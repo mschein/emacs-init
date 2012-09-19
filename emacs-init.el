@@ -1,7 +1,7 @@
 ;
 ;; Copyright (C) by Michael Scheinholtz.  All Rights Reserved.
 ;;
-;; TODO: 
+;; TODO:
 ;; 1. reorg doc here.
 ;; 2. Need to figure out tab and hippie expand to
 ;;    get everything to play nicelyl
@@ -36,7 +36,7 @@
 ;;
 ;; starting common lisp slime
 ;; (load-file slime-lisp.el)
-;;  
+;;
 ;; run lein -swank and then M-x slime-connect to run
 ;; slime with clojure.
 ;;
@@ -51,9 +51,9 @@
 ;; to turn off annoying case issues, do:
 ;; M-x set-variable: case-fold-search to nil
 ;;
-;; remember google supports g4 
-;; 
-;; M-x package-list-packages 
+;; remember google supports g4
+;;
+;; M-x package-list-packages
 ;;
 ;; eshell might be fun instead of shell
 ;;
@@ -70,7 +70,7 @@
 ;;       4. need to remember urls/file paths/bigtable/megastore paths.
 ;;       2. mostly it's pretty good so far.
 ;;          -> coming up with a good shell driver will be cool
-;;          -> perl + lisp + super programmable 
+;;          -> perl + lisp + super programmable
 ;;
 ;;    c. Other interesting features.
 ;;       1. networking (simple smtp, imap, ftp, www)?
@@ -82,7 +82,7 @@
 ;;       6. webscraping?
 ;;       7. better csv display?
 ;;       8. log analysis?
-;; 
+;;
 ;; icicles? ... super search for everything http://www.emacswiki.org/cgi-bin/wiki/Icicles
 ;;
 ;; Re-tabify
@@ -137,7 +137,7 @@
 (require 'find-lisp)
 
 ;; My stuff
-(dolist (path '("~/.emacs.d/mike" "~/.emacs.d/contrib"))
+(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/contrib"))
   (add-to-list 'load-path path))
 (require 'elisp-lib)
 ;(require 'clojure)
@@ -254,7 +254,7 @@ that uses 'font-lock-warning-face'."
 ;;       -> Can I make more of these?
 ;;
 ;;
-(ido-mode t) 
+(ido-mode t)
 (setq ido-enable-flex-matching t)
 
 (setq ido-create-new-buffer 'always)
@@ -300,7 +300,7 @@ that uses 'font-lock-warning-face'."
 
 ;;
 ;; Make window navigation easier
-;; 
+;;
 ;; TODO: Fixme.
 (global-set-key [M-left]  'windmove-left)
 (global-set-key [M-right] 'windmove-right)
@@ -391,7 +391,7 @@ that uses 'font-lock-warning-face'."
 
 
 
-;; ;; Found on interwebs: 
+;; ;; Found on interwebs:
 ;; ;; http://emacsblog.org/2007/03/12/tab-completion-everywhere/
 ;; (defun indent-or-expand (arg)
 ;;   "Either indent according to mode, or expand the word preceding
