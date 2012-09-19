@@ -1,0 +1,6 @@
+#name : mapcar template
+#contributor : Michael Scheinholtz
+# --
+(mapcar (lambda (elm)
+         elm) 
+         $0)

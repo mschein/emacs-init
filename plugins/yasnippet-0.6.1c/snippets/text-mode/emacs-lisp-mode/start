@@ -1,0 +1,12 @@
+#name : File template
+#contributor : Michael Scheinholta
+# --
+;;
+;; Copyright (C) Michael Scheinholtz, 2010.  All rights reserved.
+;; Emacs lisp code
+;;
+(require 'cl)
+(require 'elisp-lib)
+
+
+(package '$0)

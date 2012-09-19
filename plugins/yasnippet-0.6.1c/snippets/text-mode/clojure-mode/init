@@ -1,0 +1,13 @@
+#name: init
+# --
+;;
+;; Copyright (C) `(current-time-split :year)` by Michael Scheinholtz.  All Rights Reserved.
+;;
+;; Description:
+;; Enter Description Here!
+;; 
+(ns `(string-join "." (current-last-dirname) (buffer-name-no-extn))`
+  ;; (:import  )
+  (:require [clojure.contrib.str-utils2 :as s])
+  (:use clojure.contrib.def
+        clojure.pprint))
