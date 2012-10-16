@@ -10,29 +10,31 @@
 ;; This doesn't work reliably... but it can
 ;; be run to unload crappy slime.
 ;; (unwind-protect
-;;     (progn
-;;       (unload-feature 'swank-clojure)
-;;       (unload-feature 'slime))
-;;   (+ 1 2))
+;;    (unload-feature 'swank-clojure)
+;;  (message "No need to unload swank clojure"))
 
-;(setq inferior-lisp-program "~/bin/ccl64")
+;; (unwind-protect
+;;     (unload-feature 'slime)
+;;   (message "No need to unload slime"))
+
+;; These seem to work better.  Why?
+(condition-case nil
+    (unload-feature 'swank-clojure)
+  (error nil))
+(condition-case nil
+    (unload-feature 'slime)
+  (error nil))
+
+(setq inferior-lisp-program "/usr/local/bin/sbcl")
 (setq load-path (remove-if (| string-match "slime" %) load-path))
-(add-to-list 'load-path "~/.emacs.d/slime-3.0/slime-2010-11-21/")  ; your SLIME directory
+(add-to-list 'load-path "~/.emacs.d/slime")  ; your SLIME directory
 (require 'slime)
 (slime-setup '(slime-fancy))
-(setq slime-multiprocessing t)
-(setq slime-lisp-implementations
-      ;;~/Documents/dev/src/contrib/clozure/ccl-1.6/scripts/ccl64
-      '((ccl ("~/bin/ccl64"))
-        ;; find a more up to date sbcl.
-        (sbcl ("/usr/local/bin/sbcl") :coding-system utf-8-unix)))
-(setf slime-default-lisp 'ccl)
-
+;(setq slime-multiprocessing t)
 (provide 'slime-lisp)
-
 
 ;; unused.
 ;(add-hook ’lisp-mode-hook (lambda () (slime-mode t)))
 ;(add-hook ’inferior-lisp-mode-hook (lambda () (inferior-slime-mode t)))
-;
-;;(slime-setup)
+
+

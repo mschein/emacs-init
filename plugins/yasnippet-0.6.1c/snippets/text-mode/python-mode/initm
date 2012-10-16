@@ -1,0 +1,28 @@
+# -*- coding: utf-8 -*-
+# name: initm
+# contributor: Mike Scheinholtz
+# --
+#!/usr/bin/env python
+"""
+
+"""
+
+import os
+import sys
+
+import linkedin.cli
+
+######################################################################
+# Script Start
+######################################################################
+
+@linkedin.cli.entrypoint
+def main(cli):
+  # Example arguments:
+  # cli.add_argument('--url', default='http://localhost:5000', help='Url to connect to. (default: %(default)s)')
+  # cli.add_argument('--total_requests', default=50, type=int, help='How many times to execute the thr
+  # cli.add_argument('--full_refresh', action='store_true', help='Do the full cache rebuild')
+
+  with cli.run():
+
+    pass

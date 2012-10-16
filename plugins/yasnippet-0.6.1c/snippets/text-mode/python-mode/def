@@ -13,8 +13,7 @@ def ${1:name}($2):
             (mapconcat
              '(lambda (x)
                 (if (not (string= (nth 0 x) ""))
-                    (concat "- " (char-to-string 96) (nth 0 x)
-                            (char-to-string 96) ":")))
+                  (format ":param %s:" (nth 0 x))))
              (mapcar
               '(lambda (x)
                  (mapcar

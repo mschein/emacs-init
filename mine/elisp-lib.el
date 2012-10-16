@@ -4,12 +4,13 @@
 ;; I think it's easier to search longer files, and lisp lends itself well to
 ;; that.  So for now, one library function, and one google file.
 ;;
+;;
+;; http://xahlee.org/emacs/elisp_common_functions.html, a good reference.
+;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
@@ -36,7 +37,7 @@ test.  If the test returned nil, then the body will not execute."
   "Provides an if macro that binds a value a la let.
 
 Example:
-(if-let (res (fetch-string))
+ (if-let (res (fetch-string))
    (convert-to-something res)
    (error \"failed to fetch string\"))
 Here res is the name, and (fetch-string) is the
@@ -47,6 +48,28 @@ of the test."
   (destructuring-bind (name test) test-binding
       `(let ((,name ,test))
          (if ,name ,@forms))))
+
+(defmacro if-let* (test-bindings &rest forms)
+  "Provides an if-let macro that only works if all lets are true"
+
+  ;; build up a chain of if-lets, with the false case always the same.
+  (destructuring-bind (pos &rest neg) forms
+    (reduce (fn (prev-bindings binding)
+                `(if-let ,binding
+                   ,prev-bindings
+                   ,@neg))
+            (reverse test-bindings)
+            :initial-value pos)))
+
+(defmacro when-let* (test-bindings &rest forms)
+  ;; Would it be better to do this with a regular loop, to get rid of the
+  ;; "car"
+  (car
+   (reduce (fn (prev-bindings binding)
+               `((when-let ,binding
+                    ,@prev-bindings)))
+           (reverse test-bindings)
+           :initial-value forms)))
 
 (defun append-if (test lst)
   (if-let (res test)
@@ -65,7 +88,7 @@ of the test."
          (setf out-arg-list (cons sym out-arg-list)))
        (error "Missing argument %%%s in | form" (1+ i))))
     (reverse out-arg-list)))
-  
+
 
 ;; (defmacro printf (fmt &rest args)
 ;;   (with-fmt print fmt args))
@@ -135,7 +158,7 @@ of the test."
         (if (symbolp elm)
             ;; TODO(scheinholtz): should I raise an error if I find
             ;; nested '|'s?
-            (progn 
+            (progn
               (if (equal '| elm)
                   (error "Nested |'s are not allowed."))
 
@@ -339,7 +362,7 @@ Example:
 
 (defun append-if-true (&rest elements)
   "Join the elements into a string if they aren't null
-Example: 
+Example:
 "
   (interactive)
   (remove-if 'not elements))
@@ -348,7 +371,7 @@ Example:
   ;; ((string-is-null-or-empty . val)
   ;;  (>= limit 0) . limit)
   ;;; ...
-  `(append-if-true 
+  `(append-if-true
     ,@(mapcar
        (fn ((test . val))
             `(if ,test ,val))
@@ -376,10 +399,10 @@ Example:
   (not (string-nil-or-empty s)))
 
 (defun string-ends-with (str suffix)
-  (string-match (concat (regex-quote str) "\\$") suffix))
+  (string-match (concat (regexp-quote suffix) "$") str))
 
-(defun string-starts-with (str suffix)
-  (string-match (concat "\\^" (regex-quote str)) suffix))
+(defun string-starts-with (str prefix)
+  (string-match (concat "^" (regexp-quote prefix)) str))
 
 (defun string-or (&rest args)
   ;; Loop through the args, return the first not nil or empty
@@ -388,7 +411,7 @@ Example:
 
 (defun string-trim-chars (str front-group back-group)
   (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group) "" str))
-                            
+
 (defun string-trim (str)
   "Remove leading and tailing whitespace from STR."
   (let ((s (if (symbolp str) (symbol-name str) str)))
@@ -397,74 +420,55 @@ Example:
 ;; XXX This doesn't quite work the way I want
 ;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
 ;; find all numbers and put them in a list.
-(defun string-find (regex str)
-  (if (string-match regex str)
+(defun* string-find (regex str &optional (start 0))
+  (if (string-match regex str start)
       (let ((i 1)
             (out '())
             (matched t))
         (while matched
           (aif (match-string-no-properties i str)
-               (progn 
+               (progn
                  (setf out (cons  _it_ out)))
                (setf matched nil))
           (setf i (1+ i)))
         (reverse out))))
 
-;;TODO(scheinholtz):
-;; Would this be useful enough?
-(defmacro if-string (obj &rest forms)
-  (if (stringp ,obj)
-      ,@forms))
+(defun string-find-all (regex str)
+  (let ((index 0)
+        (out '()))
+    (while (< index (length str))
+      (if-let (matched (string-find regex str index))
+         (progn
+           (setq index (match-end 0))
+           (setq out (append out matched)))
+         (setq index (length str))))
+    out))
 
-;; Should also steal stevey's string-split regex.
-;; I should steal Steve's $ function.
+(defmacro if-string (obj &rest forms)
+  "Execute the true form if the string is length > 0"
+  `(if (string-has-val ,obj)
+       ,@forms))
 
 ;; TODO(scheinholtz): Do more with this?
 (defalias 'string-replace 'replace-regexp-in-string)
 
 
 (defun quote-str (str)
-  "Make me work properly and quote sub \"s"
-  ($ "\"${str}\""))
+  "Quote a string, escaping '\" and \\"
+  (apply 'concat
+         `("\""
+           ,@(mapcar (fn [chr]
+                         (let ((s (string chr)))
+                           (if (search s "\"\'\\")
+                               (concat "\\" s)
+                             s)))
+                     str)
+           "\"")))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Copied (with permission) from Steve Yegge
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmacro $ (&rest strings)
-  "Does Perl/Ruby-style variable interpolation in STRINGS.
-Scans STRINGS for patterns matching ${EXPR}, and replaces each pattern
-with its corresponding EXPR, evaluated in the current scope.
-STRINGS must be literal strings, not arbitrary expressions that
-evaluate to strings.
-
-The macro constructs and returns a format expression that produces
-the desired result. Known bug: doesn't handle multi-line strings
-properly."
-  ;; If I ever want to enhance the macro to accept expressions that
-  ;; evaluate to strings, e.g. (interp (concat "hello, " "${x}")),
-  ;; I'll have to use gensyms for format-args and format-string.
-  (let ((format-args '())
-        (format-string "")
-        (string (apply #'concat strings)))
-    (while (string-match
-            "\\(\\${\\([^\}]+\\)}\\)\\(.*\\)"
-            string)
-      (setq format-string
-            (concat format-string
-                    (substring string 0 (match-beginning 1))
-                    "%s"))
-      (push (read
-             (substring string
-                        (match-beginning 2)
-                        (match-end 2)))
-            format-args)
-      (setq string (substring string (match-beginning 3))))
-    ;; append tail after last expr, if any
-    (when (plusp (length string))
-      (setq format-string (concat format-string string)))
-    ;; construct format expression
-    (apply #'list 'format format-string (nreverse format-args))))
+(defun string-case= (s1 s2)
+  "Compare s1 and s2 ignoring case"
+  (string= (downcase s1) (downcase s2)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs utils
@@ -487,8 +491,11 @@ properly."
     (if doit (shell-command cmd)))))
 
 ;; TODO(scheinholtz): Unify buffer sections.
+(defun string->list (str)
+  (mapcar 'string-trim (split-string str "\n" t)))
+
 (defun buffer->list ()
-  (mapcar 'string-trim (split-string (buffer-string) "\n" t)))
+  (string->list (buffer-string)))
 
 ;; TODO(scheinholtz): Do I really need this function?
 (defun buffer->list->message ()
@@ -525,11 +532,21 @@ properly."
   ;; char-equal is case insensitive.
   (any-true (mapcar (| char-equal c %) '(?t ?Y))))
 
+(defun make-shell-buffer-name (path)
+  (->> path split-path last-car (format "*sh-%s*")))
+
 ;; How do I make this switch to the current file directory?
+(defun shell-open-dir (dir)
+  "Create a shell in the given directory"
+  (let ((name (generate-new-buffer-name (make-shell-buffer-name dir))))
+    (switch-to-buffer name)
+    (cd dir)
+    (shell name)))
+
 (defun* shell-dir ()
+  "Open a shell in the current default directory"
   (interactive)
-  (shell)
-  (rename-buffer (->> default-directory split-path last-car (format "*sh-%s*")) t))
+  (shell-open-dir default-directory))
 
 (defmacro insertf (fmt &rest args)
   `(with-fmt insert ,fmt ,@args))
@@ -670,7 +687,7 @@ properly."
 ;; TODO(scheinholtz): Work on me later
 ;; more loop foo.
 (defun tr (char-from char-to str)
-  (mapconcat (lambda (elm) 
+  (mapconcat (lambda (elm)
                (if (string= (string elm) char-from)
                    char-to
                  (string elm)))
@@ -684,9 +701,9 @@ properly."
     (reduce (lambda (path elm)
               (if (string-nil-or-empty path)
                   elm
-                (concat (string-remove ($ "${sep}$") path) 
-                        sep 
-                        (string-remove ($ "^${sep}") elm))))
+                (concat (string-remove (concat sep "$") path)
+                        sep
+                        (string-remove (concat "^" sep) elm))))
             parts :initial-value "")))
 
 (defalias 'basename 'file-name-nondirectory)
@@ -724,7 +741,7 @@ Example:
   (set-buffer (generate-new-buffer buffer-name))
   (insert (string-join-lst "\n" lst)))
 
-;; Use delete-trailing-whitespace to 
+;; Use delete-trailing-whitespace to
 ;; remove whitespace from a file
 ;; NOTE! delete-blank-lines removes
 ;; all blank lines, not just the ones at the end.
@@ -757,30 +774,127 @@ Example:
          (insertf "(interactive%s)"
                   (if (string-nil-or-empty arg-str)
                       ""
-                    (->> arg-str (string-split " ") 
-                         (mapcar (| format "s%s: " %)) (string-join-lst "\\n") 
+                    (->> arg-str (string-split " ")
+                         (mapcar (| format "s%s: " %)) (string-join-lst "\\n")
                          (format " \"%s\""))))
          (indent-region (line-beginning-position) (line-end-position)))
        (error "unable to parse arglist"))))
 
 (defun set-default-directory (dir)
   (interactive "sdir: ")
-  (setq default-directory dir))  
+  (setq default-directory dir))
+
+;; Maybe also allow this to do a dired?
+(defun jump-to-abbrev (abbrev table)
+  (if-let* ((abbrev-table-cell
+             (remove-if-not
+              (fn ((path-abbrev . _))
+                  (or (and (= (length abbrev) 1)
+                           (string= (-> path-abbrev (elt 0) char-to-string)
+                                    abbrev))
+                      (string-case= abbrev path-abbrev)))
+              table))
+            (result-dir (cdar abbrev-table-cell)))
+     (shell-open-dir result-dir)
+     (error (format "Invalid abbrev: %s" abbrev))))
+
 
 (defun return-to-pos (fn &rest args)
-  "get the current position and pass it to the calling fun.  
+  "get the current position and pass it to the calling fun.
    Once that function returns, return the cursor to its current position."
   (let ((pos (point)))
     (apply fn (cons pos args))
     (goto-char pos)))
 
+(defun sum-col-region-fn (begin end)
+  (save-excursion
+    (let* ((lines (string->list (buffer-substring-no-properties begin end)))
+           (total 0))
+      (dolist (line lines)
+        (if-let* ((nums (string-find-all "\\(-\\{0,1\\}[0-9]+[0-9\.]*\\)" line))
+                  (num-str (car nums))
+                  (num (string-to-int num-str)))
+          (setq total (+ total num))))
+      total)))
+
+(defun sum-col-region (begin end)
+  (interactive "r")
+  (message "%d" (sum-col-region-fn begin end)))
+
+
 (defun underline ()
   (interactive)
-  (return-to-pos 
+  (return-to-pos
    (fn (pos)
        )))
-  
+
   ;; look at the previous line
 
+(defmacro make-bookmark (name url)
+  `(defun ,name ()
+     (interactive)
+     (browse-url-chrome ,url)))
+
+(defun replace-string-in-region (begin end new-string)
+  "Given a region defined with begin and end, replace
+   That region with the new-string"
+  (message (format "got new string: %s" new-string))
+  (delete-region begin end)
+  (goto-char begin)
+  (insert new-string))
+
+(defun title-caps-to-underbar (begin end)
+  (interactive "r")
+  (let ((str (buffer-substring-no-properties begin end)))
+    (message str)
+    (message (string-replace "\\([A-Z]\\)" (| downcase %) str))))
+    ;; (replace-string-in-region begin end
+    ;;  (string-replace "\\([A-Z]\\)" (| downcase %)))))
+
+
+(defun linear-regression ()
+  ;; http://en.wikipedia.org/wiki/Simple_linear_regression
+  )
+
+;;(defun ascii-graph (vals &keys ))
+
+(defun exponential-moving-avg (smoothing-constant nums)
+  (reverse
+   (reduce (fn (out-list new)
+               (let* ((old (car out-list))
+                      (diff (- new old))
+                      (update (* (- 1 smoothing-constant) diff)))
+                 (cons (+ old update) out-list)))
+           (cdr nums)
+           :initial-value (list (car nums)))))
+
+(defun url-join (&rest args)
+  (flet ((clean-element (elm)
+           (let ((trimmed (string-trim-chars elm "\\/" "\\")))
+             (if (string-ends-with elm "://")
+                 (concat trimmed "/")
+               trimmed))))
+    (string-join-lst "/" (mapcar #'clean-element args))))
+
+(defun url-join-lst (elm)
+  (apply 'url-join elm))
+
+(defun goto-end-of-buffer ()
+  (goto-char (point-max)))
+
+(defun underline ()
+  (interactive)
+  (save-excursion
+    (previous-line)
+    (end-of-line)
+    (let ((underline-len (current-column)))
+      (next-line)
+      (beginning-of-line)
+      (dotimes (i underline-len)
+        (insert "-")))))
+
+(defun multi-occur-all (pattern)
+  (interactive "spattern: ")
+  (multi-occur (buffer-list) pattern))
 
 (provide 'elisp-lib)

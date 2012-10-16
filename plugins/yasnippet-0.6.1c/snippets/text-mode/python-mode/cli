@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# name: cli
+# contributor: Mike Scheinholtz
+# --
+#!/usr/bin/env python
+#
+# Author: Michael Scheinholtz
+# Email: mls@linkedin.com
+# 
+"""
+
+"""
+
+
+import linkedin.cli
+
+
+@linkedin.cli.entrypoint
+def main(cli):
+
+  with cli.run() as c:
+
+    c.log.info(c.args.fabric)

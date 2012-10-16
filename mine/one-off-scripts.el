@@ -54,7 +54,7 @@
   (interactive)
   (find-file-noselect "~/doc/todo.org")
   (switch-to-buffer-other-window "todo.org"))
-  
+
 
 (defun find-dup (lst)
   ;; loop though list
@@ -65,6 +65,95 @@
 (defun slope (v1 v2)
   (/ (- (cadr v1) (cadr v2))
      (- (car v1) (car v2))))
- 
+
+(defun find-emacs-unsaved-files ()
+  (interactive)
+  (insertf "find . | grep \\#"))
+
+;; Some useful bookmarks
+(make-bookmark clojure-doc "http://clojuredocs.org/")
+(make-bookmark clojure-ref "http://clojuredocs.org/quickref/Clojure%20Core")
+
+
+(defun sql-insert-select (table-name)
+  (insertf
+   "
+
+def %s_select(%s_id, conn=engine):
+  return conn.execute(select([%s]).where(%s.c.id==%s_id)).fetchone()
+" table-name table-name table-name table-name table-name)
+  (insertf
+   "
+
+def %s_select_and(conn=engine, **columns):
+  args = [column==columns[column.name] for column in %s.c if column.name in columns.keys()]
+  return conn.execute(select([%s]).where(and_(*args))).fetchall()
+" table-name table-name table-name table-name table-name)
+  (insertf
+   "
+
+def %s_select_or(conn=engine, **columns):
+  args = [column==columns[column.name] for column in %s.c if column.name in columns.keys()]
+  return conn.execute(select([%s]).where(or_(*args))).fetchall()
+" table-name table-name table-name table-name table-name))
+
+(defun sql-insert-insert (table-name)
+  (insertf
+   "
+
+def %s_insert_group(args, conn=engine):
+  return conn.execute(%s.insert(), args)
+" table-name table-name)
+
+  (insertf
+   "
+
+def %s_insert(conn=engine, **kwargs):
+  result = conn.execute(%s.insert(), **kwargs)
+  return result.inserted_primary_key[0]
+" table-name table-name))
+
+(defun sql-insert-update (table-name)
+  (insertf
+   "
+
+def %s_update(%s_id, conn=engine, **kwargs):
+  # HACK until we move to sqlalchemy 0.8
+  unknown_columns = set(kwargs.keys()) - set(%s.c.keys())
+  if unknown_columns:
+    raise ValueError('some column names were invalid in the update set: %%s' %% unknown_columns)
+  result = conn.execute(%s.update().
+                        where(%s.c.id==%s_id).
+                        values(**kwargs))
+  if result.rowcount < 1:
+    raise ValueError('no rows updated')
+  return result
+" table-name table-name table-name table-name table-name table-name))
+
+;;(defun sql-insert-delete (table-name))
+
+(defun sql-insert-crud (table-name)
+  (interactive "stable-name: ")
+  (dolist (fn '(sql-insert-select
+                sql-insert-insert
+                sql-insert-update))
+    (funcall fn table-name)))
+
+(defun sql-insert-crud-for-list (table-names)
+  (dolist (table table-names)
+    (sql-insert-crud table)))
+
+(defun sql-get-table-names-region (begin end)
+  (interactive "r")
+  (->> (region-to-list begin end)
+       (remove-if-not (| string-match-p " = Table(" %))
+       (mapcar (| first (string-find-all "\\([^ ]+\\) = Table" %)))))
+
+(defun sql-insert-crud-for-region (begin end)
+  (interactive "r")
+  (sql-insert-crud-for-list (sql-get-table-names-region begin end)))
+
 
 (provide 'one-off-scripts)
+
+

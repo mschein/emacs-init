@@ -1,4 +1,4 @@
-;
+;;
 ;; Copyright (C) by Michael Scheinholtz.  All Rights Reserved.
 ;;
 ;; TODO:
@@ -20,8 +20,19 @@
 ;; eshell vs shell.... interesting to try.
 ;; Newline in a regex:
 ;; c-q c-j
+;; occur !!! show all lines (across buffers) matching a regex
+;;
+;; using lisp in regexes substitutions:
+;; \,(lispcode): can call any function, they can use (matched-regex 1) or whatever the function
+;; is.
+;; also, you can use \1, \2, for different matches.
 ;;
 ;;M-x dirs will tell the shell buffer to figure out what the current working directory is.
+;;
+;; find-library can be useful for finding more documentation
+;;
+;;Searching through multiple buffers:
+;; (multi-occur-in-matching-buffers)
 ;;
 ;;C-/
 ;;
@@ -111,6 +122,7 @@
 ;; one off scripts
 ;; Library
 ;;
+;; indent-region and what not is awesome.
 ;;
 ;; Term Mode doc
 ;; c-c c-j : line mode (more emacs like
@@ -129,24 +141,51 @@
 ;; Debugging:
 ;; M-X check-parens to find unbalanced stuff.
 ;;
-;;
 ;; Fix font... I am not using the anti-aliased fonts.
 ;;
 ;; Global includes
+;;
+;; c-x c-k l:Turn the last 100 commands into a macro
+;;
+;; More emacs key strokes.
+;; http://www.cs.rutgers.edu/LCSR-Computing/some-docs/emacs-chart.html
+;;
 (require 'cl)
 (require 'find-lisp)
 
 ;; My stuff
-(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/contrib"))
+(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/company" "~/.emacs.d/contrib" "~/.emacs.d/contrib/groovymode" "~/.emacs.d/elpa/http-post-simple-1.0"))
   (add-to-list 'load-path path))
 (require 'elisp-lib)
-;(require 'clojure)
 (require 'one-off-scripts)
+(require 'linkedin)
+
+;; Add the new emacs package loader:
+
+
+
+;; For Clojure work use nReple and ritz
+
 
 ;; To run a slime, uncomment and slime-lisp and start
 ;; a new emacs.
-;(require 'slime-lisp)
-;(require 'slime-clj)
+(require 'slime-lisp)
+
+
+;;; This was installed by package-install.el.
+;;; This provides support for the package system and
+;;; interfacing with ELPA, the package archive.
+;;; Move this code earlier if you want to reference
+;;; packages in your .emacs.
+;; (when
+;;     (load
+;;      (expand-file-name "~/.emacs.d/elpa/package.el"))
+;;   (package-initialize))
+
+(require 'package)
+(add-to-list 'package-archives
+             '("marmalade" . "http://marmalade-repo.org/packages/"))
+(package-initialize)
 
 
 ;; Set up the keyboard so the delete key on both the regular keyboard
@@ -204,13 +243,24 @@
 ;; Ruby inside emacs
 (require 'inf-ruby)
 
+;; Want one function to handle this, since this function changes when we upgrade
+(defun turn-on-subword-mode ()
+  (c-subword-mode))
+
 ;; Javascript for json editing.
 (add-to-list 'load-path "~/.emacs.d/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (autoload 'javascript-mode "javascript" nil t)
+(add-hook 'javascript-mode 'turn-on-subword-mode)
 
-;;
+;; Allow these functions.
 (put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+
+;; Set Chrome as the default browser
+(setq browse-url-generic-program "/opt/google/chrome/google-chrome")
+
+;; http://go/crt
 
 ;; Smarter buffer switching
 ;;
@@ -236,7 +286,7 @@ that uses 'font-lock-warning-face'."
 
 (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
 (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
+(add-hook 'java-mode 'turn-on-subword-mode)
 
 ;; Make cut and paste work
 (setq x-select-enable-clipboard t)
@@ -284,9 +334,6 @@ that uses 'font-lock-warning-face'."
 ;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
 
 
-(put 'downcase-region 'disabled nil)
-
-
 ;; Shut off useless menu items. etc.
 (setq inhibit-splash-screen t)
 
@@ -318,14 +365,16 @@ that uses 'font-lock-warning-face'."
 (defalias 'ia 'insert-author)
 (defalias 'scc 'slime-connect-clj)
 
-(defalias 'sb 'multi-isearch-buffers)
-(defalias 'sbx 'multi-isearch-buffers)
+(defalias 'sb 'multi-occur-all)
+(defalias 'sbx 'multi-occur-in-matching-buffers)
 
 (defalias 'cr 'comment-region)
 (defalias 'ucr 'uncomment-region)
 (defalias 'shd 'shell-dir)
 (defalias 'rlf 'reload-file)
-(defalias 'sbx 'multi-isearch-buffers)
+;(defalias 'sbx 'multi-isearch-buffers)
+(defalias 'ls 'linkedin-search)
+(defalias 'ul 'underline)
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
@@ -340,16 +389,7 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\M-n" 'forward-paragraph)
 
 (global-set-key "\C-cd" 'duplicate-line)
-
-;;; This was installed by package-install.el.
-;;; This provides support for the package system and
-;;; interfacing with ELPA, the package archive.
-;;; Move this code earlier if you want to reference
-;;; packages in your .emacs.
-(when
-    (load
-     (expand-file-name "~/.emacs.d/elpa/package.el"))
-  (package-initialize))
+(global-set-key "\C-cg" 'jump-to-abbrev-li)
 
 
 ;; put all backup files in one place
@@ -375,20 +415,18 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\C-cj" 'import-jump)
 (global-set-key "\C-xt" 'open-todo)
 (global-set-key "\C-c\M-f" 'find-file-at-point)
-
-(autoload 'python-mode "python-mode" "Python Mode." t)
+(global-set-key (kbd "C-;") 'undo)
 
 ;; Flyspell code
 (defun turn-on-flyspell ()
    "Force flyspell-mode on using a positive arg.  For use in hooks."
    (interactive)
-   (flyspell-mode 1))
+   (flyspell-mode 1)
+   (define-key flyspell-mode-map (kbd "C-;") 'undo))
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
 (add-hook 'text-mode-hook 'turn-on-flyspell)
+
 ;(add-hook 'c-mode-common-hook 'flyspell-prog-mode)
-
-
-
 
 
 ;; ;; Found on interwebs:
@@ -462,23 +500,269 @@ that uses 'font-lock-warning-face'."
 ;;; uncomment for CJK utf-8 support for non-Asian users
 ;; (require 'un-define)
 
-(put 'downcase-region 'disabled nil)
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Org mode customizations.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; !!! NOTE !!! if you move emacs versions, be sure to recompile the files
+;; in the org-mode directory.  Also, if you hack org mode...
+;;
+;; cd ~/.emacs.d/contrib/org-mode/lisp
+;; make
+;;
+;; make install-info to update the org-mode docs.
+;;
+;; export note: use pandoc to convert from latex to mediawiki.
+;;  .cabal/bin/pandoc -f latex -t mediawiki <your file>
+;; also, there is another ruby converter for org-mode files to make wikis
+;;
+
+;; A directory for non-default orgmode files.
+(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/lisp")
+(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/contrib/lisp")
+(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/EXPERIMENTAL")
+
+;; Install the custom org mode.
+(require 'org-install)
+(add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
+
+;; recommended key bindings from the manual.
+(global-set-key "\C-cl" 'org-store-link)
+(global-set-key "\C-cc" 'org-capture)
+(global-set-key "\C-ca" 'org-agenda)
+(global-set-key "\C-cb" 'org-iswitchb)
+
+;; Add support for wiki exporting. !!! NOTE !!!
+;; This touches experimental stuff, so it could easily break on upgrade.
+(require 'org-mw)
+
+;; linkedin wiki.
+(require 'org-linkedin-wiki)
+
 (setq org-todo-keywords
-      '((sequence "TODO(t!)" "|" "WORKING(w)" "|" "DONE(d!)")
-	(sequence "QUERY(q)" "|" "SENT(s)")
-	(sequence "LATER(l)")
-	(sequence "|" "FAILED(f!)")
-	(sequence "|" "CANCELED(f!)")))
+      '((sequence "TODO(t!)"
+                  "WORKING(w!)" "PAUSED(p!)" "QUERY(q)" "TESTING(e!)"
+
+                  "|" "SENT(s!)" "DONE(d!)" "LATER(l!)" "FAILED(f!)" "DELAYED(a!)" "CANCELED(c!)" "DUPLICATE(u!)")
+	))
 
 (setq org-todo-keyword-faces
       '(
         ("TODO"  . (:foreground "red" :weight bold))
+        ("DELAYED"  . (:foreground "red" :weight bold))
         ("WORKING"  . (:foreground "gold2" :weight bold))
+        ("PAUSED"  . (:foreground "gold2" :weight bold))
+        ("TESTING"  . (:foreground "gold2" :weight bold))
         ("DONE"  . (:foreground "forestgreen" :weight bold))
         ("QUERY"  . (:foreground "darkred" :weight bold))
         ("SENT"  . (:foreground "SpringGreen4" :weight bold))
         ("LATER"  . (:foreground "dimgrey" :weight bold))
         ("FAILED"  . (:foreground "DarkOrange3" :weight bold))
-        ("CANCELED"  . shadow)))
+        ("CANCELED"  . shadow)
+        ("DUPLICATE"  . shadow)))
+
+;; turn off _ meaning <sub> etc.  If I really want this feature
+;; it's possible to do:
+;; #+OPTIONS ^:nil
+;; in an orgmode file.
+(setq org-export-with-sub-superscripts nil)
+
+;; Fix multi-line wrapping and what not in org mode
+;;
+;; I can't use this unless I upgrade emacs.  It crashes 23.1
+;; (setq org-startup-indented nil)
+
+;; Make it so long lines wrap in org mode.
+;; This might be possible to remove if clean mode can be made to work.
+(add-hook 'org-mode-hook 'turn-on-visual-line-mode)
+
+;; Make ctrl-return insert a subheading.
+(add-hook 'org-mode-hook
+          (lambda ()
+            (local-set-key [(control return)] 'org-insert-subheading)
+
+            ;; Is there a better way to do this?  I'm not sure why org-mode doesn't honor the
+            ;; global settings.
+            (define-key flyspell-mode-map (kbd "C-;") 'undo)
+            (local-set-key [M-left]  'windmove-left)
+            (local-set-key [M-right] 'windmove-right)
+            (local-set-key [M-up]    'windmove-up)
+            (local-set-key [M-down]  'windmove-down)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Text Mode configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Make it so long lines wrap even on internal frames (not windows)
+(setq truncate-partial-width-windows nil)
+
+;;
+;; Other line wrapping goodies:
+;; Visual Line mode.
+;; Long line mode... apparently this mode sucks.
+;; fill paragraph (realigns a paragraph based on the frame or fill column.)
+;;
+(add-hook 'text-mode-hook 'turn-on-visual-line-mode)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LDAP and EMAIL command setup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; I have tabled this for the moment since it depends on ldapsearch
+;; and that doesn't appeat to be installed right now :-p
+
+;; (require 'eudc)
+
+;; ;; make it work with tab in mail mode.
+;; (eval-after-load
+;;  "message"
+;;  '(define-key message-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
+;; (eval-after-load
+;;  "sendmail"
+;;  '(define-key mail-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
+
+;; Reference linkedin's ldap server
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setting up the Python IDE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; Info additions
+;;
+(add-to-list 'load-path "~/.emacs.d/contrib/pydoc-info-0.2/")
+(require 'pydoc-info)
+
+;;
+;; Python mode stuff
+;;
+(add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+(add-to-list 'interpreter-mode-alist '("python" . python-mode))
+
+;;
+;; Autopair mode
+;;
+(require 'autopair)
+
+;; enable autopair in all buffers
+(autopair-global-mode)
+(add-hook 'sldb-mode-hook #'(lambda () (setq autopair-dont-activate t)))
+
+(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
+
+
+;;;;;;;;;;;;;;;;;;;;;  Linkedin Specific Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Set the indent level to be 2 spaces
+(setq python-indent 2)
+
+;; Remember that in python mode when you eval a region it only produces
+;; the visible results of doing so.
+
+;; Turn on flymake with pylink et al.
+
+;; Move flymake errors to the mini-buffer
+(require 'flymake-cursor)
+
+;; Run the pycheck.sh script to make flymake work
+;; with python files.
+(add-hook 'find-file-hook 'flymake-find-file-hook)
+
+(defun flymake-pycheck-init ()
+  (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                     'flymake-create-temp-inplace))
+         (local-file (file-relative-name temp-file
+                                         (file-name-directory buffer-file-name))))
+    (list "epylint" (list local-file))))
+
+(when (load "flymake" t)
+   (add-to-list 'flymake-allowed-file-name-masks
+                '("\\.py\\'" flymake-pycheck-init)))
+
+(global-set-key [f10] 'flymake-goto-prev-error)
+(global-set-key [f11] 'flymake-goto-next-error)
+
+;; Automatically delete trailing whitespace when saving files
+;; while you are in python major mode.
+;; Also, only use spaces, no tabs.
+;; Also, turn on CamelCase navigation mode
+(add-hook 'python-mode-hook
+          (lambda()
+            (setq-default indent-tabs-mode nil)
+            (turn-on-subword-mode)
+            (let ((match-all-regex "."))
+              (add-to-list 'flymake-allowed-file-name-masks `(,match-all-regex flymake-pycheck-init))
+              (flymake-mode)
+              (setq flymake-allowed-file-name-masks
+                    (remove-if (| (equalp match-all-regex (car %))) flymake-allowed-file-name-masks)))
+            (flymake-mode)))
+
+(add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
+
+
+;; Linkedin allows crazy long lines.
+(font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
+
+;; Activate pymacs (it should be installed in the system elisp code.)
+;;
+;; Pymacs documentation link: http://pymacs.progiciels-bpi.ca/pymacs.html
+;; (autoload 'pymacs-apply "pymacs")
+;; (autoload 'pymacs-call "pymacs")
+;; (autoload 'pymacs-eval "pymacs" nil t)
+;; (autoload 'pymacs-exec "pymacs" nil t)
+;; (autoload 'pymacs-load "pymacs" nil t)
+
+;; ;;If you plan to use a special directory to hold your own Pymacs code
+;; ;;in Python, which should be searched prior to the usual Python import
+;; ;;search path, then uncomment the next two lines:
+;; ;;
+;; ;;(eval-after-load "pymacs"
+;; ;;     '(add-to-list 'pymacs-load-path YOUR-PYMACS-DIRECTORY"))
+;; (require 'pymacs)
+;; (pymacs-load "ropemacs" "rope-")
+;; (setq ropemacs-enable-autoimport t)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'psvn)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Hippie Expand ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; For now I'm just going to set hippie expand to take over M-/, since
+;; that should be similar to what I have now.
+;; It looks like ac/yas will share the tab in a reasonable way, if I think
+;; of a more efficient way to use it, I will.
+(global-set-key (kbd "C-/") 'hippie-expand)
+(global-set-key (kbd "M-/") 'dabbrev-expand)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Scala Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-to-list 'load-path "~/.emacs.d/contrib/scala-emacs")
+(require 'scala-mode-auto)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Groovy Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(autoload 'groovy-mode "groovy-mode" "Major mode for editing Groovy code." t)
+(add-to-list 'auto-mode-alist '("\.groovy$" . groovy-mode))
+(add-to-list 'auto-mode-alist '("\.gradle$" . groovy-mode))
+(add-to-list 'interpreter-mode-alist '("groovy" . groovy-mode))
+
+;;; make Groovy mode electric by default.
+;;; I turned this off because autopair is smarter, and seems to do everything
+;;; electric mode does.
+;;;
+;; (add-hook 'groovy-mode-hook
+;;           '(lambda ()
+;;              ;; turn off autopair for this mode.
+;;              (autopair-mode 0)
+;;              (require 'groovy-electric)
+;;              (groovy-electric-mode)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(add-to-list 'load-path "~/.emacs.d/contrib/confluence-el")
+(require 'confluence)
+(setq confluence-url "https://iwww.corp.linkedin.com/wiki/cf/rpc/xmlrpc")
+(add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
+
