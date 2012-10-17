@@ -154,11 +154,10 @@
 (require 'find-lisp)
 
 ;; My stuff
-(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/company" "~/.emacs.d/contrib" "~/.emacs.d/contrib/groovymode" "~/.emacs.d/elpa/http-post-simple-1.0"))
+(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/company" "~/.emacs.d/contrib" "~/.emacs.d/contrib/groovymode" "~/.emacs.d/elpa/http-post-simple-1.0" "~/.emacs.d/autopair"))
   (add-to-list 'load-path path))
 (require 'elisp-lib)
 (require 'one-off-scripts)
-(require 'linkedin)
 
 ;; Add the new emacs package loader:
 
@@ -182,10 +181,10 @@
 ;;      (expand-file-name "~/.emacs.d/elpa/package.el"))
 ;;   (package-initialize))
 
-(require 'package)
-(add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
-(package-initialize)
+;; (require 'package)
+;; (add-to-list 'package-archives
+;;              '("marmalade" . "http://marmalade-repo.org/packages/"))
+;; (package-initialize)
 
 
 ;; Set up the keyboard so the delete key on both the regular keyboard
