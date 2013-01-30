@@ -153,6 +153,10 @@ def %s_update(%s_id, conn=engine, **kwargs):
   (interactive "r")
   (sql-insert-crud-for-list (sql-get-table-names-region begin end)))
 
+(defun conv-cool-constructor (begin end)
+  (->> (region-to-list begin end)
+       )
+  )
 
 (provide 'one-off-scripts)
 

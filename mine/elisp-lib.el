@@ -497,6 +497,12 @@ Example:
 (defun buffer->list ()
   (string->list (buffer-string)))
 
+(defun region->list (begin end)
+  (string->list (buffer-substring-no-properties begin end)))
+
+;; do this the right way.
+(defalias 'region-to-list 'region->list)
+
 ;; TODO(scheinholtz): Do I really need this function?
 (defun buffer->list->message ()
   (interactive)
@@ -808,7 +814,7 @@ Example:
 
 (defun sum-col-region-fn (begin end)
   (save-excursion
-    (let* ((lines (string->list (buffer-substring-no-properties begin end)))
+    (let* ((lines (region->list begin end))
            (total 0))
       (dolist (line lines)
         (if-let* ((nums (string-find-all "\\(-\\{0,1\\}[0-9]+[0-9\.]*\\)" line))
@@ -843,13 +849,23 @@ Example:
   (goto-char begin)
   (insert new-string))
 
+(defun tc-str (str)
+  (let ()
+    (do ((i 0)) ; init
+        (< i (length str)) ; end
+
+
+        )
+    ))
+
 (defun title-caps-to-underbar (begin end)
   (interactive "r")
-  (let ((str (buffer-substring-no-properties begin end)))
-    (message str)
-    (message (string-replace "\\([A-Z]\\)" (| downcase %) str))))
-    ;; (replace-string-in-region begin end
-    ;;  (string-replace "\\([A-Z]\\)" (| downcase %)))))
+  (let ((case-fold-search nil))
+    (replace-string-in-region begin end
+      (string-replace
+        "\\([A-Z]\\)"
+        (| concat "_" (downcase %))
+        (buffer-substring-no-properties begin end)))))
 
 
 (defun linear-regression ()

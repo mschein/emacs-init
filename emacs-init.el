@@ -724,7 +724,7 @@ that uses 'font-lock-warning-face'."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(require 'psvn)
+;;(require 'psvn)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Hippie Expand ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
