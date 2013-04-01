@@ -9,14 +9,14 @@
 ;;     (unload-feature 'slime)
 ;;   (error nil))
 
-;; (add-to-list 'load-path "~/.emacs.d/swank-clojure")
+;; (add-to-list 'load-path "~/emacs-init/swank-clojure")
 ;; ;; XXX This should not be needed
-;; ;(add-to-list 'load-path "~/.emacs.d/elpa/clojure-mode-1.7.1/clojure-mode.el")
+;; ;(add-to-list 'load-path "~/emacs-init/elpa/clojure-mode-1.7.1/clojure-mode.el")
 
 ;; ;; Point to the crappy slime.
 ;; (setq load-path (remove-if (| string-match "slime" %) load-path))
-;; (add-to-list 'load-path "~/.emacs.d/elpa/slime-20100404")
-;; (add-to-list 'load-path "~/.emacs.d/elpa/slime-repl-20100404")
+;; (add-to-list 'load-path "~/emacs-init/elpa/slime-20100404")
+;; (add-to-list 'load-path "~/emacs-init/elpa/slime-repl-20100404")
 
 ;; ;; sets up everything
 ;; (require 'swank-clojure)

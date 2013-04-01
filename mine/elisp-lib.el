@@ -2,7 +2,7 @@
 
 ;;
 ;; I think it's easier to search longer files, and lisp lends itself well to
-;; that.  So for now, one library function, and one google file.
+;; that.  So for now, one library function, and one company custom file.
 ;;
 ;;
 ;; http://xahlee.org/emacs/elisp_common_functions.html, a good reference.
@@ -11,10 +11,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'cl-lib)
+
+;; Wrap in try catch
+(setf lexical-binding t)
+
+(setf directory-sep-char ?/)
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
-  (print (apply 'format fmt args)))
+  (print (apply #'format fmt args)))
 
 (defmacro* when-let ((name test) &rest body)
   "Provides a (when) macro with a let binding.
@@ -131,14 +137,14 @@ of the test."
     -> 6
    mapcar (| `(,%)) '(a b c))
     -> ((a) (b) (c))
-   reduce (| apply 'string-join" " %&) '(\"a\" \"b\" \"c\") ->
+   reduce (| apply #'string-join" " %&) '(\"a\" \"b\" \"c\") ->
     \"a b c\""
    ;; Walk the given form looking for '%'s to replace.
    ;; The basic algorithm is each % is replaced with a (gensym) and
    ;; an alist is built up containing: (argpos . gensym) values.
    ;; A single % or the &rest %& are made seperate because they
    ;; require special handling.
-   (labels
+   (cl-labels
      ((make-arg-list (arg-alist)
        ;; Converts an alist of (argpos . gensym) pairs into the
        ;; argument list for the function.
@@ -185,7 +191,7 @@ of the test."
      (let* ((alist-args '())
             (rest-arg nil)
             (single-arg nil)
-            (new-forms (code-walker 'perc->gensym in-forms))
+            (new-forms (code-walker #'perc->gensym in-forms))
             (arg-list (make-arg-list alist-args)))
 
        ;; validate arguments and handle single %
@@ -278,7 +284,7 @@ The macro expansion is: (concat \"bar\" (string-trim \"  foo  \"))"
 (defun code-walker (in-fun forms)
   "Call fun on each atom in forms and set the atom to the
 result of fun."
-  (labels ((mapcar-pairs (mcp-fun forms)
+  (cl-labels ((mapcar-pairs (mcp-fun forms)
                          (mapcar
                           (lambda (elm-pair)
                             (destructuring-bind (elm last-elm) elm-pair
@@ -353,7 +359,7 @@ Example:
  (h_ "one" 'a "two" 'b)
  -> ... a hash table with one -> a, two -> b"
   (let ((ht (gensym)))
-    `(let ((,ht (make-hash-table :test 'equal)))
+    `(let ((,ht (make-hash-table :test #'equal)))
        ,@(mapcar (lambda (pair)
                    (destructuring-bind (key val) pair
                        `(puthash ,key ,val ,ht)))
@@ -365,7 +371,7 @@ Example:
 Example:
 "
   (interactive)
-  (remove-if 'not elements))
+  (remove-if #'not elements))
 
 (defmacro append-if-passes (alist)
   ;; ((string-is-null-or-empty . val)
@@ -384,7 +390,7 @@ Example:
 
 ;; TODO(scheinholtz): make a multi arg version
 (defun string-join-lst (sep str-list)
-  (mapconcat 'identity str-list sep))
+  (mapconcat #'identity str-list sep))
 
 (defun string-join (sep &rest args)
   (string-join-lst sep args))
@@ -455,7 +461,7 @@ Example:
 
 (defun quote-str (str)
   "Quote a string, escaping '\" and \\"
-  (apply 'concat
+  (apply #'concat
          `("\""
            ,@(mapcar (fn [chr]
                          (let ((s (string chr)))
@@ -483,7 +489,7 @@ Example:
 
 ;; TODO(scheinholtz): Use the async I/O for this.
 (defun* doit-shell (doit-str silent fmt &rest args)
-  (let ((cmd (apply 'format fmt args))
+  (let ((cmd (apply #'format fmt args))
         (doit (string= "yes" doit-str)))
     (when (or (not doit) (not silent))
       (switch-to-buffer "*shell-cmd-buf*")
@@ -492,7 +498,7 @@ Example:
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str)
-  (mapcar 'string-trim (split-string str "\n" t)))
+  (mapcar #'string-trim (split-string str "\n" t)))
 
 (defun buffer->list ()
   (string->list (buffer-string)))
@@ -525,7 +531,7 @@ Example:
   (switch-to-buffer name))
 
 (defun to-buffer-switchf (name fmt &rest args)
-  (to-buffer-switch name (apply 'format fmt args)))
+  (to-buffer-switch name (apply #'format fmt args)))
 
 (defun shell-command-to-buffer (name cmd)
   (to-buffer-switch name (shell-command-to-string cmd)))
@@ -631,7 +637,7 @@ Example:
 (defun* conv-time (time &key (seconds 0) (minutes 0) (hours 0) (days 0) (months 0) (years 0))
   (let* ((oplist (list seconds minutes hours days months years))
          (split-time (take (length oplist) (decode-time time))))
-    (apply 'encode-time (mapcar* '+ split-time oplist))))
+    (apply #'encode-time (mapcar* '+ split-time oplist))))
 
 (defun last-month (cur-time)
   (time-subtract cur-time (days-to-time 32)))
@@ -881,11 +887,11 @@ Example:
                       (diff (- new old))
                       (update (* (- 1 smoothing-constant) diff)))
                  (cons (+ old update) out-list)))
-           (cdr nums)
+	   (cdr nums)
            :initial-value (list (car nums)))))
 
 (defun url-join (&rest args)
-  (flet ((clean-element (elm)
+  (cl-flet ((clean-element (elm)
            (let ((trimmed (string-trim-chars elm "\\/" "\\")))
              (if (string-ends-with elm "://")
                  (concat trimmed "/")

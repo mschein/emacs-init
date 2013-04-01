@@ -27,7 +27,7 @@
 
 (setq inferior-lisp-program "/usr/local/bin/sbcl")
 (setq load-path (remove-if (| string-match "slime" %) load-path))
-(add-to-list 'load-path "~/.emacs.d/slime")  ; your SLIME directory
+(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 (require 'slime)
 (slime-setup '(slime-fancy))
 ;(setq slime-multiprocessing t)

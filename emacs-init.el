@@ -154,7 +154,7 @@
 (require 'find-lisp)
 
 ;; My stuff
-(dolist (path '("~/.emacs.d/mine" "~/.emacs.d/company" "~/.emacs.d/contrib" "~/.emacs.d/contrib/groovymode" "~/.emacs.d/elpa/http-post-simple-1.0" "~/.emacs.d/autopair"))
+(dolist (path '("~/emacs-init/mine" "~/emacs-init/company" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair"))
   (add-to-list 'load-path path))
 (require 'elisp-lib)
 (require 'one-off-scripts)
@@ -178,7 +178,7 @@
 ;;; packages in your .emacs.
 ;; (when
 ;;     (load
-;;      (expand-file-name "~/.emacs.d/elpa/package.el"))
+;;      (expand-file-name "~/emacs-init/elpa/package.el"))
 ;;   (package-initialize))
 
 ;; (require 'package)
@@ -232,7 +232,7 @@
 (global-set-key "\C-x\M-f" 'find-file-other-window)
 
 ;; Add ruby files.
-(add-to-list 'load-path "~/.emacs.d/ruby-mode")
+(add-to-list 'load-path "~/emacs-init/ruby-mode")
 (add-to-list 'auto-mode-alist '("\\.rb\\'" . ruby-mode))
 (autoload 'ruby-mode "ruby-mode" "Major mode for ruby code")
 
@@ -247,7 +247,7 @@
   (c-subword-mode))
 
 ;; Javascript for json editing.
-(add-to-list 'load-path "~/.emacs.d/javascript")
+(add-to-list 'load-path "~/emacs-init/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (autoload 'javascript-mode "javascript" nil t)
 (add-hook 'javascript-mode 'turn-on-subword-mode)
@@ -311,10 +311,10 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Add YASnippet support
 ;;
-(add-to-list 'load-path "~/.emacs.d/plugins/yasnippet-0.6.1c")
+(add-to-list 'load-path "~/emacs-init/plugins/yasnippet-0.6.1c")
 (require 'yasnippet) ;; not yasnippet-bundle
 (yas/initialize)
-(yas/load-directory "~/.emacs.d/plugins/yasnippet-0.6.1c/snippets")
+(yas/load-directory "~/emacs-init/plugins/yasnippet-0.6.1c/snippets")
 (setq require-final-newline nil)
 
 ;; Paredit setup
@@ -479,9 +479,9 @@ that uses 'font-lock-warning-face'."
 
 
 ;; Turn on auto completion.
-(add-to-list 'load-path "~/.emacs.d/contrib/")
+(add-to-list 'load-path "~/emacs-init/contrib/")
 (require 'auto-complete-config)
-(add-to-list 'ac-dictionary-directories "~/.emacs.d/contrib/ac-dict")
+(add-to-list 'ac-dictionary-directories "~/emacs-init/contrib/ac-dict")
 (ac-config-default)
 (ac-flyspell-workaround)
 
@@ -506,7 +506,7 @@ that uses 'font-lock-warning-face'."
 ;; !!! NOTE !!! if you move emacs versions, be sure to recompile the files
 ;; in the org-mode directory.  Also, if you hack org mode...
 ;;
-;; cd ~/.emacs.d/contrib/org-mode/lisp
+;; cd ~/emacs-init/contrib/org-mode/lisp
 ;; make
 ;;
 ;; make install-info to update the org-mode docs.
@@ -517,9 +517,9 @@ that uses 'font-lock-warning-face'."
 ;;
 
 ;; A directory for non-default orgmode files.
-(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/lisp")
-(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/contrib/lisp")
-(add-to-list 'load-path "~/.emacs.d/contrib/org-mode/EXPERIMENTAL")
+(add-to-list 'load-path "~/emacs-init/contrib/org-mode/lisp")
+(add-to-list 'load-path "~/emacs-init/contrib/org-mode/contrib/lisp")
+(add-to-list 'load-path "~/emacs-init/contrib/org-mode/EXPERIMENTAL")
 
 ;; Install the custom org mode.
 (require 'org-install)
@@ -631,7 +631,7 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Info additions
 ;;
-(add-to-list 'load-path "~/.emacs.d/contrib/pydoc-info-0.2/")
+(add-to-list 'load-path "~/emacs-init/contrib/pydoc-info-0.2/")
 (require 'pydoc-info)
 
 ;;
@@ -737,7 +737,7 @@ that uses 'font-lock-warning-face'."
 (global-set-key (kbd "M-/") 'dabbrev-expand)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Scala Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-to-list 'load-path "~/.emacs.d/contrib/scala-emacs")
+(add-to-list 'load-path "~/emacs-init/contrib/scala-emacs")
 (require 'scala-mode-auto)
 
 
@@ -760,7 +760,7 @@ that uses 'font-lock-warning-face'."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-to-list 'load-path "~/.emacs.d/contrib/confluence-el")
+(add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
 (require 'confluence)
 (setq confluence-url "https://iwww.corp.linkedin.com/wiki/cf/rpc/xmlrpc")
 (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
