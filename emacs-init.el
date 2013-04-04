@@ -150,6 +150,9 @@
 ;; More emacs key strokes.
 ;; http://www.cs.rutgers.edu/LCSR-Computing/some-docs/emacs-chart.html
 ;;
+;; Mastering eshell:
+;;  http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/
+;;
 (require 'cl)
 (require 'find-lisp)
 
@@ -256,10 +259,17 @@
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Shell Mode options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Emacs now supports colors :-)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+;; But it doesn't support less, so turn the pager off.
+(setenv "GIT_PAGER" "")
+
 ;; Set Chrome as the default browser
 (setq browse-url-generic-program "/opt/google/chrome/google-chrome")
-
-;; http://go/crt
 
 ;; Smarter buffer switching
 ;;
@@ -764,4 +774,3 @@ that uses 'font-lock-warning-face'."
 (require 'confluence)
 (setq confluence-url "https://iwww.corp.linkedin.com/wiki/cf/rpc/xmlrpc")
 (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
-

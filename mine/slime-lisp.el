@@ -25,7 +25,7 @@
     (unload-feature 'slime)
   (error nil))
 
-(setq inferior-lisp-program "/usr/local/bin/sbcl")
+(setq inferior-lisp-program "ccl64")
 (setq load-path (remove-if (| string-match "slime" %) load-path))
 (add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 (require 'slime)
@@ -36,5 +36,3 @@
 ;; unused.
 ;(add-hook ’lisp-mode-hook (lambda () (slime-mode t)))
 ;(add-hook ’inferior-lisp-mode-hook (lambda () (inferior-slime-mode t)))
-
-
