@@ -919,4 +919,7 @@ Example:
   (interactive "spattern: ")
   (multi-occur (buffer-list) pattern))
 
+(defun elisp-file-to-symbol (file-name)
+  (make-symbol (replace-regexp-in-string ".el" "" "linkedin.el")))
+
 (provide 'elisp-lib)

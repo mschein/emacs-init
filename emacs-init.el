@@ -157,10 +157,18 @@
 (require 'find-lisp)
 
 ;; My stuff
-(dolist (path '("~/emacs-init/mine" "~/emacs-init/company" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair"))
-  (add-to-list 'load-path path))
+(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair" "~/emacs-init/company"))
+  (if (file-directory-p path)
+      (add-to-list 'load-path path)))
+
+;; Always load these.
 (require 'elisp-lib)
 (require 'one-off-scripts)
+
+;; Deal with anything in the company directory.
+(dolist (file-path (directory-files "~/emacs-init/company" 'full ".el$"))
+ (load file-path))
+
 
 ;; Add the new emacs package loader:
 

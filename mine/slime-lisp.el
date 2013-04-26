@@ -32,7 +32,9 @@
 (require 'slime)
 (require 'slime-autoloads)
 (slime-setup '(slime-fancy))
-(load (expand-file-name "~/quicklisp/slime-helper.el"))
+(if (file-exists-p "~/quicklisp/slime-helper.el")
+    (load (expand-file-name "~/quicklisp/slime-helper.el")))
+
 
 ;(setq slime-multiprocessing t)
 (provide 'slime-lisp)
