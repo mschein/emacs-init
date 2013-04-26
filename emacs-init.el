@@ -166,8 +166,10 @@
 (require 'one-off-scripts)
 
 ;; Deal with anything in the company directory.
-(dolist (file-path (directory-files "~/emacs-init/company" 'full ".el$"))
- (load file-path))
+(let ((company-dir "~/emacs-init/company"))
+  (if (file-directory-p company-dir)
+      (dolist (file-path (directory-files company-dir 'full ".el$"))
+	(load file-path))))
 
 
 ;; Add the new emacs package loader:
