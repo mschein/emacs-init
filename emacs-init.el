@@ -660,16 +660,26 @@ that uses 'font-lock-warning-face'."
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
 (add-to-list 'interpreter-mode-alist '("python" . python-mode))
 
+(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
+
 ;;
 ;; Autopair mode
 ;;
+;; NOTE: wrong argument characterp issues are usually autopair's fault.
+;;
 (require 'autopair)
+
+;; Don't add autopair in certain modes
+(add-hook 'sldb-mode-hook #'(lambda ()
+                              (setq autopair-dont-activate t)
+                              (autopair-mode -1)))
+(add-hook 'term-mode-hook #'(lambda ()
+                              (setq autopair-dont-activate t)
+                              (autopair-mode -1)))
 
 ;; enable autopair in all buffers
 (autopair-global-mode)
-(add-hook 'sldb-mode-hook #'(lambda () (setq autopair-dont-activate t)))
 
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
 
 
 ;;;;;;;;;;;;;;;;;;;;;  Linkedin Specific Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
