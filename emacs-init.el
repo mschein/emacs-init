@@ -257,7 +257,7 @@
 
 ;; Want one function to handle this, since this function changes when we upgrade
 (defun turn-on-subword-mode ()
-  (c-subword-mode))
+  (subword-mode))
 
 ;; Javascript for json editing.
 (add-to-list 'load-path "~/emacs-init/javascript")
