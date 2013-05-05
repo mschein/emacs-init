@@ -408,7 +408,7 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\M-n" 'forward-paragraph)
 
 (global-set-key "\C-cd" 'duplicate-line)
-(global-set-key "\C-cg" 'jump-to-abbrev-li)
+;;(global-set-key "\C-cg" 'jump-to-abbrev-li)
 
 
 ;; put all backup files in one place
