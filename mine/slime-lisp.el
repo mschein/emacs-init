@@ -27,13 +27,13 @@
 
 (setq inferior-lisp-program "ccl64")
 (setq load-path (remove-if (| string-match "slime" %) load-path))
-(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
+;;(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 
-(require 'slime)
-(require 'slime-autoloads)
-(slime-setup '(slime-fancy))
-(if (file-exists-p "~/quicklisp/slime-helper.el")
-    (load (expand-file-name "~/quicklisp/slime-helper.el")))
+(when (file-exists-p "~/quicklisp/slime-helper.el")
+  (load (expand-file-name "~/quicklisp/slime-helper.el"))
+  (require 'slime)
+  (require 'slime-autoloads)
+  (slime-setup '(slime-fancy)))
 
 
 ;(setq slime-multiprocessing t)
