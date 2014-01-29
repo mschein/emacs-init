@@ -6,6 +6,8 @@
 ;; 2. Need to figure out tab and hippie expand to
 ;;    get everything to play nicelyl
 ;;
+;; find Jedi
+;;
 ;; Orgmode notes
 ;; to get Emacs documentation:
 ;; M-x info (lots of stuff here)
@@ -417,6 +419,8 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\C-cd" 'duplicate-line)
 ;;(global-set-key "\C-cg" 'jump-to-abbrev-li)
 
+;; Save desktops
+(desktop-save-mode 1)
 
 ;; put all backup files in one place
 (setq backup-by-copying t      ; don't clobber symlinks
@@ -424,7 +428,7 @@ that uses 'font-lock-warning-face'."
       '(("." . "~/.emacs-backups"))    ; don't litter my fs tree
       delete-old-versions t
       kept-new-versions 8
-      kept-old-versions 2
+      kept-old-versions 8
       version-control t)      ; use versioned backups
 
 ;;
@@ -490,23 +494,7 @@ that uses 'font-lock-warning-face'."
 ;;         (text-mode . dabbrev-completion)
 ;;         (slime-repl-mode . slime-complete-symbol)))
 
-
-;; (defun fix-font ()
-;;   (interactive)
-;;   (set-face-attribute 'default nil :height 100)
-;;   ;;  (set-default-font "-adobe-courier-medium-r-normal--12-120-75-75-m-70-iso10646-1")
-;;   ;;(set-default-font "Bitstream Vera Sans Mono-10")
-;; ;;  (set-default-font "-bitstream-courier 10 pitch-medium-r-normal--0-0-0-0-m-0-adobe-standard")
-
-;;   ;; (set-default-font "DejaVu Sans Mono-10")
-;;   ;;(set-default-font "DejaVu Sans Mono-13")
-;;   )
-
-;; (fix-font)
-
-
 ;; Turn on auto completion.
-(add-to-list 'load-path "~/emacs-init/contrib/")
 (require 'auto-complete-config)
 (add-to-list 'ac-dictionary-directories "~/emacs-init/contrib/ac-dict")
 (ac-config-default)
@@ -568,7 +556,6 @@ that uses 'font-lock-warning-face'."
 (setq org-todo-keywords
       '((sequence "TODO(t!)"
                   "WORKING(w!)" "PAUSED(p!)" "QUERY(q)" "TESTING(e!)"
-
                   "|" "SENT(s!)" "DONE(d!)" "LATER(l!)" "FAILED(f!)" "DELAYED(a!)" "CANCELED(c!)" "DUPLICATE(u!)")
 	))
 
@@ -666,7 +653,6 @@ that uses 'font-lock-warning-face'."
 ;;
 (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
 (add-to-list 'interpreter-mode-alist '("python" . python-mode))
-
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
 
 ;;
@@ -692,6 +678,7 @@ that uses 'font-lock-warning-face'."
 ;;;;;;;;;;;;;;;;;;;;;  Linkedin Specific Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Set the indent level to be 2 spaces
 (setq python-indent 2)
+(setq python-indent-offset 2)
 
 ;; Remember that in python mode when you eval a region it only produces
 ;; the visible results of doing so.
@@ -710,11 +697,18 @@ that uses 'font-lock-warning-face'."
                      'flymake-create-temp-inplace))
          (local-file (file-relative-name temp-file
                                          (file-name-directory buffer-file-name))))
-    (list "epylint" (list local-file))))
+    (list "flake8" (list local-file))))
 
 (when (load "flymake" t)
    (add-to-list 'flymake-allowed-file-name-masks
                 '("\\.py\\'" flymake-pycheck-init)))
+
+;; If we're in python mode, make sure flymake comes on.
+(add-hook 'python-mode-hook #'(lambda ()
+                                ;; enable flymake-python for files with no '.py' extension
+                                (make-local-variable 'flymake-allowed-file-name-masks)
+                                (add-to-list 'flymake-allowed-file-name-masks
+                                             '("" flymake-pycheck-init))))
 
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
