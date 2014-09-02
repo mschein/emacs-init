@@ -160,6 +160,7 @@
 ;; (require 's)
 ;; (require 'dash)
 ;; (require 'dash-functional)
+;(require 'cssh)
 
 ;; My stuff
 (dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair" "~/emacs-init/company"))
@@ -196,10 +197,10 @@
 ;;; interfacing with ELPA, the package archive.
 ;;; Move this code earlier if you want to reference
 ;;; packages in your .emacs.
-;; (when
-;;     (load
-;;      (expand-file-name "~/emacs-init/elpa/package.el"))
-;;   (package-initialize))
+(when
+    (load
+     (expand-file-name "~/emacs-init/elpa/package.el"))
+  (package-initialize))
 
 (require 'package)
 (add-to-list 'package-archives
@@ -371,6 +372,10 @@ that uses 'font-lock-warning-face'."
 ;; (set-face-attribute 'default nil :height 80)
 
 
+;; Magit options
+(add-hook 'magit-mode-hook 'magit-load-config-extensions)
+
+
 ;;
 ;; Make window navigation easier
 ;;
@@ -390,6 +395,8 @@ that uses 'font-lock-warning-face'."
 (defalias 'i 'insert-interactive)
 (defalias 'ia 'insert-author)
 (defalias 'scc 'slime-connect-clj)
+(defalias 'ms 'magit-status)
+(defalias 'ml 'magit-log)
 
 (defalias 'sb 'multi-occur-all)
 (defalias 'sbx 'multi-occur-in-matching-buffers)
@@ -400,9 +407,10 @@ that uses 'font-lock-warning-face'."
 (defalias 'ucr 'uncomment-region)
 (defalias 'shd 'shell-dir)
 (defalias 'rlf 'reload-file)
-;(defalias 'sbx 'multi-isearch-buffers)
 (defalias 'ls 'linkedin-search)
 (defalias 'ul 'underline)
+(defalias 'ytp 'yank-to-file-location-python)
+
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)

@@ -927,4 +927,8 @@ Example:
 (defun elisp-file-to-symbol (file-name)
   (make-symbol (replace-regexp-in-string ".el" "" "linkedin.el")))
 
+(defun yank-to-file-location-python ()
+  (interactive)
+  (kill-new (format "b %s:%d" (buffer-file-name) (line-number-at-pos))))
+
 (provide 'elisp-lib)
