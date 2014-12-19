@@ -25,7 +25,11 @@
     (unload-feature 'slime)
   (error nil))
 
-(setq inferior-lisp-program "ccl64")
+;; (setq inferior-lisp-program "~/bin/ccl64")
+(setq slime-lisp-implementations
+      '((sbcl ("sbcl"))
+        (ccl ("~/bin/ccl64" "--quiet"))
+        (abcl ("~/bin/abcl"))))
 (setq load-path (remove-if (| string-match "slime" %) load-path))
 ;;(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 
@@ -34,6 +38,17 @@
   (require 'slime)
   (require 'slime-autoloads)
   (slime-setup '(slime-fancy)))
+
+;; Set the common lisp hyperspec root
+(setf common-lisp-hyperspec-root "file:/Users/mscheinh/doc/common-lisp-hyperspec/HyperSpec/")
+
+;; This doesn't work that well...
+;; (require 'info-look)
+;; (info-lookup-add-help
+;;  :mode 'lisp-mode
+;;  :regexp "[^][()'\" \t\n]+"
+;;  :ignore-case t
+;;  :doc-spec '(("(ansicl)Symbol Index" nil nil nil)))
 
 
 ;(setq slime-multiprocessing t)

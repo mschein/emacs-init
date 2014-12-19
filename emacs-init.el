@@ -155,6 +155,9 @@
 ;;
 (require 'cl)
 (require 'find-lisp)
+;; (require 's)
+;; (require 'dash)
+;; (require 'dash-functional)
 
 ;; My stuff
 (dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair" "~/emacs-init/company"))
@@ -183,6 +186,8 @@
 ;; a new emacs.
 (require 'slime-lisp)
 
+;; Add more info paths
+(add-to-list 'Info-default-directory-list "/usr/local/share/info")
 
 ;;; This was installed by package-install.el.
 ;;; This provides support for the package system and
@@ -194,10 +199,10 @@
 ;;      (expand-file-name "~/emacs-init/elpa/package.el"))
 ;;   (package-initialize))
 
-;; (require 'package)
-;; (add-to-list 'package-archives
-;;              '("marmalade" . "http://marmalade-repo.org/packages/"))
-;; (package-initialize)
+(require 'package)
+(add-to-list 'package-archives
+             '("marmalade" . "http://marmalade-repo.org/packages/"))
+(package-initialize)
 
 
 ;; Set up the keyboard so the delete key on both the regular keyboard
@@ -361,7 +366,7 @@ that uses 'font-lock-warning-face'."
 (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
 ;; pick a font.
-(set-face-attribute 'default nil :height 80)
+;; (set-face-attribute 'default nil :height 80)
 
 
 ;;
@@ -386,6 +391,8 @@ that uses 'font-lock-warning-face'."
 
 (defalias 'sb 'multi-occur-all)
 (defalias 'sbx 'multi-occur-in-matching-buffers)
+
+(defalias 'ms 'magit-status)
 
 (defalias 'cr 'comment-region)
 (defalias 'ucr 'uncomment-region)
