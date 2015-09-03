@@ -6,6 +6,9 @@
 ;; 2. Need to figure out tab and hippie expand to
 ;;    get everything to play nicelyl
 ;;
+;; To open a file with sudo do:
+;; /sudo::
+;;
 ;; find Jedi
 ;;
 ;; Orgmode notes
@@ -155,6 +158,17 @@
 ;; Mastering eshell:
 ;;  http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/
 ;;
+;; M-x find-name-dired: you will be prompted for a root directory and a filename pattern.
+;; Press t to "toggle mark" for all files found.
+;; Press Q for "Query-Replace in Files...": you will be prompted for query/substitution regexps.
+;; Proceed as with query-replace-regexp: SPACE to replace and move to next match, n to skip a match, etc.
+;;
+;; Magit, append a commit message with no changes.
+;; C-u c
+;; To do an ammended commit.
+;; C-c C-a
+;; lots of interesting features here... about chunks as well. I should use them more.
+;;
 (require 'cl)
 (require 'find-lisp)
 ;; (require 's)
@@ -245,8 +259,10 @@
 
 ;;
 ;; Mike's customizations
+;; XXX May want to change how I do this.
 ;;
 (setq c-basic-offset 4)
+(setq js-indent-level 2)
 
 ;; Make goto-line a command.
 (global-set-key "\M-g" 'goto-line)
@@ -386,31 +402,31 @@ that uses 'font-lock-warning-face'."
 (global-set-key [M-down]  'windmove-down)
 
 ;; Thanks Steve.
-(defalias 'qr  'query-replace "A short cut for query-replace")
-(defalias 'qrr 'query-replace-regexp "A short cut for query-replace-regexp")
-(defalias 'rr 'replace-regexp "A short cut for replace-regexp")
+(defalias 'cr 'comment-region)
 (defalias 'eb 'eval-buffer)
-(defalias 'sl 'sort-lines)
-(defalias 'ir 'indent-region)
+(defalias 'fnd 'find-name-dired)
 (defalias 'i 'insert-interactive)
 (defalias 'ia 'insert-author)
-(defalias 'scc 'slime-connect-clj)
-(defalias 'ms 'magit-status)
+(defalias 'ir 'indent-region)
+(defalias 'ls 'linkedin-search)
 (defalias 'ml 'magit-log)
-
+(defalias 'ms 'magit-status)
+(defalias 'qr  'query-replace "A short cut for query-replace")
+(defalias 'qrr 'query-replace-regexp "A short cut for query-replace-regexp")
+(defalias 'rlf 'reload-file)
+(defalias 'rr 'replace-regexp "A short cut for replace-regexp")
 (defalias 'sb 'multi-occur-all)
 (defalias 'sbx 'multi-occur-in-matching-buffers)
-
 (defalias 'ms 'magit-status)
 
 (defalias 'cr 'comment-region)
 (defalias 'ucr 'uncomment-region)
+(defalias 'scc 'slime-connect-clj)
 (defalias 'shd 'shell-dir)
-(defalias 'rlf 'reload-file)
-(defalias 'ls 'linkedin-search)
+(defalias 'sl 'sort-lines)
+(defalias 'ucr 'uncomment-region)
 (defalias 'ul 'underline)
 (defalias 'ytp 'yank-to-file-location-python)
-
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
