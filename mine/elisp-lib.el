@@ -931,4 +931,9 @@ Example:
   (interactive)
   (kill-new (format "b %s:%d" (buffer-file-name) (line-number-at-pos))))
 
+(defun clear-buffer (buffer)
+  "Clear the contents of the named buffer."
+  (with-current-buffer buffer
+    (delete-region (point-min) (point-max))))
+
 (provide 'elisp-lib)

@@ -158,6 +158,12 @@ def %s_update(%s_id, conn=engine, **kwargs):
        )
   )
 
+(defun find-all-connected-hosts ()
+  (interactive)
+  (let ((buffer (get-buffer-create "*local-network*")))
+    (clear-buffer buffer)
+    (shell-command "ping -c 3 192.168.1.255")
+    (shell-command "arp -a" buffer)
+    (switch-to-buffer buffer)))
+
 (provide 'one-off-scripts)
-
-

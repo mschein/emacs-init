@@ -243,6 +243,13 @@
 (setq column-number-mode 1)
 (show-paren-mode 1)
 
+;; OSX key bindings
+(when (eq system-type 'darwin) ;; mac specific settings
+  (setq mac-option-modifier 'alt)
+  (setq mac-command-modifier 'meta)
+  (global-set-key [kp-delete] 'delete-char) ;; sets fn-delete to be right-delete
+  )
+
 ;;
 ;; Get cperl-mode setup since it is better.
 ;;
@@ -479,6 +486,8 @@ that uses 'font-lock-warning-face'."
    (define-key flyspell-mode-map (kbd "C-;") 'undo))
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
 (add-hook 'text-mode-hook 'turn-on-flyspell)
+
+(setf exec-path (append exec-path '("/usr/local/bin")))
 
 ;(add-hook 'c-mode-common-hook 'flyspell-prog-mode)
 
