@@ -216,9 +216,15 @@
      (expand-file-name "~/emacs-init/elpa/package.el"))
   (package-initialize))
 
+;; Note!  Use list-packages instead of package-list-packages.
 (require 'package)
 (add-to-list 'package-archives
-             '("marmalade" . "http://marmalade-repo.org/packages/"))
+             '("marmalade" . "http://marmalade-repo.org/packages/") t)
+(add-to-list 'package-archives
+             '("melpa-stable" . "http://stable.melpa.org/packages/") t)
+
+(setf package-user-dir "~/emacs-init/emacs-packages")
+
 (package-initialize)
 
 
