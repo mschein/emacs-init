@@ -96,7 +96,7 @@
 ;;          automatically deal with error handling.
 ;;       5. automatically launch a webbrowser at a specific page
 ;;       6. webscraping?
-;;       7. better csv display?
+;       7. better csv display?
 ;;       8. log analysis?
 ;;
 ;; icicles? ... super search for everything http://www.emacswiki.org/cgi-bin/wiki/Icicles
@@ -195,7 +195,6 @@
 ;; Add the new emacs package loader:
 
 
-
 ;; For Clojure work use nReple and ritz
 
 
@@ -205,16 +204,6 @@
 
 ;; Add more info paths
 (add-to-list 'Info-default-directory-list "/usr/local/share/info")
-
-;;; This was installed by package-install.el.
-;;; This provides support for the package system and
-;;; interfacing with ELPA, the package archive.
-;;; Move this code earlier if you want to reference
-;;; packages in your .emacs.
-(when
-    (load
-     (expand-file-name "~/emacs-init/elpa/package.el"))
-  (package-initialize))
 
 ;; Note!  Use list-packages instead of package-list-packages.
 (require 'package)
