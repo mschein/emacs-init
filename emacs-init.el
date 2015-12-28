@@ -62,7 +62,6 @@
 ;; man: man in emacs.
 ;; ediff: diff 2 files
 ;; elisp-index-search: find help for commands
-;; package updater: M-x package-list-packages
 ;;
 ;; to turn off annoying case issues, do:
 ;; M-x set-variable: case-fold-search to nil
@@ -70,6 +69,7 @@
 ;; remember google supports g4
 ;;
 ;; M-x package-list-packages
+;; or I think list-pacakages is better sometimes.
 ;;
 ;; eshell might be fun instead of shell
 ;;
