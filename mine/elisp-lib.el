@@ -936,4 +936,10 @@ Example:
   (with-current-buffer buffer
     (delete-region (point-min) (point-max))))
 
+(defun mount-dmg (path)
+  (shell-command (combine-and-quote-strings (list "hdiutil" "attach" path))))
+
+(defun umount-dmg (path)
+  (shell-command (combine-and-quote-strings (list "hdiutil" "detach" path))))
+
 (provide 'elisp-lib)
