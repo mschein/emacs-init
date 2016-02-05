@@ -27,11 +27,11 @@
 (defun printf (fmt &rest args)
   (print (apply #'format fmt args)))
 
-(defmacro* when-let ((name test) &rest body)
+(defmacro* m-when-let ((name test) &rest body)
   "Provides a (when) macro with a let binding.
 When-let binds a name to the result of the a test for use inside the BODY.
 
-So (when-let (res (+ 1 2 3))
+So (m-when-let (res (+ 1 2 3))
      (print res)
      (- res 1))
 returns 5 and prints 6.  res is the name, and (+ 1 2 3) is the
@@ -44,11 +44,11 @@ test.  If the test returned nil, then the body will not execute."
   `(let ((_it_ ,test))
      (if _it_ ,@forms)))
 
-(defmacro if-let (test-binding &rest forms)
+(defmacro m-if-let (test-binding &rest forms)
   "Provides an if macro that binds a value a la let.
 
 Example:
- (if-let (res (fetch-string))
+ (m-if-let (res (fetch-string))
    (convert-to-something res)
    (error \"failed to fetch string\"))
 Here res is the name, and (fetch-string) is the
@@ -77,24 +77,24 @@ of the test."
   ;; "car"
   (car
    (reduce (fn (prev-bindings binding)
-               `((when-let ,binding
-                    ,@prev-bindings)))
+               `((m-when-let ,binding
+                   ,@prev-bindings)))
            (reverse test-bindings)
            :initial-value forms)))
 
 (defun append-if (test lst)
-  (if-let (res test)
+  (m-if-let (res test)
           (append lst (to-list res))))
 
 (defun cons-if (test lst)
-  (if-let (res test)
+  (m-if-let (res test)
           (cons res lst)))
 
 (defun _make-arg-list (arg-alist)
   (let ((out-arg-list '()))
     (dotimes (i (length arg-alist))
       ;; &rest doesn't work yet... how to deal with it?
-      (if-let (res (assoc (number-to-string  (1+ i)) arg-alist))
+      (m-if-let (res (assoc (number-to-string  (1+ i)) arg-alist))
        (destructuring-bind (arg . sym) res
          (setf out-arg-list (cons sym out-arg-list)))
        (error "Missing argument %%%s in | form" (1+ i))))
@@ -157,7 +157,7 @@ of the test."
          ;; TODO(scheinholtz): Switch to loop, to get rid of the (1+ i)
          (dotimes (i (length arg-alist))
            (let ((arg-pos (1+ i)))
-             (if-let (res (assoc (number-to-string arg-pos) arg-alist))
+             (m-if-let (res (assoc (number-to-string arg-pos) arg-alist))
                      (destructuring-bind (arg . sym) res
                        (setf out-arg-list (cons sym out-arg-list)))
                      (error "Missing argument %%%s in f form" arg-pos))))
@@ -173,7 +173,7 @@ of the test."
               (if (equal '| elm)
                   (error "Nested |'s are not allowed."))
 
-            (if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
+            (m-if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
               (let ((new-name (gensym)))
                 ;; TODO(scheinholtz) caseq or case-eq?
                 ;; Does that exist?
@@ -185,9 +185,9 @@ of the test."
                                          (setf new-name single-arg)
                                        (setf single-arg new-name)))
                  ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
-                 (t (if-let (old-sym (aget alist-args arg-num))
-                            (setf new-name old-sym)
-                            (setf alist-args (acons arg-num new-name alist-args)))))
+                 (t (m-if-let (old-sym (aget alist-args arg-num))
+                              (setf new-name old-sym)
+                              (setf alist-args (acons arg-num new-name alist-args)))))
                 new-name)
               elm))
           elm)))
@@ -448,7 +448,7 @@ Example:
   (let ((index 0)
         (out '()))
     (while (< index (length str))
-      (if-let (matched (string-find regex str index))
+      (m-if-let (matched (string-find regex str index))
          (progn
            (setq index (match-end 0))
            (setq out (append out matched)))
@@ -660,8 +660,8 @@ Example:
 
 ;; sun: 0, mon: 1, Sat: 6
 (defun prev-day-of-week (time day-of-week)
-  (if-let (day-of-week (if (numberp day-of-week)
-                           day-of-week
+  (m-if-let (day-of-week (if (numberp day-of-week)
+                             day-of-week
                          (aget week-days day-of-week)))
     (do ((i 1 (+ i 1)))
         ((>= i 8))
@@ -784,7 +784,7 @@ Example:
   (interactive)
   (let ((pos (point)))
     (re-search-backward "(defun +[^ ]+ +(\\(.*?\\))")
-    (if-let (arg-str (match-string-no-properties 1))
+    (m-if-let (arg-str (match-string-no-properties 1))
        (progn
          (printf "arg-str: |%s|\n" arg-str)
          (goto-char pos)
