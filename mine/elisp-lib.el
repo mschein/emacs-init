@@ -698,8 +698,9 @@ Example:
 (defun string-remove (pattern str)
   (string-replace pattern "" str))
 
-(defun string-contains (char str)
-  ())
+;; Is this needed?
+(defun remove-if-in-set (set seq)
+  (remove-if (| find % set :test #'equal) seq))
 
 ;; TODO(scheinholtz): Work on me later
 ;; more loop foo.

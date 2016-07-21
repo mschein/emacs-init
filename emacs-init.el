@@ -758,6 +758,28 @@ that uses 'font-lock-warning-face'."
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
 
+;;
+;; Turn on a jslint flymake
+;;
+(defun flymake-js-init ()
+  (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                     'flymake-create-temp-inplace))
+         (local-file (file-relative-name temp-file
+                                         (file-name-directory buffer-file-name))))
+    (list "jshint" (list "--reporter=unix" local-file))))
+
+(when (load "flymake" t)
+   (add-to-list 'flymake-allowed-file-name-masks
+                '("\\.js\\'" flymake-js-init)))
+
+
+;;
+;; Turn off flymake for xml/html since I can't get it to work
+;;
+(setf flymake-allowed-file-name-masks (remove-if
+                                       (| find (car %) '("\\.html?\\'" "\\.xml\\'") :test #'equal)
+                                       flymake-allowed-file-name-masks))
+
 
 ;; Linkedin allows crazy long lines.
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
