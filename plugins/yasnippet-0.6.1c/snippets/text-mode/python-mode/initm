@@ -9,20 +9,25 @@
 
 import os
 import sys
+import argparse
 
-import linkedin.cli
 
 ######################################################################
 # Script Start
 ######################################################################
 
-@linkedin.cli.entrypoint
-def main(cli):
-  # Example arguments:
-  # cli.add_argument('--url', default='http://localhost:5000', help='Url to connect to. (default: %(default)s)')
-  # cli.add_argument('--total_requests', default=50, type=int, help='How many times to execute the thr
-  # cli.add_argument('--full_refresh', action='store_true', help='Do the full cache rebuild')
+def main():
+    parser = argparse.ArgumentParser()
 
-  with cli.run():
+    # Example arguments:
+    # parser.add_argument('--url', default='http://localhost:5000', help='Url to connect to. (default: %(default)s)')
+    # parser.add_argument('--total_requests', default=50, type=int, help='How many times to execute the thr
+    # parser.add_argument('--full_refresh', action='store_true', help='Do the full cache rebuild')
 
-    pass
+    args = parser.parse_args()
+
+    # New Code Here...
+
+
+if __name__ == '__main__':
+    main()
