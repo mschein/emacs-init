@@ -4,7 +4,7 @@
 ;; TODO:
 ;; 1. reorg doc here.
 ;; 2. Need to figure out tab and hippie expand to
-;;    get everything to play nicelyl
+;;    get everything to play nicely
 ;;
 ;; To open a file with sudo do:
 ;; /sudo::
@@ -158,6 +158,8 @@
 ;; Mastering eshell:
 ;;  http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/
 ;;
+;;
+;; Recursively search files.
 ;; M-x find-name-dired: you will be prompted for a root directory and a filename pattern.
 ;; Press t to "toggle mark" for all files found.
 ;; Press Q for "Query-Replace in Files...": you will be prompted for query/substitution regexps.
@@ -264,7 +266,6 @@
 ;; XXX May want to change how I do this.
 ;;
 (setq c-basic-offset 4)
-(setq js-indent-level 2)
 
 ;; Make goto-line a command.
 (global-set-key "\M-g" 'goto-line)
@@ -285,11 +286,18 @@
 (defun turn-on-subword-mode ()
   (subword-mode))
 
-;; Javascript for json editing.
+
+;;
+;; Javascript Configuration
+;;
 (add-to-list 'load-path "~/emacs-init/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (autoload 'javascript-mode "javascript" nil t)
 (add-hook 'javascript-mode 'turn-on-subword-mode)
+
+(setq js-indent-level 4)
+(setq sqml-basic-offset 4)
+
 
 ;; Allow these functions.
 (put 'upcase-region 'disabled nil)
@@ -805,7 +813,7 @@ that uses 'font-lock-warning-face'."
 ;; Turn off flymake for xml/html since I can't get it to work
 ;;
 (setf flymake-allowed-file-name-masks (remove-if
-                                       (| find (car %) '("\\.html?\\'" "\\.xml\\'") :test #'equal)
+                                       (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
                                        flymake-allowed-file-name-masks))
 
 
