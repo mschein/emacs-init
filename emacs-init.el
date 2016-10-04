@@ -421,13 +421,13 @@ that uses 'font-lock-warning-face'."
 (defalias 'ls 'linkedin-search)
 (defalias 'ml 'magit-log)
 (defalias 'ms 'magit-status)
+(defalias 'mff 'magit-find-file)
 (defalias 'qr  'query-replace "A short cut for query-replace")
 (defalias 'qrr 'query-replace-regexp "A short cut for query-replace-regexp")
 (defalias 'rlf 'reload-file)
 (defalias 'rr 'replace-regexp "A short cut for replace-regexp")
 (defalias 'sb 'multi-occur-all)
 (defalias 'sbx 'multi-occur-in-matching-buffers)
-(defalias 'ms 'magit-status)
 
 (defalias 'cr 'comment-region)
 (defalias 'ucr 'uncomment-region)
@@ -815,6 +815,11 @@ that uses 'font-lock-warning-face'."
 (setf flymake-allowed-file-name-masks (remove-if
                                        (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
                                        flymake-allowed-file-name-masks))
+
+(add-hook 'html-mode-hook
+          (lambda ()
+            ;; Default indentation is usually 2 spaces, changing to 4.
+            (set (make-local-variable 'sgml-basic-offset) 4)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
