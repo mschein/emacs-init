@@ -173,6 +173,7 @@
 ;;
 (require 'cl)
 (require 'find-lisp)
+(require 'midnight)
 ;; (require 's)
 ;; (require 'dash)
 ;; (require 'dash-functional)
