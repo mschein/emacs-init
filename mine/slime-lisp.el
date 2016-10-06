@@ -40,7 +40,10 @@
   (slime-setup '(slime-fancy)))
 
 ;; Set the common lisp hyperspec root
-(setf common-lisp-hyperspec-root "file:/Users/mscheinh/doc/common-lisp-hyperspec/HyperSpec/")
+
+;; To get the common lisp hyperspec locally
+;; 1. (ql:quickload "clhs")
+(load "/Users/mike/quicklisp/clhs-use-local.el" t)
 
 ;; This doesn't work that well...
 ;; (require 'info-look)
