@@ -865,3 +865,8 @@ that uses 'font-lock-warning-face'."
 (setq confluence-url "https://iwww.corp.linkedin.com/wiki/cf/rpc/xmlrpc")
 (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
 (put 'set-goal-column 'disabled nil)
+
+
+;; Get Hy
+(add-to-list 'load-path "~/emacs-init/emacs-packages/hy-mode")
+(require 'hy-mode)
