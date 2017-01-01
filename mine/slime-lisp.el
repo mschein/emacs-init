@@ -43,7 +43,7 @@
 
 ;; To get the common lisp hyperspec locally
 ;; 1. (ql:quickload "clhs")
-(load "/Users/mike/quicklisp/clhs-use-local.el" t)
+(load (format "/Users/%s/quicklisp/clhs-use-local.el" (user-full-name)) t)
 
 ;; This doesn't work that well...
 ;; (require 'info-look)
