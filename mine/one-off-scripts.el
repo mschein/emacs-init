@@ -165,5 +165,43 @@ def %s_update(%s_id, conn=engine, **kwargs):
     (shell-command "ping -c 3 192.168.1.255")
     (shell-command "arp -a" buffer)
     (switch-to-buffer buffer)))
+;;
+;; keeping this for reference
+;;
+;; (defun csv-normalize-ids-internal (&optional start-line start-number)
+;;   (let ((start-line (or start-line 1))
+;;         (start-number (or start-number 1)))
+
+;;     (save-excursion
+;;       ;; go back to the top and n lines down.
+;;       (goto-char (point-min))
+;;       (next-line start-line)
+;;       (message "Im here")
+
+;;       (let ((num start-number)
+;;             (total-lines (count-lines (point-min) (1+ (buffer-size)))))
+;;         (while (< (line-number-at-pos) total-lines)
+;;           (message "num is %d total-lines %d\n" num total-lines)
+;;           (beginning-of-line)
+;;           (replace-regexp "^[0-9]+" (number-to-string num))
+;;           (incf num)
+;;           (next-line))))))
+
+
+(defun csv-normalize-ids-internal (&optional start-line start-number)
+  (let ((start-line (or start-line 1))
+        (number (or start-number 1)))
+
+    (save-excursion
+      ;; go back to the top and n lines down.
+      (goto-char (point-min))
+      (next-line start-line)
+      (while (re-search-forward "^[0-9]+" nil t)
+        (replace-match (number-to-string number) nil nil)
+        (incf number)))))
+
+(defun csv-normalize-ids ()
+  (interactive)
+  (csv-normalize-ids-internal))
 
 (provide 'one-off-scripts)
