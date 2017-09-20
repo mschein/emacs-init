@@ -552,17 +552,28 @@ Example:
 (defun make-shell-buffer-name (path)
   (->> path split-path last-car (format "*sh-%s*")))
 
-;; How do I make this switch to the current file directory?
-(defun shell-open-dir (dir)
-  "Create a shell in the given directory"
+(defun with-open-dir (dir handle-fn)
+  "Call `handle-fn' with the name of an opened directory and buffer."
   (let ((name (generate-new-buffer-name (make-shell-buffer-name dir))))
     (switch-to-buffer name)
     (cd dir)
-    (shell name)))
+    (funcall handle-fn name)))
 
-(defun* shell-dir ()
+;; How do I make this switch to the current file directory?
+(defun shell-open-dir (dir)
+  "Create a shell in the given directory"
+  (with-open-dir dir (lambda (name)
+                       (shell name))))
+
+(defun shell-dir ()
   "Open a shell in the current default directory"
   (interactive)
+  (shell-open-dir default-directory))
+
+(defun eshell-dir ()
+  (interactive)
+  (with-open-dir (lambda (name)
+                   (eshell name)))
   (shell-open-dir default-directory))
 
 (defmacro insertf (fmt &rest args)
