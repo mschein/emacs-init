@@ -234,6 +234,10 @@
 
 (package-initialize)
 
+;; Setup 'which-key' so we get a list of key binding options
+;; as we type.
+(require 'which-key)
+(which-key-mode)
 
 ;; Set up the keyboard so the delete key on both the regular keyboard
 ;; and the keypad delete the character under the cursor and to the right
