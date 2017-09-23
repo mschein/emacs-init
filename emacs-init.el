@@ -901,3 +901,9 @@ that uses 'font-lock-warning-face'."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-hook 'go-mode-hook (lambda ()
+                          (setq tab-width 4)))
