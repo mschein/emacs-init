@@ -1,6 +1,0 @@
-#name : function template
-#contributor : Michael Scheinholtz
-# --
-(defconst $1 
-  '(($0))
-   )

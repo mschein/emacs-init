@@ -1,5 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: dbg
-# contributor: Mike Scheinholtz
-# --
-import pdb; pdb.set_trace()

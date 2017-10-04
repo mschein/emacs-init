@@ -1,8 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: handler
-# contributor: Michael Scheinholtz (mls@linkedin.com)
-# --
-class $0(SocketServer.BaseRequestHandler):
-
-  def handle(self):
-    pass

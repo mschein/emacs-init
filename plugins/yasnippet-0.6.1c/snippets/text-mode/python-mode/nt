@@ -1,6 +1,0 @@
-# -*- coding: utf-8 -*-
-# name: nt
-# contributor: Mike Scheinholtz
-# --
-
-$1 = namedtuple("${1:$(concat text)}", "$0")
