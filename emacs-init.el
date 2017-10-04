@@ -385,10 +385,15 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Add YASnippet support
 ;;
-(add-to-list 'load-path "~/emacs-init/plugins/yasnippet-0.6.1c")
 (require 'yasnippet) ;; not yasnippet-bundle
+;; relocate my person extension dir
+(setf yas-snippet-dirs (remove-if (| when (stringp %)
+                                     (cl-search ".emacs.d" %)) yas-snippet-dirs))
+(push "~/emacs-init/snippets" yas-snippet-dirs)
 (yas/initialize)
-(yas/load-directory "~/emacs-init/plugins/yasnippet-0.6.1c/snippets")
+
+
+;; We don't always need the final new line in a file.
 (setq require-final-newline nil)
 
 ;; Paredit setup
