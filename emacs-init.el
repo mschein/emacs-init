@@ -462,6 +462,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'ucr 'uncomment-region)
 (defalias 'ul 'underline)
 (defalias 'ytp 'yank-to-file-location-python)
+(defalias 'bu 'browse-url)
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
