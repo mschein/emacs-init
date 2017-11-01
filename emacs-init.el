@@ -463,6 +463,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'ul 'underline)
 (defalias 'ytp 'yank-to-file-location-python)
 (defalias 'bu 'browse-url)
+(defalias 'fnd 'find-name-dired)
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
@@ -618,7 +619,7 @@ that uses 'font-lock-warning-face'."
 (setq org-todo-keywords
       '((sequence "TODO(t!)"
                   "WORKING(w!)" "PAUSED(p!)" "QUERY(q)" "TESTING(e!)"
-                  "|" "SENT(s!)" "DONE(d!)" "LATER(l!)" "FAILED(f!)" "DELAYED(a!)" "CANCELED(c!)" "DUPLICATE(u!)")
+                  "|" "REVIEWING(r!)" "SENT(s!)" "DONE(d!)" "LATER(l!)" "FAILED(f!)" "DELAYED(a!)" "CANCELED(c!)" "DUPLICATE(u!)")
 	))
 
 (setq org-todo-keyword-faces
@@ -628,6 +629,7 @@ that uses 'font-lock-warning-face'."
         ("WORKING"  . (:foreground "gold2" :weight bold))
         ("PAUSED"  . (:foreground "gold2" :weight bold))
         ("TESTING"  . (:foreground "gold2" :weight bold))
+        ("REVIEWING"  . (:foreground "forestgreen" :weight bold))
         ("DONE"  . (:foreground "forestgreen" :weight bold))
         ("QUERY"  . (:foreground "darkred" :weight bold))
         ("SENT"  . (:foreground "SpringGreen4" :weight bold))

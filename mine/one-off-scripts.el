@@ -53,6 +53,7 @@
 (defun open-todo ()
   (interactive)
   (find-file-noselect "~/doc/todo.org")
+  (find-file-noselect "~/doc/notes.org")
   (switch-to-buffer-other-window "todo.org"))
 
 

@@ -12,6 +12,7 @@
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'cl-lib)
+(require 's)
 
 ;; Package-Requires
 ;;
@@ -22,6 +23,17 @@
 (setf lexical-binding t)
 
 (setf directory-sep-char ?/)
+
+(defun aget (key alist)
+  "I discovered I was missing this function.
+   I'm not entirely sure why I have it, it may
+   be worth getting rid of, but there are things that call it.
+
+   Return the cdr in an associated array
+   `key`: The key to lookup
+   `alist`: The associated list to check.
+  "
+  (cdr (assoc key alist)))
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
@@ -185,7 +197,7 @@ of the test."
                                          (setf new-name single-arg)
                                        (setf single-arg new-name)))
                  ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
-                 (t (m-if-let (old-sym (aget alist-args arg-num))
+                 (t (m-if-let (old-sym (aget arg-num alist-args))
                               (setf new-name old-sym)
                               (setf alist-args (acons arg-num new-name alist-args)))))
                 new-name)
@@ -673,7 +685,7 @@ Example:
 (defun prev-day-of-week (time day-of-week)
   (m-if-let (day-of-week (if (numberp day-of-week)
                              day-of-week
-                         (aget week-days day-of-week)))
+                         (aget day-of-week week-days)))
     (do ((i 1 (+ i 1)))
         ((>= i 8))
       (print i)
@@ -694,7 +706,7 @@ Example:
                     (:hour . 2)
                     (:min . 1)
                     (:sec . 0))))
-    (if-let (idx (aget time-map elm))
+    (if-let (idx (aget elm time-map))
             (nth idx (decode-time time))
             (raise (format "invalid time element %s" elm)))))
 
@@ -813,8 +825,7 @@ Example:
   (interactive "sdir: ")
   (setq default-directory dir))
 
-;; Maybe also allow this to do a dired?
-(defun jump-to-abbrev (abbrev table)
+(defun jump-to-abbrev (handler abbrev table)
   (if-let* ((abbrev-table-cell
              (remove-if-not
               (fn ((path-abbrev . _))
@@ -824,9 +835,14 @@ Example:
                       (string-case= abbrev path-abbrev)))
               table))
             (result-dir (cdar abbrev-table-cell)))
-     (shell-open-dir result-dir)
+     (funcall handler result-dir)
      (error (format "Invalid abbrev: %s" abbrev))))
 
+(defun jump-to-abbrev-shell (&rest args)
+  (apply 'jump-to-abbrev (cons 'shell-open-dir args)))
+
+(defun jump-to-abbrev-dired (&rest args)
+  (apply 'jump-to-abbrev (cons 'dired args)))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
