@@ -602,9 +602,11 @@ Example:
 
 (defun duplicate-line ()
   (interactive)
-  (let ((line (thing-at-point 'line)))
+  (end-of-line)
+  (open-line 1)
+  (beginning-of-line)
+  (let ((line (current-line)))
     (next-line)
-    (beginning-of-line)
     (insert line)
     (end-of-line)))
 
