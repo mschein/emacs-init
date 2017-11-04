@@ -478,10 +478,9 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\M-n" 'forward-paragraph)
 
 (global-set-key "\C-cd" 'duplicate-line)
-;;(global-set-key "\C-cg" 'jump-to-abbrev-li)
 
 ;; Save desktops
-(desktop-save-mode 1)
+(desktop-save-mode t)
 
 ;; put all backup files in one place
 (setq backup-by-copying t      ; don't clobber symlinks

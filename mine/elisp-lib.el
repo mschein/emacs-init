@@ -513,6 +513,12 @@ Example:
       (-> cmd (concat "\n") insert)
     (if doit (shell-command cmd)))))
 
+(defun run (&rest cmd-parts)
+  (shell-command (combine-and-quote-strings cmd-parts)))
+
+(defun run-to-str (&rest cmd-parts)
+  (shell-command-to-string (combine-and-quote-strings cmd-parts)))
+
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str)
   (mapcar #'string-trim (split-string str "\n" t)))
@@ -967,9 +973,26 @@ Example:
     (delete-region (point-min) (point-max))))
 
 (defun mount-dmg (path)
-  (shell-command (combine-and-quote-strings (list "hdiutil" "attach" path))))
+  (run "hdiutil" "attach" path))
 
 (defun umount-dmg (path)
-  (shell-command (combine-and-quote-strings (list "hdiutil" "detach" path))))
+  (run "hdiutil" "detach" path))
+
+(defmacro pushd (dir &rest body)
+  (let ((old-dir (gensym)))
+    `(let ((,old-dir default-directory))
+       (unwind-protect
+           (progn
+             (setf default-directory ,dir)
+             ,@body)
+         (setf default-directory ,old-dir)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Git commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun git-remote-origin-url ()
+  (interactive)
+  (string-trim (run-to-str "git" "config" "--get" "remote.origin.url")))
 
 (provide 'elisp-lib)
