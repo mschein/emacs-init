@@ -12,7 +12,6 @@
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'cl-lib)
-(require 's)
 
 ;; Package-Requires
 ;;
@@ -769,7 +768,7 @@ Example:
               (funcall cb_fn file))
           (if (and (>= max_depth 0) (file-directory-p file))
               (traverse-directories cb_fn file :file_match file_match :max_depth (1- max_depth))))
-        (remove-if-not 'is-real-file  (directory-files start_dir t))))
+        (remove-if-not #'is-real-file  (directory-files start_dir t))))
 
 (defun directory-last-dirname (path)
   "Return the name of the last directory in the path.
@@ -847,10 +846,10 @@ Example:
      (error (format "Invalid abbrev: %s" abbrev))))
 
 (defun jump-to-abbrev-shell (&rest args)
-  (apply 'jump-to-abbrev (cons 'shell-open-dir args)))
+  (apply #'jump-to-abbrev (cons 'shell-open-dir args)))
 
 (defun jump-to-abbrev-dired (&rest args)
-  (apply 'jump-to-abbrev (cons 'dired args)))
+  (apply #'jump-to-abbrev (cons 'dired args)))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
@@ -938,7 +937,7 @@ Example:
     (string-join-lst "/" (mapcar #'clean-element args))))
 
 (defun url-join-lst (elm)
-  (apply 'url-join elm))
+  (apply #'url-join elm))
 
 (defun goto-end-of-buffer ()
   (goto-char (point-max)))
