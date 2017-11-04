@@ -919,8 +919,6 @@ Example:
   ;; http://en.wikipedia.org/wiki/Simple_linear_regression
   )
 
-;;(defun ascii-graph (vals &keys ))
-
 (defun exponential-moving-avg (smoothing-constant nums)
   (reverse
    (reduce (fn (out-list new)
@@ -964,6 +962,11 @@ Example:
   (make-symbol (replace-regexp-in-string ".el" "" "linkedin.el")))
 
 (defun yank-to-file-location-python ()
+  "Take the path and line number of the current cursor position
+and put it into the kill ring.
+
+The idea is that this is an easy way to set a break point in a
+python debugging session."
   (interactive)
   (kill-new (format "b %s:%d" (buffer-file-name) (line-number-at-pos))))
 
