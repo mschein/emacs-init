@@ -439,6 +439,11 @@ Example:
   (let ((s (if (symbolp str) (symbol-name str) str)))
     (replace-regexp-in-string "\\(^[[:space:]\n]*\\|[[:space:]\n]*$\\)" "" s)))
 
+(defun string-trim-end (str)
+  "Remove only the tailing whitespace from STR."
+  (let ((s (if (symbolp str) (symbol-name str) str)))
+    (replace-regexp-in-string "\\([[:space:]\n]*$\\)" "" s)))
+
 ;; XXX This doesn't quite work the way I want
 ;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
 ;; find all numbers and put them in a list.
@@ -603,7 +608,7 @@ Example:
 
 (defun current-line ()
   "Return the line under the cursor, with properties."
-  (string-trim (thing-at-point 'line)))
+  (string-trim-end (thing-at-point 'line)))
 
 (defun duplicate-line ()
   (interactive)
