@@ -307,13 +307,18 @@
   (subword-mode))
 
 
-;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Javascript Configuration
-;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (add-to-list 'load-path "~/emacs-init/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
+(add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+
 (autoload 'javascript-mode "javascript" nil t)
 (add-hook 'javascript-mode 'turn-on-subword-mode)
+
+;; flymake stuff is done later.
 
 (setq js-indent-level 4)
 (setq sqml-basic-offset 4)
@@ -823,6 +828,8 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Turn on a jslint flymake
 ;;
+;;
+;; TODO: I should make a function to simplify these declarations.
 (defun flymake-js-init ()
   (let* ((temp-file (flymake-init-create-temp-buffer-copy
                      'flymake-create-temp-inplace))
@@ -834,6 +841,18 @@ that uses 'font-lock-warning-face'."
 (when (load "flymake" t)
    (add-to-list 'flymake-allowed-file-name-masks
                 '("\\.js\\'" flymake-js-init)))
+
+(defun flymake-eslint-init ()
+  (let* ((temp-file (flymake-init-create-temp-buffer-copy
+                     'flymake-create-temp-inplace))
+         (local-file (file-relative-name temp-file
+                                         (file-name-directory buffer-file-name))))
+    (message "local file: %s" local-file)
+    `("eslint" ("--no-color" "--format" "unix" ,local-file))))
+
+(when (load "flymake" t)
+   (add-to-list 'flymake-allowed-file-name-masks
+                '("\\.jsx\\'" flymake-eslint-init)))
 
 
 ;;
