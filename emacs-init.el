@@ -828,6 +828,11 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Turn on a jslint flymake
 ;;
+;; to setup on a new osx system:
+;; - brew install npm
+;; - npm install -g jshint
+;; - npm install -g eslint
+;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
 ;;
 ;; TODO: I should make a function to simplify these declarations.
 (defun flymake-js-init ()
