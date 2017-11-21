@@ -205,4 +205,14 @@ def %s_update(%s_id, conn=engine, **kwargs):
   (interactive)
   (csv-normalize-ids-internal))
 
+(defun jsx-mode ()
+  (interactive)
+  (web-mode)
+  ;; This is ugly to do with flymake, I should consider switching
+  ;; to flycheck.
+  (make-local-variable 'flymake-allowed-file-name-masks)
+  (setf flymake-allowed-file-name-masks (list '(".*\\'" flymake-eslint-init)))
+  (flymake-mode t))
+
+
 (provide 'one-off-scripts)

@@ -831,7 +831,7 @@ that uses 'font-lock-warning-face'."
 ;; to setup on a new osx system:
 ;; - brew install npm
 ;; - npm install -g jshint
-;; - npm install -g eslint
+;; - npm install -g eslint eslint-plugin-react babel-eslint
 ;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
 ;;
 ;; TODO: I should make a function to simplify these declarations.
@@ -925,7 +925,9 @@ that uses 'font-lock-warning-face'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(package-selected-packages (quote (magit google-this cider))))
+ '(package-selected-packages
+   (quote
+    (async auto-complete clojure-mode dash epl f flycheck flycheck-perl6 flymake-go git-commit go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist magit-popup perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key with-editor yasnippet magit google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
