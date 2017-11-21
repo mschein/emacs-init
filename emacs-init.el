@@ -832,9 +832,11 @@ that uses 'font-lock-warning-face'."
 ;; - brew install npm
 ;; - npm install -g jshint
 ;; - npm install -g eslint eslint-plugin-react babel-eslint
+;;
 ;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
 ;;
 ;; TODO: I should make a function to simplify these declarations.
+;;
 (defun flymake-js-init ()
   (let* ((temp-file (flymake-init-create-temp-buffer-copy
                      'flymake-create-temp-inplace))
