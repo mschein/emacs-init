@@ -264,8 +264,7 @@
 (when (eq system-type 'darwin) ;; mac specific settings
   (setq mac-option-modifier 'alt)
   (setq mac-command-modifier 'meta)
-  (global-set-key [kp-delete] 'delete-char) ;; sets fn-delete to be right-delete
-  )
+  (global-set-key [kp-delete] 'delete-char)) ;; sets fn-delete to be right-delete
 
 ;;
 ;; Get cperl-mode setup since it is better.
@@ -340,16 +339,8 @@
 ;; Set Chrome as the default browser
 (setq browse-url-generic-program "/opt/google/chrome/google-chrome")
 
-;; Smarter buffer switching
-;;
-;; also see:
-;;
-;; If you want to prevent certain buffers from showing up in the completion list, set ‘iswitchb-buffer-ignore’. Example:
-;; (setq iswitchb-buffer-ignore '("^ " "*Buffer"))
-;; This one is useful if you want to lose the *…* special buffers from the list. It’s helpful if you’re using the JDEE for editing Java apps, as you end up with buffers named org.whatever.package.Class which you might want to eliminate:
-;; (setq iswitchb-buffer-ignore '("^\\*"))
-;;
-(iswitchb-mode 1)
+;; Make sure we use ido mode.
+(ido-mode t)
 
 ;; automatically unzip/gunzip/uncompress files
 (auto-compression-mode 1)
@@ -842,7 +833,6 @@ that uses 'font-lock-warning-face'."
                      'flymake-create-temp-inplace))
          (local-file (file-relative-name temp-file
                                          (file-name-directory buffer-file-name))))
-    (message "local file: %s" local-file)
     `("jshint" ("--reporter=unix" ,local-file))))
 
 (when (load "flymake" t)
@@ -854,7 +844,6 @@ that uses 'font-lock-warning-face'."
                      'flymake-create-temp-inplace))
          (local-file (file-relative-name temp-file
                                          (file-name-directory buffer-file-name))))
-    (message "local file: %s" local-file)
     `("eslint" ("--no-color" "--format" "unix" ,local-file))))
 
 (when (load "flymake" t)

@@ -915,7 +915,7 @@ Example:
 (defun add-password-prompt-check (check)
   (unless (cl-search check comint-password-prompt-regexp)
     (setf comint-password-prompt-regexp
-          (concat comint-password-(point)rompt-regexp check))))
+          (concat comint-password-prompt-regexp check))))
 
 (defun title-caps-to-underbar (begin end)
   (interactive "r")
