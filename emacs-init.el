@@ -339,9 +339,6 @@
 ;; Set Chrome as the default browser
 (setq browse-url-generic-program "/opt/google/chrome/google-chrome")
 
-;; Make sure we use ido mode.
-(ido-mode t)
-
 ;; automatically unzip/gunzip/uncompress files
 (auto-compression-mode 1)
 
@@ -375,7 +372,6 @@ that uses 'font-lock-warning-face'."
 ;;
 (ido-mode t)
 (setq ido-enable-flex-matching t)
-
 (setq ido-create-new-buffer 'always)
 
 ;;
