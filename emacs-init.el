@@ -942,3 +942,7 @@ that uses 'font-lock-warning-face'."
 
 (add-hook 'go-mode-hook (lambda ()
                           (setq tab-width 4)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Password Check  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-password-prompt-check "\\|^Enter host password .*:\\'")

@@ -851,10 +851,13 @@ Example:
      (error (format "Invalid abbrev: %s" abbrev))))
 
 (defun jump-to-abbrev-shell (&rest args)
-  (apply #'jump-to-abbrev (cons 'shell-open-dir args)))
+  (apply #'jump-to-abbrev (cons #'shell-open-dir args)))
 
 (defun jump-to-abbrev-dired (&rest args)
-  (apply #'jump-to-abbrev (cons 'dired args)))
+  (apply #'jump-to-abbrev (cons #'dired args)))
+
+(defun jump-to-abbrev-magit (&rest args)
+  (apply #'jump-to-abbrev (cons #'magit-status args)))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
@@ -908,6 +911,11 @@ Example:
 
         )
     ))
+
+(defun add-password-prompt-check (check)
+  (unless (cl-search check comint-password-prompt-regexp)
+    (setf comint-password-prompt-regexp
+          (concat comint-password-(point)rompt-regexp check))))
 
 (defun title-caps-to-underbar (begin end)
   (interactive "r")
