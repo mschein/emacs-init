@@ -442,7 +442,6 @@ that uses 'font-lock-warning-face'."
 (defalias 'i 'insert-interactive)
 (defalias 'ia 'insert-author)
 (defalias 'ir 'indent-region)
-(defalias 'ls 'linkedin-search)
 (defalias 'ml 'magit-log)
 (defalias 'ms 'magit-status)
 (defalias 'mff 'magit-find-file)
@@ -612,9 +611,6 @@ that uses 'font-lock-warning-face'."
 ;; This touches experimental stuff, so it could easily break on upgrade.
 (require 'org-mw)
 
-;; linkedin wiki.
-(require 'org-linkedin-wiki)
-
 (setq org-todo-keywords
       '((sequence "TODO(t!)"
                   "WORKING(w!)" "PAUSED(p!)" "QUERY(q)" "TESTING(e!)"
@@ -696,9 +692,6 @@ that uses 'font-lock-warning-face'."
 ;; (eval-after-load
 ;;  "sendmail"
 ;;  '(define-key mail-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
-
-;; Reference linkedin's ldap server
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -798,7 +791,7 @@ that uses 'font-lock-warning-face'."
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
 
-;; Linkedin allows crazy long lines.
+;; Allows crazy long lines.
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
 
 ;; Activate pymacs (it should be installed in the system elisp code.)
@@ -905,11 +898,10 @@ that uses 'font-lock-warning-face'."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
-(require 'confluence)
-(setq confluence-url "https://iwww.corp.linkedin.com/wiki/cf/rpc/xmlrpc")
-(add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
-(put 'set-goal-column 'disabled nil)
+;; (add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
+;; (require 'confluence)
+;; (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
+;; (put 'set-goal-column 'disabled nil)
 
 
 ;; Get Hy
