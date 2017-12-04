@@ -44,11 +44,35 @@
 ;; SLIME Coolness:
 ;;  c-c c-d c-d  -> Print the doc string of any function.
 ;;
-;;
 ;;Macro recording [permalink]
 ;;C-x ( : start recording keyboard macro
 ;;C-x ) : stop recording keyboard macro
 ;;C-x e : replay current keyboard macro
+;;
+;; Jumping around in a file
+;; - use search
+;; - registers
+;;   - C-x r spc (letter) (save) spot under letter name
+;;   - C-x r j (letter) (jump back to point)
+;; - bookmarks
+;;   - C-x r m (save named bookmark)
+;;   - C-x r b (jump to a named bookmark)
+;;   - C-x r l (list bookmarks)
+;; - M-e and M-a to move by sentences.
+;; - use c-u and M-- to vary counts.
+;; - M-< and M-> go to start and end of files reliably.
+;; - sexp movement
+;;   - C-M-f C-M-b (forward and back by s-exp)
+;; - M-m back to indent.... (a better C-a M-f)
+;; - goto-line: M-g
+;;
+;; Rectangles
+;; -
+;;
+;; xref stack
+;; M-, xref-pop-marker-stack...
+;;
+;;
 ;;
 ;; starting common lisp slime
 ;; (load-file slime-lisp.el)
@@ -312,6 +336,8 @@
 (defun turn-on-subword-mode ()
   (subword-mode))
 
+;; Make it so C-n adds newlines.
+(setq next-line-add-newlines t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Javascript Configuration
@@ -460,6 +486,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'ucr 'uncomment-region)
 (defalias 'ul 'underline)
 (defalias 'ytp 'yank-to-file-location-python)
+(defalias 'ji 'jump-to-imports-python)
 (defalias 'bu 'browse-url)
 (defalias 'fnd 'find-name-dired)
 (defalias 'tf 'toggle-frame-fullscreen)
@@ -500,7 +527,6 @@ that uses 'font-lock-warning-face'."
 
 (global-set-key "\C-c\C-r" 'reload-file)
 (global-set-key "\C-cp" 'insert-client-path)
-(global-set-key "\C-g" 'goto-line)
 (global-set-key "\C-cj" 'import-jump)
 (global-set-key "\C-xt" 'open-todo)
 (global-set-key "\C-c\M-f" 'find-file-at-point)

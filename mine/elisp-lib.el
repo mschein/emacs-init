@@ -1008,3 +1008,37 @@ python debugging session."
   (string-trim (run-to-str "git" "config" "--get" "remote.origin.url")))
 
 (provide 'elisp-lib)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Python commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun yank-to-file-location-python ()
+  "Take the path and line number of the current cursor position
+and put it into the kill ring.
+
+The idea is that this is an easy way to set a break point in a
+python debugging session."
+  (interactive)
+  (kill-new (format "b %s:%d" (buffer-file-name) (line-number-at-pos))))
+
+(defconst python-import-regex
+  "^\s*\\(import\s+[_a-zA-Z0-9]+\\|from\s+[_a-zA-Z0-9]+\s+import\s+[_a-zA-Z0-9]+\\)"
+  "Searches for 'from <identifier> import <identifier>' or 'import <identifier>' forms")
+
+(defun jump-to-imports-python ()
+  "Jump up to the lowest import statement for python.
+
+   Also record our current location so we can jump back.
+   it's saved in register ?p, so you can type
+   C-x r j p to get back.
+   "
+  (interactive)
+
+  (message "%s" (point-marker))
+  (point-to-register ?p)
+  (re-search-backward python-import-regex nil t)
+  (goto-char (if-let (pos (match-beginning 0))
+                 (goto-char pos)
+               (point-min))))
