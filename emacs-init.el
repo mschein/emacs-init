@@ -171,6 +171,13 @@
 ;; C-c C-a
 ;; lots of interesting features here... about chunks as well. I should use them more.
 ;;
+;; full screen on osx:
+;; Emacs 24.4
+;;
+;; Use ‘ns-use-native-fullscreen’ to get “native” fullscreen on OS X 10.7.
+;;
+;; Both M-x toggle-frame-fullscreen or M-x toggle-frame-maximized are available without having to define a function from below.
+;;
 (require 'cl)
 (require 'find-lisp)
 (require 'midnight)
@@ -456,6 +463,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'ytp 'yank-to-file-location-python)
 (defalias 'bu 'browse-url)
 (defalias 'fnd 'find-name-dired)
+(defalias 'tf 'toggle-frame-fullscreen)
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
