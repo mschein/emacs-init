@@ -400,12 +400,6 @@ Example:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; TODO(scheinholtz): make a multi arg version
-(defun string-join (sep &rest args)
-  (mapconcat #'identity args sep))
-
-(defun string-join-list (sep str-list)
-  (apply #'string-join (cons sep str-list)))
-
 (defun string-split (sep-regex str)
   (split-string str sep-regex))
 
@@ -429,16 +423,6 @@ Example:
 (defun string-trim-chars (str front-group back-group)
   "Remove leading and trailing characters from a string."
   (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group) "" str))
-
-(defun string-trim (str)
-  "Remove leading and tailing whitespace from STR."
-  (let ((s (if (symbolp str) (symbol-name str) str)))
-    (replace-regexp-in-string "\\(^[[:space:]\n]*\\|[[:space:]\n]*$\\)" "" s)))
-
-(defun string-trim-end (str)
-  "Remove only the tailing whitespace from STR."
-  (let ((s (if (symbolp str) (symbol-name str) str)))
-    (replace-regexp-in-string "\\([[:space:]\n]*$\\)" "" s)))
 
 ;; XXX This doesn't quite work the way I want
 ;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
@@ -604,7 +588,7 @@ Example:
 
 (defun current-line ()
   "Return the line under the cursor, with properties."
-  (string-trim-end (thing-at-point 'line)))
+  (string-trim-right (thing-at-point 'line)))
 
 (defun duplicate-line ()
   (interactive)
@@ -752,13 +736,13 @@ Example:
                  directory-sep)))
     (let ((leading-slash (needs-slash (first args) #'string-starts-with))
           (trailing-slash (needs-slash (last-car args) #'string-ends-with)))
-      (string-join ""
-                   leading-slash
-                   (apply #'string-join
-                          directory-sep (mapcar (| string-trim-chars %
-                                                   directory-sep
-                                                   directory-sep) args))
-                   trailing-slash))))
+      (string-join (list leading-slash
+                         (string-join (mapcar (| string-trim-chars %
+                                                 directory-sep
+                                                 directory-sep)
+                                              args)
+                                      directory-sep)
+                         trailing-slash)))))
 
 (defalias 'basename 'file-name-nondirectory)
 
@@ -793,7 +777,7 @@ Example:
 
 (defun list->buffer (list buffer-name)
   (set-buffer (generate-new-buffer buffer-name))
-  (insert (apply #'string-join (cons "\n" list))))
+  (insert (string-join list)))
 
 ;; Use delete-trailing-whitespace to
 ;; remove whitespace from a file
@@ -809,7 +793,7 @@ Example:
   "Return the buffer name with no extension: a.clj -> a"
   (let ((split-name (string-split "\\." (buffer-name))))
     (if (> (length split-name) 1)
-        (string-join-list "." (butlast split-name 1))
+        (string-join (butlast split-name 1) ".")
       (car split-name))))
 
 
@@ -828,9 +812,12 @@ Example:
          (insertf "(interactive%s)"
                   (if (string-nil-or-empty arg-str)
                       ""
-                    (->> arg-str (string-split " ")
-                         (mapcar (| format "s%s: " %)) (string-join-list "\\n")
-                         (format " \"%s\""))))
+                    (format " \"%s\""
+                            (string-join
+                             (->> arg-str
+                                  (string-split " ")
+                                  (mapcar (| format "s%s: " %)))
+                             "\\n"))))
          (indent-region (line-beginning-position) (line-end-position)))
        (error "unable to parse arglist"))))
 
@@ -931,7 +918,7 @@ Example:
              (if (string-ends-with elm "://")
                  (concat trimmed "/")
                trimmed))))
-    (string-join-list "/" (mapcar #'clean-element args))))
+    (string-join (mapcar #'clean-element args) "/")))
 
 (defun url-join-list (elm)
   (apply #'url-join elm))
