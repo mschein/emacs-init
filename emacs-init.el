@@ -73,6 +73,10 @@
 ;; M-, xref-pop-marker-stack...
 ;;
 ;;
+;; Browsing the kill-ring
+;;  C-h v kill-ring (view the variable kill ring)
+;;  C-y M-y to browse earlier kill-ring entries, or you can use C-u <num> C-y to dump
+;;  earlier entries.
 ;;
 ;; starting common lisp slime
 ;; (load-file slime-lisp.el)
