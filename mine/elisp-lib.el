@@ -13,15 +13,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'cl-lib)
 
-;; Package-Requires
-;;
-;;
-;;
-
 ;; Wrap in try catch
 (setf lexical-binding t)
 
-(setf directory-sep-char ?/)
+(setf directory-sep "/")
 
 (defun aget (key alist)
   "I discovered I was missing this function.
@@ -93,13 +88,13 @@ of the test."
            (reverse test-bindings)
            :initial-value forms)))
 
-(defun append-if (test lst)
+(defun append-if (test list)
   (m-if-let (res test)
-          (append lst (to-list res))))
+          (append list (to-list res))))
 
-(defun cons-if (test lst)
+(defun cons-if (test list)
   (m-if-let (res test)
-          (cons res lst)))
+          (cons res list)))
 
 (defun _make-arg-list (arg-alist)
   (let ((out-arg-list '()))
@@ -128,14 +123,14 @@ of the test."
   "Convert thing to a list if it isnt already."
   (if (atom thing) (list thing) thing))
 
-(defun last-car (lst)
-  (car (last lst)))
+(defun last-car (list)
+  (car (last list)))
 
-(defun take (n lst)
-  (butlast lst (- (length lst) n)))
+(defun take (n list)
+  (butlast list (- (length list) n)))
 
-(defun drop (n lst)
-  (last lst (- (length lst) n)))
+(defun drop (n list)
+  (last list (- (length list) n)))
 
 (defmacro |->> (&rest forms)
   `(| ->> % ,@forms))
@@ -336,14 +331,14 @@ result of fun."
       '()
       (cons elm (repeat-elm (1- n) elm))))
 
-(defun* partition (n lst &key (step n) (pad nil))
+(defun* partition (n list &key (step n) (pad nil))
   "Split a list into sublists of length n.  A step
 value is optional.
 
 Example:
  (partition 2 '(1 2 3 4 5) :step 1)
  -> ((1 2) (2 3) (3 4) (4 5) (5))"
-  (loop for sublist on lst by
+  (loop for sublist on list by
         (lambda (elm) (drop step elm))
         collect (let ((chunk (take n sublist)))
                   (if pad
@@ -353,19 +348,19 @@ Example:
                           chunk))
                     chunk))))
 
-(defun remove-if-not-regex (regex lst &optional replace)
-  (let ((res (remove-if-not (| string-match regex %) lst)))
+(defun remove-if-not-regex (regex list &optional replace)
+  (let ((res (remove-if-not (| string-match regex %) list)))
     (if (string-has-val replace)
         (mapcar (| replace-regexp-in-string regex replace %) res)
       res)))
 
-(defun all-true (lst)
+(defun all-true (list)
   ;; Note, since or is a macro, we can't do 'or
-  (reduce (| and %1 %2) lst))
+  (reduce (| and %1 %2) list))
 
-(defun any-true (lst)
+(defun any-true (list)
   ;; Note, since or is a macro, we can't do 'or
-  (reduce (| or %1 %2) lst))
+  (reduce (| or %1 %2) list))
 
 
 (defmacro h_ (&rest args)
@@ -405,11 +400,11 @@ Example:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; TODO(scheinholtz): make a multi arg version
-(defun string-join-lst (sep str-list)
-  (mapconcat #'identity str-list sep))
-
 (defun string-join (sep &rest args)
-  (string-join-lst sep args))
+  (mapconcat #'identity args sep))
+
+(defun string-join-list (sep str-list)
+  (apply #'string-join (cons sep str-list)))
 
 (defun string-split (sep-regex str)
   (split-string str sep-regex))
@@ -432,6 +427,7 @@ Example:
   (dolist (str args) (if-not (string-nil-or-empty str) (return str))))
 
 (defun string-trim-chars (str front-group back-group)
+  "Remove leading and trailing characters from a string."
   (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group) "" str))
 
 (defun string-trim (str)
@@ -631,7 +627,7 @@ Example:
 ;; break a list into (elm, index, first|middle|last) tuples for
 ;; easier functional processing?
 ;;
-;;(defun list->info-tuple (lst)
+;;(defun list->info-tuple (list)
 ;;  (loop )
 
 ;; Stolen from http://www.thekidder.com/2008/10/21/emacs-reload-file/
@@ -747,17 +743,22 @@ Example:
              str ""))
 
 (defun split-path (path)
-  (split-string path (string directory-sep-char) t))
+  (split-string path directory-sep t))
 
-(defun join-path (&rest parts)
-  (let ((sep (string directory-sep-char)))
-    (reduce (lambda (path elm)
-              (if (string-nil-or-empty path)
-                  elm
-                (concat (string-remove (concat sep "$") path)
-                        sep
-                        (string-remove (concat "^" sep) elm))))
-            parts :initial-value "")))
+(defun path-join (&rest args)
+  "Join a set of path parts together, removing any duplicate slashes (OSX/Unix only)."
+  (cl-flet ((needs-slash (val check-for-slash)
+               (when (and val (funcall check-for-slash val directory-sep))
+                 directory-sep)))
+    (let ((leading-slash (needs-slash (first args) #'string-starts-with))
+          (trailing-slash (needs-slash (last-car args) #'string-ends-with)))
+      (string-join ""
+                   leading-slash
+                   (apply #'string-join
+                          directory-sep (mapcar (| string-trim-chars %
+                                                   directory-sep
+                                                   directory-sep) args))
+                   trailing-slash))))
 
 (defalias 'basename 'file-name-nondirectory)
 
@@ -790,9 +791,9 @@ Example:
 ;; Buffer Utils.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun list->buffer (lst buffer-name)
+(defun list->buffer (list buffer-name)
   (set-buffer (generate-new-buffer buffer-name))
-  (insert (string-join-lst "\n" lst)))
+  (insert (apply #'string-join (cons "\n" list))))
 
 ;; Use delete-trailing-whitespace to
 ;; remove whitespace from a file
@@ -808,7 +809,7 @@ Example:
   "Return the buffer name with no extension: a.clj -> a"
   (let ((split-name (string-split "\\." (buffer-name))))
     (if (> (length split-name) 1)
-        (string-join-lst "." (butlast split-name 1))
+        (string-join-list "." (butlast split-name 1))
       (car split-name))))
 
 
@@ -828,7 +829,7 @@ Example:
                   (if (string-nil-or-empty arg-str)
                       ""
                     (->> arg-str (string-split " ")
-                         (mapcar (| format "s%s: " %)) (string-join-lst "\\n")
+                         (mapcar (| format "s%s: " %)) (string-join-list "\\n")
                          (format " \"%s\""))))
          (indent-region (line-beginning-position) (line-end-position)))
        (error "unable to parse arglist"))))
@@ -878,17 +879,9 @@ Example:
       total)))
 
 (defun sum-col-region (begin end)
+
   (interactive "r")
   (message "%d" (sum-col-region-fn begin end)))
-
-
-(defun underline ()
-  (interactive)
-  (return-to-pos
-   (fn (pos)
-       )))
-
-  ;; look at the previous line
 
 (defmacro make-bookmark (name url)
   `(defun ,name ()
@@ -902,15 +895,6 @@ Example:
   (delete-region begin end)
   (goto-char begin)
   (insert new-string))
-
-(defun tc-str (str)
-  (let ()
-    (do ((i 0)) ; init
-        (< i (length str)) ; end
-
-
-        )
-    ))
 
 (defun add-password-prompt-check (check)
   (unless (cl-search check comint-password-prompt-regexp)
@@ -947,9 +931,9 @@ Example:
              (if (string-ends-with elm "://")
                  (concat trimmed "/")
                trimmed))))
-    (string-join-lst "/" (mapcar #'clean-element args))))
+    (string-join-list "/" (mapcar #'clean-element args))))
 
-(defun url-join-lst (elm)
+(defun url-join-list (elm)
   (apply #'url-join elm))
 
 (defun goto-end-of-buffer ()
@@ -1007,9 +991,6 @@ python debugging session."
   (interactive)
   (string-trim (run-to-str "git" "config" "--get" "remote.origin.url")))
 
-(provide 'elisp-lib)
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1042,3 +1023,6 @@ python debugging session."
   (goto-char (if-let (pos (match-beginning 0))
                  (goto-char pos)
                (point-min))))
+
+
+(provide 'elisp-lib)

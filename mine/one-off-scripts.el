@@ -16,7 +16,7 @@
   (browse-url-chrome "http://maps.google.com/maps?f=q&source=s_q&hl=en&geocode=&q=san+jose+ca&sll=37.339386,-121.894956&sspn=0.444376,0.910492&g=san+jose&ie=UTF8&hq=&hnear=San+Jose,+Santa+Clara,+California&ll=37.378888,-121.889191&spn=0.891557,2.602386&z=10&layer=t&err=1"))
 
 
-;; (defun make-abbrev-list (lst)
+;; (defun make-abbrev-list (list)
 ;;   "Convert a list of strings into an alist of abbreviations for those strings
 ;; use the first letter of each word and just the first letter, if it
 ;; is unique."
@@ -30,7 +30,7 @@
 ;;                         (string (aref word 0)))
 ;;                       name))
 ;;              )
-;;            lst)
+;;            list)
 ;;   )
 
 (defun list-fonts ()
@@ -57,7 +57,7 @@
   (switch-to-buffer-other-window "todo.org"))
 
 
-(defun find-dup (lst)
+(defun find-dup (list)
   ;; loop though list
   ;; get element at random length
   ;; how do you know which ones to
