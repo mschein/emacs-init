@@ -33,5 +33,5 @@ echo '(quit)'
 
 sbcl --load quicklisp.lisp
 
-popd $tmpdir
+popd
 rm -rf $tmpdir
