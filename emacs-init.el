@@ -217,7 +217,7 @@
 ;(require 'cssh)
 
 ;; My stuff
-(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0" "~/emacs-init/autopair" "~/emacs-init/company"))
+(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0"))
   (if (file-directory-p path)
       (add-to-list 'load-path path)))
 
@@ -917,18 +917,6 @@ that uses 'font-lock-warning-face'."
 (add-to-list 'auto-mode-alist '("\.gradle$" . groovy-mode))
 (add-to-list 'interpreter-mode-alist '("groovy" . groovy-mode))
 
-;;; make Groovy mode electric by default.
-;;; I turned this off because autopair is smarter, and seems to do everything
-;;; electric mode does.
-;;;
-;; (add-hook 'groovy-mode-hook
-;;           '(lambda ()
-;;              ;; turn off autopair for this mode.
-;;              (autopair-mode 0)
-;;              (require 'groovy-electric)
-;;              (groovy-electric-mode)))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; (add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
 ;; (require 'confluence)
@@ -946,7 +934,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (macrostep dockerfile-mode async auto-complete clojure-mode dash epl f flycheck flycheck-perl6 flymake-go git-commit go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist magit-popup perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key with-editor yasnippet magit google-this cider))))
+    (autopair macrostep dockerfile-mode async auto-complete clojure-mode dash epl f flycheck flycheck-perl6 flymake-go git-commit go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist magit-popup perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key with-editor yasnippet magit google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
