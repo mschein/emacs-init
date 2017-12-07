@@ -1,9 +1,9 @@
-;;; vkill-autoloads.el --- automatically extracted autoloads
+;;; dired-sort-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil nil ("vkill.el") (23081 24606 129305 636000))
+;;;### (autoloads nil nil ("dired-sort.el") (23081 24392 620804 122000))
 
 ;;;***
 
@@ -12,4 +12,4 @@
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
 ;; End:
-;;; vkill-autoloads.el ends here
+;;; dired-sort-autoloads.el ends here

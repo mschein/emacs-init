@@ -1,9 +1,9 @@
-;;; vkill-autoloads.el --- automatically extracted autoloads
+;;; request-autoloads.el --- automatically extracted autoloads
 ;;
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil nil ("vkill.el") (23081 24606 129305 636000))
+;;;### (autoloads nil nil ("request.el") (23081 24389 281295 422000))
 
 ;;;***
 
@@ -12,4 +12,4 @@
 ;; no-byte-compile: t
 ;; no-update-autoloads: t
 ;; End:
-;;; vkill-autoloads.el ends here
+;;; request-autoloads.el ends here
