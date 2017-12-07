@@ -963,3 +963,8 @@ that uses 'font-lock-warning-face'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Password Check  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (add-password-prompt-check "\\|^Enter host password .*:\\'")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Turn on an equivalent of proced on OSX ;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Emacs's proced doesn't work on OSX.
+(require 'vkill)
