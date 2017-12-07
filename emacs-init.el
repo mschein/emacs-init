@@ -124,7 +124,7 @@
 ;;          automatically deal with error handling.
 ;;       5. automatically launch a webbrowser at a specific page
 ;;       6. webscraping?
-;       7. better csv display?
+;;       7. better csv display?
 ;;       8. log analysis?
 ;;
 ;; icicles? ... super search for everything http://www.emacswiki.org/cgi-bin/wiki/Icicles
