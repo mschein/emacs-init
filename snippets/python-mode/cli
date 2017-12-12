@@ -2,22 +2,16 @@
 # name: cli
 # contributor: Mike Scheinholtz
 # --
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Author: Michael Scheinholtz
-# Email: mls@linkedin.com
-# 
+#
 """
 
 """
 
+import argparse
 
-import linkedin.cli
 
-
-@linkedin.cli.entrypoint
 def main(cli):
-
-  with cli.run() as c:
-
-    c.log.info(c.args.fabric)
+    pass
