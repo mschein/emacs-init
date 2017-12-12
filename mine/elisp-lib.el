@@ -976,7 +976,9 @@ python debugging session."
 
 (defun git-remote-origin-url ()
   (interactive)
-  (string-trim (run-to-str "git" "config" "--get" "remote.origin.url")))
+  (if-let (url (string-trim (run-to-str "git" "config" "--get" "remote.origin.url")))
+      url
+    (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands

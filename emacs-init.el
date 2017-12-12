@@ -650,8 +650,7 @@ that uses 'font-lock-warning-face'."
 	))
 
 (setq org-todo-keyword-faces
-      '(
-        ("TODO"  . (:foreground "red" :weight bold))
+      '(("TODO"  . (:foreground "red" :weight bold))
         ("DELAYED"  . (:foreground "red" :weight bold))
         ("WORKING"  . (:foreground "gold2" :weight bold))
         ("PAUSED"  . (:foreground "gold2" :weight bold))

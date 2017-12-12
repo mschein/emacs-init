@@ -4,14 +4,27 @@
 # --
 #!/usr/bin/env python3
 #
-# Author: Michael Scheinholtz
-#
 """
 
 """
 
 import argparse
+import os
+import sys
 
 
-def main(cli):
+# def some_function(args):
+#     pass
+
+def main():
+#    parser = argparse.ArgumentParser(description='')
+#    parser.add_argument('--arg', help='')
+#    parser.set_defaults(func=some_function)
+
+#    # Call the function
+#    args = parser.parse_args(sys.argv)
+#    args.func(args)
     pass
+
+# if __name__ == '__main__':
+#    main()
