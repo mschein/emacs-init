@@ -3,8 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "paredit" "paredit.el" (23081 24390 223763
-;;;;;;  757000))
+;;;### (autoloads nil "paredit" "paredit.el" (23087 22389 0 0))
 ;;; Generated autoloads from paredit.el
 
 (autoload 'paredit-mode "paredit" "\
@@ -17,6 +16,10 @@ Paredit behaves badly if parentheses are imbalanced, so exercise
 \\<paredit-mode-map>
 
 \(fn &optional ARG)" t nil)
+
+;;;***
+
+;;;### (autoloads nil nil ("paredit-pkg.el") (23087 358 0 0))
 
 ;;;***
 
