@@ -22,9 +22,9 @@ def main():
 #    parser.set_defaults(func=some_function)
 
 #    # Call the function
-#    args = parser.parse_args(sys.argv)
+#    args = parser.parse_args()
 #    args.func(args)
     pass
 
 # if __name__ == '__main__':
-#    main()
+#     main()
