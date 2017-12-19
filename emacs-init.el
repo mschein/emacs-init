@@ -416,6 +416,8 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; Add YASnippet support
 ;;
+;; Note, it's the 'key' part that you should type.
+;;
 (require 'yasnippet) ;; not yasnippet-bundle
 ;; relocate my person extension dir
 (setf yas-snippet-dirs (remove-if (| when (stringp %)
