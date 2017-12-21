@@ -1013,5 +1013,52 @@ python debugging session."
                  (goto-char pos)
                (point-min))))
 
+(defun guess-python-version-3 ()
+  "Attempt to guess if a buffer contains python2 or python3 code"
+  (interactive)
+
+  (save-excursion
+    ;; This is hacky, but it should work.
+    ;; scan for regexes and score python3 vs 2.
+    ;;
+    ;; python3 indicators
+    ;; Search for python3
+    ;; Search for print()
+    ;; class Foo:
+    ;; nonlocal
+    ;; {k: v for k, v in stuff}
+    ;;
+    ;; python2 indicators
+    ;; xrange
+    ;; class Foo(object):
+
+    (let ((python3-regex '("python3"
+                           "print("
+                           "class\s+[^:(]+:"
+                           "nonlocal"
+                           "{[^:]:\s+[^\s]+\s+for\s+"))
+          (python2-regex '("xrange("
+                           "print\s+[^(]"
+                           "class\s+[^(]+(object"))
+          (py3-score 0))
+      (cl-flet ((run-searches (regexes score-fn)
+                 (dolist (regex regexes)
+                   (goto-char 0)
+                   (when (re-search-forward regex nil t)
+                     (message "match regex %s" regex)
+                     (funcall score-fn)))))
+        (run-searches python3-regex (fn () (incf py3-score)))
+        (run-searches python2-regex (fn () (decf py3-score))))
+
+      ;; If the score is positive or zero, assume python3.
+      (message "final score: %d" py3-score)
+      (>= py3-score 0))))
+
+(defun update-flymake-mask (file-pattern func)
+  "Update the flyname mask for `file-pattern'.  This removes any previous matches"
+  (setq flymake-allowed-file-name-masks
+        (cons (list file-pattern func)
+              (remove-if (| equal file-pattern (first %))
+                         flymake-allowed-file-name-masks))))
 
 (provide 'elisp-lib)

@@ -507,14 +507,22 @@ that uses 'font-lock-warning-face'."
 
 (global-set-key "\C-c\C-c" 'comment-region)
 (global-set-key "\C-cu" 'uncomment-region)
-
 (global-set-key "\M-p" 'backward-paragraph)
 (global-set-key "\M-n" 'forward-paragraph)
 
 (global-set-key "\C-cd" 'duplicate-line)
 
+(global-set-key "\C-c\C-r" 'reload-file)
+(global-set-key "\C-xt" 'open-todo)
+(global-set-key "\C-c\M-f" 'find-file-at-point)
+(global-set-key (kbd "C-;") 'undo)
+
 ;; Save desktops
 (desktop-save-mode t)
+
+;; Flash the screen instead of making a noise on bell.
+;; We'll see if I like this.
+(setq visible-bell t)
 
 ;; put all backup files in one place
 (setq backup-by-copying t      ; don't clobber symlinks
@@ -532,13 +540,6 @@ that uses 'font-lock-warning-face'."
 (setq uniquify-separator "/")
 (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
 (setq uniqify-ignore-buffers-re "^\\*")
-
-(global-set-key "\C-c\C-r" 'reload-file)
-(global-set-key "\C-cp" 'insert-client-path)
-(global-set-key "\C-cj" 'import-jump)
-(global-set-key "\C-xt" 'open-todo)
-(global-set-key "\C-c\M-f" 'find-file-at-point)
-(global-set-key (kbd "C-;") 'undo)
 
 ;; Flyspell code
 (defun turn-on-flyspell ()
@@ -786,23 +787,48 @@ that uses 'font-lock-warning-face'."
 ;; with python files.
 (add-hook 'find-file-hook 'flymake-find-file-hook)
 
-(defun flymake-pycheck-init ()
-  (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                     'flymake-create-temp-inplace))
-         (local-file (file-relative-name temp-file
-                                         (file-name-directory buffer-file-name))))
-    (list "flake8" (list local-file))))
+(defmacro define-flymake-checker (func cmd &rest args)
+  "Define a flymake checker function.
+   It will be named `func', and will execute cmd + the rest of the args."
+
+  (let ((temp-file (gensym))
+        (local-file (gensym)))
+    `(defun ,func ()
+       (let* ((,temp-file (flymake-init-create-temp-buffer-copy
+                           #'flymake-create-temp-inplace))
+              (,local-file (file-relative-name ,temp-file
+                                               (file-name-directory buffer-file-name))))
+         (list ,cmd (list ,@args ,local-file))))))
+
+(define-flymake-checker flymake-flake8-checker "flake8")
+(define-flymake-checker flymake-flake83-checker "flake83")
+
+(defun setup-python-mode-common (interpreter checker)
+  (setq py-python-command interpreter)
+  (setq python-shell-interpreter interpreter)
+  (update-flymake-mask "\\.py\\'" checker)
+  (when (bound-and-true-p python-mode)
+    (update-flymake-mask "." checker)))
+
+(defun setup-python3-mode ()
+  (interactive)
+  (setup-python-mode-common "python3" #'flymake-flake83-checker))
+
+(defun setup-python2-mode ()
+  (interactive)
+  (setup-python-mode-common "python" #'flymake-flake8-checker))
 
 (when (load "flymake" t)
-   (add-to-list 'flymake-allowed-file-name-masks
-                '("\\.py\\'" flymake-pycheck-init)))
+  ;; Do I need this, if I call this during the mode hook?
+  (setup-python3-mode))
 
 ;; If we're in python mode, make sure flymake comes on.
 (add-hook 'python-mode-hook #'(lambda ()
                                 ;; enable flymake-python for files with no '.py' extension
                                 (make-local-variable 'flymake-allowed-file-name-masks)
-                                (add-to-list 'flymake-allowed-file-name-masks
-                                             '("" flymake-pycheck-init))))
+                                (if (guess-python-version-3)
+                                    (setup-python3-mode)
+                                  (setup-python2-mode))))
 
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
@@ -815,11 +841,6 @@ that uses 'font-lock-warning-face'."
           (lambda()
             (setq-default indent-tabs-mode nil)
             (turn-on-subword-mode)
-            (let ((match-all-regex "."))
-              (add-to-list 'flymake-allowed-file-name-masks `(,match-all-regex flymake-pycheck-init))
-              (flymake-mode)
-              (setq flymake-allowed-file-name-masks
-                    (remove-if (| (equalp match-all-regex (car %))) flymake-allowed-file-name-masks)))
             (flymake-mode)))
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
@@ -858,27 +879,12 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; TODO: I should make a function to simplify these declarations.
 ;;
-(defun flymake-js-init ()
-  (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                     'flymake-create-temp-inplace))
-         (local-file (file-relative-name temp-file
-                                         (file-name-directory buffer-file-name))))
-    `("jshint" ("--reporter=unix" ,local-file))))
+(define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
+(define-flymake-checker flymake-eslint-checker "eslint" "--no-color" "--format" "unix")
 
 (when (load "flymake" t)
    (add-to-list 'flymake-allowed-file-name-masks
-                '("\\.js\\'" flymake-js-init)))
-
-(defun flymake-eslint-init ()
-  (let* ((temp-file (flymake-init-create-temp-buffer-copy
-                     'flymake-create-temp-inplace))
-         (local-file (file-relative-name temp-file
-                                         (file-name-directory buffer-file-name))))
-    `("eslint" ("--no-color" "--format" "unix" ,local-file))))
-
-(when (load "flymake" t)
-   (add-to-list 'flymake-allowed-file-name-masks
-                '("\\.jsx\\'" flymake-eslint-init)))
+                '("\\.jsx\\'" flymake-eslint-checker)))
 
 
 ;;

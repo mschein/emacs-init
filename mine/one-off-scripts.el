@@ -214,5 +214,4 @@ def %s_update(%s_id, conn=engine, **kwargs):
   (setf flymake-allowed-file-name-masks (list '(".*\\'" flymake-eslint-init)))
   (flymake-mode t))
 
-
 (provide 'one-off-scripts)
