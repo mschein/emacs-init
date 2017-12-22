@@ -1032,14 +1032,17 @@ python debugging session."
     ;; xrange
     ;; class Foo(object):
 
-    (let ((python3-regex '("python3"
-                           "print("
-                           "class\s+[^:(]+:"
-                           "nonlocal"
-                           "{[^:]:\s+[^\s]+\s+for\s+"))
-          (python2-regex '("xrange("
-                           "print\s+[^(]"
-                           "class\s+[^(]+(object"))
+    (let* ((python-NAME-regex "[A-Za-z_][A-Za-z0-9_]+")
+           (python3-regex (list "python3"
+                                "print("
+                                (format "class\s+%s:" python-NAME-regex)
+                                "nonlocal"
+                                (format "{%s:\s*%s\s+for\s+"
+                                        python-NAME-regex python-NAME-regex)))
+          (python2-regex (list "xrange("
+                               "print\s+[^(]"
+                               (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
+                               "\.iteritems("))
           (py3-score 0))
       (cl-flet ((run-searches (regexes score-fn)
                  (dolist (regex regexes)
