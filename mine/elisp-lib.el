@@ -962,11 +962,15 @@ python debugging session."
   (run "hdiutil" "detach" path))
 
 (defmacro pushd (dir &rest body)
+  "Run the body in this new default directory"
   (let ((old-dir (gensym)))
+
     `(let ((,old-dir default-directory))
        (unwind-protect
            (progn
-             (setf default-directory ,dir)
+             (setf default-directory (if (file-name-absolute-p ,dir)
+                                         dir
+                                       (path-join ,old-dir ,dir)))
              ,@body)
          (setf default-directory ,old-dir)))))
 

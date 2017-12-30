@@ -214,4 +214,55 @@ def %s_update(%s_id, conn=engine, **kwargs):
   (setf flymake-allowed-file-name-masks (list '(".*\\'" flymake-eslint-init)))
   (flymake-mode t))
 
+(defconst *python-setup.py-file*
+  "from setuptools import setup
+
+package = '%s'
+version = '0.1'
+
+setup(name=package,
+      version=version,
+      description=\"<some description\",
+      entry_points={
+          'console_scripts': []
+      },
+      install_requires=[
+          # Macros can be had with mcpy and macropy
+      ],
+)")
+
+(defconst *python-init-file* "# empty module file")
+
+(defun python-create-project (name)
+  (interactive "sname: ")
+
+  (message "Current directory: %s" default-directory)
+  (unless (file-exists-p name)
+    (message "make dir %s" name)
+    (make-directory name)
+
+    (pushd name
+       ;; write setup.py
+       (message "create setup.py")
+       (message "current dir %s" default-directory)
+
+       (with-temp-file "setup.py"
+         (insertf *python-setup.py-file* name))
+
+       (message "create dirs")
+       (make-directory name)
+       (make-directory "test")
+
+       (message "create init.py")
+       (with-temp-file (path-join name "__init__.py")
+         (insertf *python-init-file*))
+
+       ;; Run command to setup more stuff
+       (message "setup git module")
+       (run "git" "init")
+       (let ((venv-dir ".venv"))
+         (message "create virtualenv")
+         (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
+         (make-symbolic-link ".venv/bin/activate" "activate")))))
+
 (provide 'one-off-scripts)
