@@ -13,18 +13,20 @@ import os
 import sys
 
 
-# def some_function(args):
-#     pass
+def some_function(args):
+    print('Hello world')
+    sys.exit(0)
+
 
 def main():
-#    parser = argparse.ArgumentParser(description='')
-#    parser.add_argument('--arg', help='')
-#    parser.set_defaults(func=some_function)
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('--arg', help='')
+    parser.set_defaults(func=some_function)
 
-#    # Call the function
-#    args = parser.parse_args()
-#    args.func(args)
-    pass
+    # Call the function
+    args = parser.parse_args()
+    args.func(args)
 
-# if __name__ == '__main__':
-#     main()
+
+if __name__ == '__main__':
+     main()
