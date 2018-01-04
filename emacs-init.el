@@ -225,12 +225,6 @@
 (require 'elisp-lib)
 (require 'one-off-scripts)
 
-;; Deal with anything in the local directory.
-(let ((local-dir "~/emacs-init/local"))
-  (if (file-directory-p local-dir)
-      (dolist (file-path (directory-files local-dir 'full ".el$"))
-	(load file-path))))
-
 ;; Add the new emacs package loader:
 
 
@@ -966,3 +960,11 @@ that uses 'font-lock-warning-face'."
 
 ;; Emacs's proced doesn't work on OSX.
 (require 'vkill)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
+
+;; This must be done at the end so the rest of the environment is setup.
+(let ((local-dir "~/emacs-init/local"))
+  (if (file-directory-p local-dir)
+      (dolist (file-path (directory-files local-dir 'full ".el$"))
+	(load file-path))))
