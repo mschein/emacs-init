@@ -208,6 +208,9 @@
 ;;
 ;; Both M-x toggle-frame-fullscreen or M-x toggle-frame-maximized are available without having to define a function from below.
 ;;
+;; yank:
+;; M-y will browse previous entries.
+;;
 (require 'cl)
 (require 'find-lisp)
 (require 'midnight)
