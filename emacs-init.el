@@ -672,6 +672,10 @@ that uses 'font-lock-warning-face'."
 ;; in an orgmode file.
 (setq org-export-with-sub-superscripts nil)
 
+;; Make it so inserting a new header works the way
+;; I'm used to.
+(setq org-insert-heading-respect-content t)
+
 ;; Fix multi-line wrapping and what not in org mode
 ;;
 ;; I can't use this unless I upgrade emacs.  It crashes 23.1
