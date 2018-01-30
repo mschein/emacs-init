@@ -1068,4 +1068,24 @@ python debugging session."
               (remove-if (| equal file-pattern (first %))
                          flymake-allowed-file-name-masks))))
 
+(defun find-in-jira-at-point-internal (url ticket-valid-fn)
+  "This is meant to be wrapped by another function.
+
+   It takes the current point and opens a url with it
+   as if it was a jira ticket."
+
+  (save-excursion
+    (let* ((max-ticket-len 15)
+           (negative-ticket-re "[^A-Za-z0-9-]")
+           (end (1- (save-excursion (re-search-forward negative-ticket-re))))
+           (start (1+ (save-excursion (re-search-backward negative-ticket-re))))
+           (ticket (if (< start end)
+                       (buffer-substring-no-properties start end)
+                     nil)))
+     (if (and ticket
+              (< (- end start) max-ticket-len)
+              (funcall ticket-valid-fn ticket))
+         (browse-url (path-join url "browse" ticket))
+       (error "Invalid JIRA ticket '%s' found from %s to %s" ticket start end)))))
+
 (provide 'elisp-lib)

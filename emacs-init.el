@@ -353,9 +353,13 @@
 (add-hook 'javascript-mode 'turn-on-subword-mode)
 
 ;; flymake stuff is done later.
-
-(setq js-indent-level 4)
-(setq sqml-basic-offset 4)
+(let ((js-basic-offset 2))
+  (setq js2-basic-offset js-basic-offset)
+  (setq-default web-mode-markup-indent-offset js-basic-offset)
+  (setq-default web-mode-css-indent-offset js-basic-offset)
+  (setq-default web-mode-code-indent-offset js-basic-offset)
+  (setq js-indent-level js-basic-offset)
+  (setq sqml-basic-offset js-basic-offset))
 
 
 ;; Allow these functions.
