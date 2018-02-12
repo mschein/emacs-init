@@ -215,7 +215,7 @@ def %s_update(%s_id, conn=engine, **kwargs):
   (flymake-mode t))
 
 (defconst *python-setup.py-file*
-  "from setuptools import setup
+  "from setuptools import setup, find_packages
 
 package = '%s'
 version = '0.1'
@@ -229,6 +229,14 @@ setup(name=package,
       install_requires=[
           # Macros can be had with mcpy and macropy
       ],
+      test_requires=[
+          # Unit test dependencies.
+          mock,
+      ],
+      include_package_data=True,
+      packages=find_packages(),
+      package_data={'': []},
+      zip_safe=True
 )")
 
 (defconst *python-init-file* "# empty module file")
