@@ -884,7 +884,7 @@ that uses 'font-lock-warning-face'."
 ;; TODO: I should make a function to simplify these declarations.
 ;;
 (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
-(define-flymake-checker flymake-eslint-checker "eslint" "--no-color" "--format" "unix")
+(define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
 
 (when (load "flymake" t)
    (add-to-list 'flymake-allowed-file-name-masks

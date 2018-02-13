@@ -8,6 +8,10 @@
         "node": true
     },
     "rules": {
+        "max-len": ["error", {
+          "code": 100,
+          "ignoreUrls": true,
+        }],
         "consistent-return": 2,
         "indent"           : 0,
         "no-else-return"   : 1,
