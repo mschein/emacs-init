@@ -977,3 +977,6 @@ that uses 'font-lock-warning-face'."
   (if (file-directory-p local-dir)
       (dolist (file-path (directory-files local-dir 'full ".el$"))
 	(load file-path))))
+
+
+;; (quickproject:make-project "~/src/me/cheddar" :depends-on '(#:iterate #:let-plus #:alexandria #:closer-mop #:anaphora #:rutilsx)
