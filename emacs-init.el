@@ -334,10 +334,6 @@
 ;; Ruby inside emacs
 (require 'inf-ruby)
 
-;; Want one function to handle this, since this function changes when we upgrade
-(defun turn-on-subword-mode ()
-  (subword-mode))
-
 ;; Make it so C-n adds newlines.
 (setq next-line-add-newlines t)
 
@@ -350,7 +346,13 @@
 (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
 
 (autoload 'javascript-mode "javascript" nil t)
-(add-hook 'javascript-mode 'turn-on-subword-mode)
+
+(defun js-type-hooks ()
+  "Any commands we want to run when editing js style files (jsx etc.)"
+  (subword-mode))
+
+(add-hook 'javascript-mode-hook 'js-type-hooks)
+(add-hook 'web-mode-hook 'js-type-hooks)
 
 ;; flymake stuff is done later.
 (let ((js-basic-offset 2))
@@ -391,7 +393,7 @@ that uses 'font-lock-warning-face'."
 
 (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
 (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
-(add-hook 'java-mode 'turn-on-subword-mode)
+(add-hook 'java-mode 'subword-mode)
 
 ;; Make cut and paste work
 (setq x-select-enable-clipboard t)
@@ -844,7 +846,7 @@ that uses 'font-lock-warning-face'."
 (add-hook 'python-mode-hook
           (lambda()
             (setq-default indent-tabs-mode nil)
-            (turn-on-subword-mode)
+            (subword-mode)
             (flymake-mode)))
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))

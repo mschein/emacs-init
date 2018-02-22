@@ -1088,4 +1088,8 @@ python debugging session."
          (browse-url (path-join url "browse" ticket))
        (error "Invalid JIRA ticket '%s' found from %s to %s" ticket start end)))))
 
+(defun insert-date ()
+  (interactive)
+  (insert (format-time-string "%c")))
+
 (provide 'elisp-lib)
