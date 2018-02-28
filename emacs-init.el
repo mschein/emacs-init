@@ -351,7 +351,7 @@
   "Any commands we want to run when editing js style files (jsx etc.)"
   (subword-mode))
 
-(add-hook 'javascript-mode-hook 'js-type-hooks)
+(add-hook 'js-mode-hook 'js-type-hooks)
 (add-hook 'web-mode-hook 'js-type-hooks)
 
 ;; flymake stuff is done later.
