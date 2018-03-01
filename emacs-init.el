@@ -889,8 +889,10 @@ that uses 'font-lock-warning-face'."
 (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
 
 (when (load "flymake" t)
-   (add-to-list 'flymake-allowed-file-name-masks
-                '("\\.jsx\\'" flymake-eslint-checker)))
+  (add-to-list 'flymake-allowed-file-name-masks
+               '("\\.jsx\\'" flymake-eslint-checker))
+  (add-to-list 'flymake-allowed-file-name-masks
+               '("\\.js\\'" flymake-js-checker)))
 
 
 ;;
