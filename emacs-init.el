@@ -32,7 +32,7 @@
 ;; is.
 ;; also, you can use \1, \2, for different matches.
 ;;
-;;M-x dirs will tell the shell buffer to figure out what the current working directory is.
+;; M-x dirs will tell the shell buffer to figure out what the current working directory is.
 ;;
 ;; find-library can be useful for finding more documentation
 ;;
@@ -104,6 +104,7 @@
 ;; find-* has useful file searching commands
 ;; dired is good for moving bunches of files.
 ;; Q in dired query replaces thigns in multiple files.
+;; dired (wdired mode) writable dired mode: C-x C-q
 ;;
 ;; Need to do some of the following:
 ;; 2. apply some thought to the design of my utilities
@@ -498,7 +499,6 @@ that uses 'font-lock-warning-face'."
 (defalias 'ytp 'yank-to-file-location-python)
 (defalias 'ji 'jump-to-imports-python)
 (defalias 'bu 'browse-url)
-(defalias 'fnd 'find-name-dired)
 (defalias 'tf 'toggle-frame-fullscreen)
 
 (global-set-key "\M-sb" 'multi-isearch-buffers)
