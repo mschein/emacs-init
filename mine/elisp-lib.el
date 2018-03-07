@@ -961,6 +961,15 @@ python debugging session."
 (defun umount-dmg (path)
   (run "hdiutil" "detach" path))
 
+(defun osx-screen-lock ()
+  (interactive)
+  (run "/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession"
+       "-suspend"))
+
+(defun osx-screen-lock-later (mins)
+  (interactive "nmins: ")
+  (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
+
 (defmacro pushd (dir &rest body)
   "Run the body in this new default directory"
   (let ((old-dir (gensym)))
