@@ -629,6 +629,13 @@ that uses 'font-lock-warning-face'."
 ;; also, there is another ruby converter for org-mode files to make wikis
 ;;
 
+(require 'org)
+
+;; Setup a place to store notes.
+(setq org-default-notes-file  "~/doc/todo.org")
+
+;; Do I still want this.
+;;
 ;; A directory for non-default orgmode files.
 (add-to-list 'load-path "~/emacs-init/contrib/org-mode/lisp")
 (add-to-list 'load-path "~/emacs-init/contrib/org-mode/contrib/lisp")
@@ -640,6 +647,7 @@ that uses 'font-lock-warning-face'."
 
 ;; recommended key bindings from the manual.
 (global-set-key "\C-cl" 'org-store-link)
+(global-set-key "\C-c\C-l" 'org-insert-link)
 (global-set-key "\C-cc" 'org-capture)
 (global-set-key "\C-ca" 'org-agenda)
 (global-set-key "\C-cb" 'org-iswitchb)
