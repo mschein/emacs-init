@@ -99,6 +99,7 @@
 ;; M-x package-list-packages
 ;; or I think list-pacakages is better sometimes.
 ;;
+;; C-x C-b (list-buffers.m)
 ;; eshell might be fun instead of shell
 ;;
 ;; find-* has useful file searching commands
