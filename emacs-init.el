@@ -822,7 +822,7 @@ that uses 'font-lock-warning-face'."
   (setq py-python-command interpreter)
   (setq python-shell-interpreter interpreter)
   (update-flymake-mask "\\.py\\'" checker)
-  (when (bound-and-true-p python-mode)
+  (when (eql 'python-mode major-mode)
     (update-flymake-mask "." checker)))
 
 (defun setup-python3-mode ()
