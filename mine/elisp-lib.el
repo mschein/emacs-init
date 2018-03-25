@@ -590,6 +590,16 @@ Example:
   "Return the line under the cursor, with properties."
   (string-trim-right (thing-at-point 'line)))
 
+(defun dedup (input)
+  "Remove duplicates from the input sequence"
+  (let ((seen (make-hash-table))
+        (out '()))
+    (dolist (elm input)
+      (unless (gethash elm seen)
+        (puthash elm t seen)
+        (setf out (cons elm out))))
+    (nreverse out)))
+
 (defun duplicate-line ()
   (interactive)
   (end-of-line)
@@ -1100,5 +1110,9 @@ python debugging session."
 (defun insert-date ()
   (interactive)
   (insert (format-time-string "%c")))
+
+(defun random-choice (list)
+  "Select a random item from the list."
+  (nth (random (length list)) list))
 
 (provide 'elisp-lib)
