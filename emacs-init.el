@@ -72,6 +72,13 @@
 ;; xref stack
 ;; M-, xref-pop-marker-stack...
 ;;
+;; calc notes:
+;;  - m a  ; algebraic mode
+;;  - m r  ; radian mode
+;;  - https://www.gnu.org/software/emacs/manual/html_node/calc/Getting-Started.html#Getting-Started
+;;  - C-x * q ; quick calc
+;;  - C-x * c ; regular calc
+;;
 ;;
 ;; Browsing the kill-ring
 ;;  C-h v kill-ring (view the variable kill ring)
@@ -338,6 +345,11 @@
 
 ;; Make it so C-n adds newlines.
 (setq next-line-add-newlines t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Calc Mode Settings.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq calc-algebraic-mode t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Javascript Configuration
