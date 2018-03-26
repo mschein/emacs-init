@@ -231,7 +231,7 @@ setup(name=package,
       ],
       test_requires=[
           # Unit test dependencies.
-          mock,
+          \'mock\',
       ],
       include_package_data=True,
       packages=find_packages(),
