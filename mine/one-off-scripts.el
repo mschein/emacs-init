@@ -229,7 +229,7 @@ setup(name=package,
       install_requires=[
           # Macros can be had with mcpy and macropy
       ],
-      test_requires=[
+      tests_require=[
           # Unit test dependencies.
           \'mock\',
       ],
