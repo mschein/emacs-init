@@ -456,9 +456,18 @@ Example:
   `(if (string-has-val ,obj)
        ,@forms))
 
+(defun replace-regex-region (regex replacement begin end)
+  (message "Start: %d end: %d" begin end)
+  (save-excursion
+    (goto-char begin)
+    (while (re-search-forward regex end t)
+      (replace-match replacement))))
+
+
 ;; TODO(scheinholtz): Do more with this?
 (defalias 'string-replace 'replace-regexp-in-string)
 
+(defalias 'string-replace-region 'replace-regex-region)
 
 (defun quote-str (str)
   "Quote a string, escaping '\" and \\"
@@ -876,7 +885,7 @@ Example:
       total)))
 
 (defun sum-col-region (begin end)
-
+  "Add up numbers in a region of text."
   (interactive "r")
   (message "%d" (sum-col-region-fn begin end)))
 
@@ -1114,5 +1123,9 @@ python debugging session."
 (defun random-choice (list)
   "Select a random item from the list."
   (nth (random (length list)) list))
+
+(defun remove-newlines (begin end)
+  (interactive "r")
+  (replace-regex-region "[\n ]+" " " begin end))
 
 (provide 'elisp-lib)
