@@ -457,7 +457,6 @@ Example:
        ,@forms))
 
 (defun replace-regex-region (regex replacement begin end)
-  (message "Start: %d end: %d" begin end)
   (save-excursion
     (goto-char begin)
     (while (re-search-forward regex end t)
@@ -1012,6 +1011,19 @@ python debugging session."
       url
     (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
+(defun git-symbolic-ref (&rest args)
+  "Run the git symbolic-ref command, see the man page for details."
+  (string-trim (apply #'run-to-str `("git" "symbolic-ref" ,@args))))
+
+(defun git-current-branch-ref ()
+  "Get the full ref name of the current git branch."
+  (git-symbolic-ref "HEAD"))
+
+(defun git-current-branch ()
+  "Get the short name of the git branch in the current repo."
+  (interactive)
+  (git-symbolic-ref "--short" "HEAD"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1127,5 +1139,15 @@ python debugging session."
 (defun remove-newlines (begin end)
   (interactive "r")
   (replace-regex-region "[\n ]+" " " begin end))
+
+;; Note that at some point we might need to support single arguments
+;; (as in no equal)
+(defun url-encode-params (params)
+  "Doc encode an alist into url parameters."
+  (string-join
+   (loop for (k . v) in params
+         collect (string-join (list (url-hexify-string k) (url-hexify-string v))
+                               "="))
+   "&"))
 
 (provide 'elisp-lib)
