@@ -478,12 +478,9 @@ that uses 'font-lock-warning-face'."
 
 ;;
 ;; Make window navigation easier
+;; Use shift and arrow keys
 ;;
-;; TODO: Fixme.
-(global-set-key [M-left]  'windmove-left)
-(global-set-key [M-right] 'windmove-right)
-(global-set-key [M-up]    'windmove-up)
-(global-set-key [M-down]  'windmove-down)
+(windmove-default-keybindings)
 
 ;; Thanks Steve.
 (defalias 'cr 'comment-region)
@@ -558,16 +555,14 @@ that uses 'font-lock-warning-face'."
 
 ;; Flyspell code
 (defun turn-on-flyspell ()
-   "Force flyspell-mode on using a positive arg.  For use in hooks."
-   (interactive)
-   (flyspell-mode 1)
-   (define-key flyspell-mode-map (kbd "C-;") 'undo))
+  "Force flyspell-mode on using a positive arg.  For use in hooks."
+  (interactive)
+  (flyspell-mode 1)
+  (define-key flyspell-mode-map (kbd "C-;") 'undo))
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
 (add-hook 'text-mode-hook 'turn-on-flyspell)
 
 (setf exec-path (append exec-path '("/usr/local/bin")))
-
-;(add-hook 'c-mode-common-hook 'flyspell-prog-mode)
 
 
 ;; ;; Found on interwebs:
@@ -619,9 +614,6 @@ that uses 'font-lock-warning-face'."
 ;; default to unified diffs
 (setq diff-switches "-u")
 
-;; always end a file with a newline
-;(setq require-final-newline 'query)
-
 ;;; uncomment for CJK utf-8 support for non-Asian users
 ;; (require 'un-define)
 
@@ -659,6 +651,7 @@ that uses 'font-lock-warning-face'."
 (add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
 
 ;; recommended key bindings from the manual.
+;;C-c C-o  opens saved links
 (global-set-key "\C-cl" 'org-store-link)
 (global-set-key "\C-c\C-l" 'org-insert-link)
 (global-set-key "\C-cc" 'org-capture)
@@ -716,11 +709,7 @@ that uses 'font-lock-warning-face'."
 
             ;; Is there a better way to do this?  I'm not sure why org-mode doesn't honor the
             ;; global settings.
-            (define-key flyspell-mode-map (kbd "C-;") 'undo)
-            (local-set-key [M-left]  'windmove-left)
-            (local-set-key [M-right] 'windmove-right)
-            (local-set-key [M-up]    'windmove-up)
-            (local-set-key [M-down]  'windmove-down)))
+            (define-key flyspell-mode-map (kbd "C-;") 'undo)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Mode configuration
