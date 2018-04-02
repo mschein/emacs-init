@@ -709,7 +709,11 @@ that uses 'font-lock-warning-face'."
 
             ;; Is there a better way to do this?  I'm not sure why org-mode doesn't honor the
             ;; global settings.
-            (define-key flyspell-mode-map (kbd "C-;") 'undo)))
+            (define-key flyspell-mode-map (kbd "C-;") 'undo)
+            (local-set-key [S-left] 'windmove-left)
+            (local-set-key [S-right] 'windmove-right)
+            (local-set-key [S-up] 'windmove-up)
+            (local-set-key [S-down] 'windmove-down)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Mode configuration
