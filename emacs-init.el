@@ -633,6 +633,8 @@ that uses 'font-lock-warning-face'."
 ;;  .cabal/bin/pandoc -f latex -t mediawiki <your file>
 ;; also, there is another ruby converter for org-mode files to make wikis
 ;;
+;; C-c C-o (open a thing at point)
+;;
 
 (require 'org)
 
