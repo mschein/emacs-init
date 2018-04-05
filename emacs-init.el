@@ -867,6 +867,9 @@ that uses 'font-lock-warning-face'."
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
 
+;; Try out jinja2 mode.
+(require 'jinja2-mode)
+
 ;; Allows crazy long lines.
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
 
@@ -965,7 +968,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
