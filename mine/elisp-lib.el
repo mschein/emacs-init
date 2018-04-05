@@ -856,14 +856,48 @@ Example:
      (funcall handler result-dir)
      (error (format "Invalid abbrev: %s" abbrev))))
 
-(defun jump-to-abbrev-shell (&rest args)
-  (apply #'jump-to-abbrev (cons #'shell-open-dir args)))
 
-(defun jump-to-abbrev-dired (&rest args)
-  (apply #'jump-to-abbrev (cons #'dired args)))
+;;
+;; Work on this.
+;;
+;; (defun build-jump-fn (abbreviations table key jump-fn)
+;;   (let ((abbrev (gensym)))
+;;     `((progn )
+;;       (defun jump-to-shell (,abbrev)
+;;         (interactive (list
+;;                       (completing-read "abbrev: " ',abbreviations)))
+;;         (jump-to-abbrev ,jump-fn ,abbrev ',table))
+;;        (global-set-key ,key #'jump-to-shell))))
 
-(defun jump-to-abbrev-magit (&rest args)
-  (apply #'jump-to-abbrev (cons #'magit-status args)))
+
+;; I was going to make this a loop, but I've spent too much
+;; time on it already.
+;;
+;; It seems like I should really be able to do this with a function,
+;; but lexical stuff wasn't quite working.
+;;
+(defmacro setup-jump-to-abbrev (abbrev-table)
+  (let* ((table (eval abbrev-table))
+         (abbreviations (mapcar #'car table))
+         (abbrev (gensym)))
+    `(progn
+       (defun jump-to-shell (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'shell-open-dir ,abbrev ',table))
+       (global-set-key "\C-xg" #'jump-to-shell)
+
+       (defun jump-to-dired (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'dired ,abbrev ',table))
+       (global-set-key "\C-x\C-g" #'jump-to-dired)
+
+       (defun jump-to-magit (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'magit-status ,abbrev ',table))
+       (global-set-key "\C-x\M-g" #'jump-to-magit))))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
