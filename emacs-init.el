@@ -328,10 +328,6 @@
 ;;
 (setq c-basic-offset 4)
 
-;; Make goto-line a command.
-(global-set-key "\M-g" 'goto-line)
-(global-set-key "\C-x\M-f" 'find-file-other-window)
-
 ;; Add ruby files.
 (add-to-list 'load-path "~/emacs-init/ruby-mode")
 (add-to-list 'auto-mode-alist '("\\.rb\\'" . ruby-mode))
@@ -510,12 +506,13 @@ that uses 'font-lock-warning-face'."
 (defalias 'ji 'jump-to-imports-python)
 (defalias 'bu 'browse-url)
 (defalias 'tf 'toggle-frame-fullscreen)
+(defalias 'fow 'find-file-other-window)
 
+;; More keyboard aliases
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
 
-(global-set-key "\C-x\C-m" 'execute-extended-command)
-(global-set-key "\C-c\C-m" 'execute-extended-command)
+(global-set-key "\C-c\C-m" 'execute-extended-command) ;; alias for M-x
 
 (global-set-key "\C-c\C-c" 'comment-region)
 (global-set-key "\C-cu" 'uncomment-region)
@@ -526,8 +523,9 @@ that uses 'font-lock-warning-face'."
 
 (global-set-key "\C-c\C-r" 'reload-file)
 (global-set-key "\C-xt" 'open-todo)
-(global-set-key "\C-c\M-f" 'find-file-at-point)
 (global-set-key (kbd "C-;") 'undo)
+(global-set-key "\M-g" 'goto-line)
+(global-set-key "\C-x\M-f" 'find-file-at-point)
 
 ;; Save desktops
 (desktop-save-mode t)
