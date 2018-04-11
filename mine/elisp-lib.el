@@ -362,12 +362,11 @@ Example:
   ;; Note, since or is a macro, we can't do 'or
   (reduce (| or %1 %2) list))
 
-
 (defmacro h_ (&rest args)
   "Take list of pairs and convert them in to a hashtable.
 
 Example:
- (h_ "one" 'a "two" 'b)
+ (h_ \"one\" 'a \"two\" 'b)
  -> ... a hash table with one -> a, two -> b"
   (let ((ht (gensym)))
     `(let ((,ht (make-hash-table :test #'equal)))
@@ -516,6 +515,7 @@ Example:
   (mapcar #'string-trim (split-string str "\n" t)))
 
 (defun buffer->list ()
+  "Convert the current buffer into a list."
   (string->list (buffer-string)))
 
 (defun region->list (begin end)
@@ -1183,5 +1183,14 @@ python debugging session."
          collect (string-join (list (url-hexify-string k) (url-hexify-string v))
                                "="))
    "&"))
+
+(defun assoc1 (key list)
+  "Lookup a key in an alist and raise an error if its not there.
+
+   Returns the value.  Values can be nil and it will still work.
+  "
+  (if-let (answer (assoc key list))
+      (cdr answer)
+    (error "Key \'%s\' not found" key)))
 
 (provide 'elisp-lib)
