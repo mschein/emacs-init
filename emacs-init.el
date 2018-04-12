@@ -530,6 +530,9 @@ that uses 'font-lock-warning-face'."
 ;; Save desktops
 (desktop-save-mode t)
 
+;; Enable time in the mode line.
+(display-time-mode t)
+
 ;; Flash the screen instead of making a noise on bell.
 ;; We'll see if I like this.
 (setq visible-bell t)
