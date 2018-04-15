@@ -239,7 +239,8 @@ setup(name=package,
       zip_safe=True
 )")
 
-(defconst *python-init-file* "# empty module file")
+(defconst *python-init-file* "# empty module file
+")
 
 (defun python-create-project (name)
   (interactive "sname: ")
