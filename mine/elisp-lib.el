@@ -856,7 +856,6 @@ Example:
      (funcall handler result-dir)
      (error (format "Invalid abbrev: %s" abbrev))))
 
-
 ;;
 ;; Work on this.
 ;;
@@ -897,7 +896,20 @@ Example:
          (interactive (list
                        (completing-read "abbrev: " ',abbreviations)))
          (jump-to-abbrev #'magit-status ,abbrev ',table))
-       (global-set-key "\C-x\M-g" #'jump-to-magit))))
+       (global-set-key "\C-x\M-g" #'jump-to-magit)
+       (defun yank-abbrev-path (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'kill-new ,abbrev ',table))
+       (defalias 'yap #'yank-abbrev-path)
+
+       ;; Should figure this out, but later:
+       ;; (defun insert-abbrev-path (,abbrev)
+       ;;   (interactive (list
+       ;;                 (completing-read "abbrev: " ',abbreviations)))
+       ;;   (jump-to-abbrev #'insert ,abbrev ',table))
+       ;; (defalias 'iap #'insert-abbrev-path)
+       )))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
