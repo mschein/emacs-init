@@ -505,6 +505,10 @@ Example:
     (if doit (shell-command cmd)))))
 
 (defun run (&rest cmd-parts)
+  "Execute a shell command given an argument list.  See `shell-command'
+   for return value.
+
+   Example:   (run \"hdiutil\" \"attach\" path)"
   (shell-command (combine-and-quote-strings cmd-parts)))
 
 (defun run-to-str (&rest cmd-parts)
@@ -1026,13 +1030,23 @@ python debugging session."
   (run "hdiutil" "detach" path))
 
 (defun osx-screen-lock ()
+  "Lock the screen immediately"
   (interactive)
   (run "/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession"
        "-suspend"))
 
 (defun osx-screen-lock-later (mins)
+  "Lock the screen after `mins' minutes."
   (interactive "nmins: ")
   (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
+
+(defun osx-sleep-now ()
+  "Put the system to sleep immediately."
+  (run "pmset" "sleepnow"))
+
+(defun osx-sleep-soon (mins)
+  (interactive "smins: ")
+  (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
 (defmacro pushd (dir &rest body)
   "Run the body in this new default directory"
