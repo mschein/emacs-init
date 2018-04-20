@@ -222,7 +222,7 @@ version = '0.1'
 
 setup(name=package,
       version=version,
-      description=\"<some description\",
+      description=\"<some description>\",
       entry_points={
           'console_scripts': []
       },
