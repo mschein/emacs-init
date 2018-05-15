@@ -1003,5 +1003,8 @@ that uses 'font-lock-warning-face'."
       (dolist (file-path (directory-files local-dir 'full ".el$"))
 	(load file-path))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  JSON Parsing stuff  ;;;;;;;;;;;;;;;;;;;;
+(require 'json)
+
 
 ;; (quickproject:make-project "~/src/me/cheddar" :depends-on '(#:iterate #:let-plus #:alexandria #:closer-mop #:anaphora #:rutilsx)
