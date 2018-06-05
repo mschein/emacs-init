@@ -1239,10 +1239,12 @@ python debugging session."
 ;; Other options:
 ;;  1. ignore ssl
 ;;  2. verbose
+;;
+;; Look at the `ping` and other net-utilities for inspiration.
 
 (cl-defun web-request (url
                        &key (cmd 'get)
-                       params auth body json file)
+                       params auth body json file timeout)
   "Make a web request with curl."
 
   ;; Check the args
@@ -1250,6 +1252,8 @@ python debugging session."
   (if auth
       (assert (search ":" auth)))
   (assert (not (and body json)))
+  (if timeout
+      (assert (integerp timeout)))
 
   ;; Build up the command list
   (let ((cmd (list "curl" (upcase (format "-X%s" cmd))))
@@ -1265,11 +1269,15 @@ python debugging session."
       (append-option json (| `("-H" "Content-Type: application/json"
                                "--data-raw" ,json)))
       (append-option file (| `("--data-binary" ,file)))
+      (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
       (append-option t (| list (if params
                                    (concat url "?" (url-encode-params params))
                                  url)))
 
       (message "Running %s" cmd)
+
+      ;; TODO(mls): better error handling.
+      ;; it would be good to handle the error code + headers
       (let* ((resp (do-cmd cmd :stdout 'STRING))
              (resp-json (condition-case nil
                             (json-read-from-string resp)
