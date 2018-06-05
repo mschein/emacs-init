@@ -12,6 +12,8 @@
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'cl-lib)
+(require 'subr-x)
+(require 'json)
 
 ;; Wrap in try catch
 (setf lexical-binding t)
@@ -510,6 +512,7 @@ Example:
 
    Example:   (run \"hdiutil\" \"attach\" path)"
   (shell-command (combine-and-quote-strings cmd-parts)))
+
 
 (defun run-to-str (&rest cmd-parts)
   (shell-command-to-string (combine-and-quote-strings cmd-parts)))
@@ -1143,17 +1146,17 @@ python debugging session."
                                 "nonlocal"
                                 (format "{%s:\s*%s\s+for\s+"
                                         python-NAME-regex python-NAME-regex)))
-          (python2-regex (list "xrange("
-                               "print\s+[^(]"
-                               (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
-                               "\.iteritems("))
-          (py3-score 0))
+           (python2-regex (list "xrange("
+                                "print\s+[^(]"
+                                (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
+                                "\.iteritems("))
+           (py3-score 0))
       (cl-flet ((run-searches (regexes score-fn)
-                 (dolist (regex regexes)
-                   (goto-char 0)
-                   (when (re-search-forward regex nil t)
-                     (message "match regex %s" regex)
-                     (funcall score-fn)))))
+                   (dolist (regex regexes)
+                     (goto-char 0)
+                     (when (re-search-forward regex nil t)
+                       (message "match regex %s" regex)
+                       (funcall score-fn)))))
         (run-searches python3-regex (fn () (incf py3-score)))
         (run-searches python2-regex (fn () (decf py3-score))))
 
@@ -1182,11 +1185,11 @@ python debugging session."
            (ticket (if (< start end)
                        (buffer-substring-no-properties start end)
                      nil)))
-     (if (and ticket
-              (< (- end start) max-ticket-len)
-              (funcall ticket-valid-fn ticket))
-         (browse-url (path-join url "browse" ticket))
-       (error "Invalid JIRA ticket '%s' found from %s to %s" ticket start end)))))
+      (if (and ticket
+               (< (- end start) max-ticket-len)
+               (funcall ticket-valid-fn ticket))
+          (browse-url (path-join url "browse" ticket))
+        (error "Invalid JIRA ticket '%s' found from %s to %s" ticket start end)))))
 
 (defun insert-date ()
   (interactive)
@@ -1218,5 +1221,79 @@ python debugging session."
   (if-let (answer (assoc key list))
       (cdr answer)
     (error "Key \'%s\' not found" key)))
+
+
+;; TODO(mls): See if I can unify this with run, and run-to-str.
+(cl-defun do-cmd (cmd &key input stdout stderr)
+  ;; Add an async function
+  "Be a main entry point for running shell commands."
+
+  (let* ((stdout-buffer (if (equal stdout 'STRING)
+                            (generate-new-buffer "*do-cmd-stdout*")))
+         (stdout (if stdout-buffer t stdout)))
+
+    (cl-flet ((my-call-process ()
+                 (call-process "bash" input (list stdout stderr) nil
+                               "-c" (combine-and-quote-strings cmd))))
+      (if stdout-buffer
+           (with-current-buffer stdout-buffer
+             (my-call-process)
+             (buffer-string))
+        (my-call-process)))))
+
+
+;; I should integrate this with the json encoder/decoder
+;;
+;; Other options:
+;;  1. ignore ssl
+;;  2. verbose
+
+(cl-defun web-request (url
+                       &key (cmd 'get)
+                       params auth body json file)
+  "Make a web request with curl."
+
+  ;; Check the args
+  (assert url)
+  (if auth
+      (assert (search ":" auth)))
+  (assert (not (and body json)))
+
+  ;; Build up the command list
+  (let ((cmd (list "curl" (upcase (format "-X%s" cmd))))
+        (json (when json
+                (if (typep json 'string)
+                    json
+                  (json-encode json)))))
+    (cl-flet ((append-option (arg value-fn)
+                (when arg
+                  (setf cmd (append cmd (funcall value-fn))))))
+      (append-option auth (| `("--user" ,auth)))
+      (append-option body (| `("--data-raw" ,body)))
+      (append-option json (| `("-H" "Content-Type: application/json"
+                               "--data-raw" ,json)))
+      (append-option file (| `("--data-binary" ,file)))
+      (append-option t (| list (if params
+                                   (concat url "?" (url-encode-params params))
+                                 url)))
+
+      (message "Running %s" cmd)
+      (let* ((resp (do-cmd cmd :stdout 'STRING))
+             (resp-json (condition-case nil
+                            (json-read-from-string resp)
+                          (error nil))))
+        `((:resp . ,resp)
+          (:json . ,resp-json))))))
+
+
+;; (defun export-org-table ()
+;;   (interactive)
+;;   (unless (org-at-table-p)
+;;     (error "No table at the point."))
+
+;;   (save-excursion
+;;     (org-table-begin)
+;;     )
+;;   )
 
 (provide 'elisp-lib)
