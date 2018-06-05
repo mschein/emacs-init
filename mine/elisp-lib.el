@@ -20,16 +20,17 @@
 
 (setf directory-sep "/")
 
-(defun aget (key alist)
-  "I discovered I was missing this function.
-   I'm not entirely sure why I have it, it may
-   be worth getting rid of, but there are things that call it.
+(defun assoc1 (key list)
+  "Lookup a key in an alist and raise an error if its not there.
 
-   Return the cdr in an associated array
+   Returns the value (The cdr of the element).
+   Values can be nil and it will still work.
    `key`: The key to lookup
    `alist`: The associated list to check.
   "
-  (cdr (assoc key alist)))
+  (if-let (answer (assoc key list))
+      (cdr answer)
+    (error "Key \'%s\' not found" key)))
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
@@ -193,7 +194,7 @@ of the test."
                                          (setf new-name single-arg)
                                        (setf single-arg new-name)))
                  ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
-                 (t (m-if-let (old-sym (aget arg-num alist-args))
+                 (t (m-if-let (old-sym (assoc1 arg-num alist-args))
                               (setf new-name old-sym)
                               (setf alist-args (acons arg-num new-name alist-args)))))
                 new-name)
@@ -702,7 +703,7 @@ Example:
 (defun prev-day-of-week (time day-of-week)
   (m-if-let (day-of-week (if (numberp day-of-week)
                              day-of-week
-                         (aget day-of-week week-days)))
+                         (assoc1 day-of-week week-days)))
     (do ((i 1 (+ i 1)))
         ((>= i 8))
       (print i)
@@ -723,7 +724,7 @@ Example:
                     (:hour . 2)
                     (:min . 1)
                     (:sec . 0))))
-    (if-let (idx (aget elm time-map))
+    (if-let (idx (assoc1 elm time-map))
             (nth idx (decode-time time))
             (raise (format "invalid time element %s" elm)))))
 
@@ -1212,15 +1213,6 @@ python debugging session."
          collect (string-join (list (url-hexify-string k) (url-hexify-string v))
                                "="))
    "&"))
-
-(defun assoc1 (key list)
-  "Lookup a key in an alist and raise an error if its not there.
-
-   Returns the value.  Values can be nil and it will still work.
-  "
-  (if-let (answer (assoc key list))
-      (cdr answer)
-    (error "Key \'%s\' not found" key)))
 
 
 ;; TODO(mls): See if I can unify this with run, and run-to-str.
