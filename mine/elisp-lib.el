@@ -55,7 +55,7 @@ test.  If the test returned nil, then the body will not execute."
 
 (defmacro m-if-let (test-binding &rest forms)
   "Provides an if macro that binds a value a la let.
-
+v
 Example:
  (m-if-let (res (fetch-string))
    (convert-to-something res)
@@ -852,17 +852,7 @@ Example:
   (setq default-directory dir))
 
 (defun jump-to-abbrev (handler abbrev table)
-  (if-let* ((abbrev-table-cell
-             (remove-if-not
-              (fn ((path-abbrev . _))
-                  (or (and (= (length abbrev) 1)
-                           (string= (-> path-abbrev (elt 0) char-to-string)
-                                    abbrev))
-                      (string-case= abbrev path-abbrev)))
-              table))
-            (result-dir (cdar abbrev-table-cell)))
-     (funcall handler result-dir)
-     (error (format "Invalid abbrev: %s" abbrev))))
+  (funcall handler (assoc1 abbrev table)))
 
 ;;
 ;; Work on this.
@@ -1060,7 +1050,7 @@ python debugging session."
        (unwind-protect
            (progn
              (setf default-directory (if (file-name-absolute-p ,dir)
-                                         dir
+                                         ,dir
                                        (path-join ,old-dir ,dir)))
              ,@body)
          (setf default-directory ,old-dir)))))
