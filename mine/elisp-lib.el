@@ -935,7 +935,7 @@ Example:
 (defmacro make-bookmark (name url)
   `(defun ,name ()
      (interactive)
-     (browse-url-chrome ,url)))
+     (browse-url ,url)))
 
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
@@ -1206,6 +1206,10 @@ python debugging session."
 
 
 ;; TODO(mls): See if I can unify this with run, and run-to-str.
+;;
+;; I should have run call this function.
+;; It would also be nice to direct stdout or error to the message
+;; buffer.
 (cl-defun do-cmd (cmd &key input stdout stderr)
   ;; Add an async function
   "Be a main entry point for running shell commands."
