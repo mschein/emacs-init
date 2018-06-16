@@ -494,10 +494,6 @@ Example:
 (defmacro with-fmt (fun str &rest args)
   `(,fun (format ,str ,@args)))
 
-;;(defun whocanread (user)
-;;  (interactive "suser: ")
-;;  (format-wrap 'browse-url-chrome "icanread/
-
 ;; TODO(scheinholtz): Use the async I/O for this.
 (defun* doit-shell (doit-str silent fmt &rest args)
   (let ((cmd (apply #'format fmt args))
@@ -506,6 +502,80 @@ Example:
       (switch-to-buffer "*shell-cmd-buf*")
       (-> cmd (concat "\n") insert)
     (if doit (shell-command cmd)))))
+
+;; TODO(mls): See if I can unify this with run, and run-to-str.
+;;
+;; I should have run call this function.
+;; It would also be nice to direct stdout or error to the message
+;; buffer.
+;;
+;;
+;; ideal interface:
+;; (run-str "ls -l") -> "string of contents"
+;; (run "ls" "-l" :stdout 'string :stderr "/dev/null")
+;;
+;; I may also want to add an 'environment' input to the function.
+;; for stuff like ecr access.
+;;
+;;
+(cl-defun do-cmd (cmd &key input stdout stderr no-throw)
+  ;; Add an async function
+  "Be a main entry point for running shell commands."
+
+  ;;
+  ;; elisp version of arguments:
+  ;;  -> buffer (insert into buffer before point)
+  ;;  -> buffer name (string), make a new buffer for storing stuff.
+  ;;  -> t: current buffer
+  ;;  -> nil: ignore
+  ;;  -> 0: don't wait for subprocess
+  ;;  -> (:file <path>) dump output to file.
+  ;;
+  ;; (real error) -> do something else with stderr (otherwise shared with stdout).
+  ;;
+  ;; good options for me:
+  ;; 'current-buffer
+  ;; 'string
+  ;; <buffer object>
+  ;; nil
+  ;; 'stdout ; only use on stderr, means combine the two.
+  ;; (:buffer <buffer-name>)
+  ;; (:file <file-path 'append) ; append is optional.
+  ;;
+  ;; output: (list
+  ;;          (:code . <int>)
+  ;;          (:stdout . "string")  ; if any
+  ;;          (:stderr . "string")) ; if any
+  ;;
+
+  (let* ((stdout-buffer (if (equal stdout 'STRING)
+                            (generate-new-buffer "*do-cmd-stdout*")))
+         (stdout (if stdout-buffer t stdout)))
+
+    (cl-flet ((my-call-process ()
+                 (call-process "bash" input (list stdout stderr) nil
+                               "-c" (combine-and-quote-strings cmd))))
+      (if stdout-buffer
+           (with-current-buffer stdout-buffer
+             (my-call-process)
+             (buffer-string))
+        (my-call-process)))))
+
+(cl-defun do-cmd2 (cmd &key input stdout stderr no-throw)
+  ;;
+  ;;
+  (cl-etypecase stdout
+    (symbol (cl-ecase stdout
+              (current-buffer)
+              (string)
+              (nil)
+              (stdout)))
+    (list (cl-ecase (first stdout)
+            (:file)
+            (:buffer)))
+    (buffer))
+
+
 
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `shell-command'
@@ -517,6 +587,9 @@ Example:
 
 (defun run-to-str (&rest cmd-parts)
   (shell-command-to-string (combine-and-quote-strings cmd-parts)))
+
+(defun run-str (cmd)
+  (shell-command-to-string cmd))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str)
@@ -1205,29 +1278,6 @@ python debugging session."
    "&"))
 
 
-;; TODO(mls): See if I can unify this with run, and run-to-str.
-;;
-;; I should have run call this function.
-;; It would also be nice to direct stdout or error to the message
-;; buffer.
-(cl-defun do-cmd (cmd &key input stdout stderr)
-  ;; Add an async function
-  "Be a main entry point for running shell commands."
-
-  (let* ((stdout-buffer (if (equal stdout 'STRING)
-                            (generate-new-buffer "*do-cmd-stdout*")))
-         (stdout (if stdout-buffer t stdout)))
-
-    (cl-flet ((my-call-process ()
-                 (call-process "bash" input (list stdout stderr) nil
-                               "-c" (combine-and-quote-strings cmd))))
-      (if stdout-buffer
-           (with-current-buffer stdout-buffer
-             (my-call-process)
-             (buffer-string))
-        (my-call-process)))))
-
-
 ;; I should integrate this with the json encoder/decoder
 ;;
 ;; Other options:
@@ -1278,6 +1328,32 @@ python debugging session."
                           (error nil))))
         `((:resp . ,resp)
           (:json . ,resp-json))))))
+
+(defun normalize-dir-path (path)
+  (string-remove-suffix "/" (expand-file-name path)))
+
+(defun dumpenv ()
+  (mapcar (lambda (var)
+            (if-let (key-value (string-find "^\\([^=]+\\)=\\(.+\\)$" var))
+                (apply #'cons key-value)
+              (cons var nil)))
+          process-environment))
+
+(defun in-new-env (env callback-fn)
+  (let ((old-env-values '()))
+
+    ;; Push the new environment values.
+    (mapc (fn ((name . new-value))
+              (push (cons name (getenv name)) old-env-values)
+              (setenv name new-value))
+          env)
+
+    (ignore-errors
+      (funcall callback-fn))
+
+    (mapc (fn ((name . old-value))
+              (setenv name old-value))
+          old-env-values)))
 
 
 ;; (defun export-org-table ()
