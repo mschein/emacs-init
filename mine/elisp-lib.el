@@ -186,7 +186,6 @@ of the test."
                  (progn
                    (if (equal '| elm)
                        (error "Nested |'s are not allowed."))
-                   (message "elm: %s" elm)
                    (m-if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
                       (let ((new-name (gensym)))
                         ;; TODO(scheinholtz) caseq or case-eq?
