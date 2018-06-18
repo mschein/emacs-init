@@ -550,16 +550,25 @@ Example:
 
   (let* ((stdout-buffer (if (equal stdout 'STRING)
                             (generate-new-buffer "*do-cmd-stdout*")))
-         (stdout (if stdout-buffer t stdout)))
+         (stdout (if stdout-buffer t stdout))
+         (resp nil))
 
     (cl-flet ((my-call-process ()
-                 (call-process "bash" input (list stdout stderr) nil
-                               "-c" (combine-and-quote-strings cmd))))
+                (setf resp (call-process "bash" input (list stdout stderr) nil
+                                         "-c" (combine-and-quote-strings cmd)))))
+
       (if stdout-buffer
-           (with-current-buffer stdout-buffer
-             (my-call-process)
-             (buffer-string))
-        (my-call-process)))))
+          (with-current-buffer stdout-buffer
+            (my-call-process))
+        (my-call-process))
+
+      (let ((output '()))
+        (push (cons :code resp) output)
+        (when stdout-buffer
+          (with-current-buffer stdout-buffer
+            (push (cons :stdout (buffer-string)) output))
+          (kill-buffer stdout-buffer))
+        output))))
 
 ;; (cl-defun do-cmd2 (cmd &key input stdout stderr no-throw)
 ;;   ;;
@@ -1271,7 +1280,9 @@ python debugging session."
   "Doc encode an alist into url parameters."
   (string-join
    (loop for (k . v) in params
-         collect (string-join (list (url-hexify-string k) (url-hexify-string v))
+         collect (string-join (list
+                               (url-hexify-string (format "%s" k))
+                               (url-hexify-string (format "%s" v)))
                                "="))
    "&"))
 
@@ -1298,7 +1309,7 @@ python debugging session."
       (assert (integerp timeout)))
 
   ;; Build up the command list
-  (let ((cmd (list "curl" (upcase (format "-X%s" cmd))))
+  (let ((cmd (list "curl" "-f" (upcase (format "-X%s" cmd))))
         (json (when json
                 (if (typep json 'string)
                     json
@@ -1321,9 +1332,14 @@ python debugging session."
       ;; TODO(mls): better error handling.
       ;; it would be good to handle the error code + headers
       (let* ((resp (do-cmd cmd :stdout 'STRING))
+             (output (assoc1 :stdout resp))
              (resp-json (ignore-errors
-                          (json-read-from-string resp))))
-        `((:resp . ,resp)
+                          (json-read-from-string (assoc1 :stdout resp)))))
+
+        ;; I should try to get the http code from curl
+        ;; and stderr.
+        `((:resp . ,output)
+          (:code . ,(assoc1 :code resp))
           (:json . ,resp-json))))))
 
 (defun normalize-dir-path (path)
