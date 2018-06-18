@@ -561,21 +561,19 @@ Example:
              (buffer-string))
         (my-call-process)))))
 
-(cl-defun do-cmd2 (cmd &key input stdout stderr no-throw)
-  ;;
-  ;;
-  (cl-etypecase stdout
-    (symbol (cl-ecase stdout
-              (current-buffer)
-              (string)
-              (nil)
-              (stdout)))
-    (list (cl-ecase (first stdout)
-            (:file)
-            (:buffer)))
-    (buffer))
-
-
+;; (cl-defun do-cmd2 (cmd &key input stdout stderr no-throw)
+;;   ;;
+;;   ;;
+;;   (cl-etypecase stdout
+;;     (symbol (cl-ecase stdout
+;;               (current-buffer)
+;;               (string)
+;;               (nil)
+;;               (stdout)))
+;;     (list (cl-ecase (first stdout)
+;;             (:file)
+;;             (:buffer)))
+;;     (buffer))
 
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `shell-command'
@@ -1323,9 +1321,8 @@ python debugging session."
       ;; TODO(mls): better error handling.
       ;; it would be good to handle the error code + headers
       (let* ((resp (do-cmd cmd :stdout 'STRING))
-             (resp-json (condition-case nil
-                            (json-read-from-string resp)
-                          (error nil))))
+             (resp-json (ignore-errors
+                          (json-read-from-string resp))))
         `((:resp . ,resp)
           (:json . ,resp-json))))))
 
@@ -1354,6 +1351,17 @@ python debugging session."
     (mapc (fn ((name . old-value))
               (setenv name old-value))
           old-env-values)))
+
+;; (defun find-virtualenv-file (root-dir)
+;;   (car (first
+;;         (sort (mapcar (fn (path)
+;;                           (cons path (cond
+;;                                       ((equal (normalize-dir-path (file-name-directory path))
+;;                                               (normalize-dir-path root-dir)) 10)
+;;                                       ((search "/target/" path) 5)
+;;                                       (t 0))))
+;;                       (directory-files-recursively root-dir "^activate$"))
+;;               (fn (a b) (> (cdr a) (cdr b)))))))
 
 
 ;; (defun export-org-table ()
