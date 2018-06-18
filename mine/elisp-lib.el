@@ -158,68 +158,70 @@ of the test."
    ;; an alist is built up containing: (argpos . gensym) values.
    ;; A single % or the &rest %& are made seperate because they
    ;; require special handling.
-   (cl-labels
-     ((make-arg-list (arg-alist)
-       ;; Converts an alist of (argpos . gensym) pairs into the
-       ;; argument list for the function.
-       (let ((out-arg-list '()))
-         ;; TODO(scheinholtz): Switch to loop, to get rid of the (1+ i)
-         (dotimes (i (length arg-alist))
-           (let ((arg-pos (1+ i)))
-             (m-if-let (res (assoc (number-to-string arg-pos) arg-alist))
-                     (destructuring-bind (arg . sym) res
-                       (setf out-arg-list (cons sym out-arg-list)))
-                     (error "Missing argument %%%s in f form" arg-pos))))
-         (reverse out-arg-list)))
-      (perc->gensym (elm)
-        ;; Given an element in the code forms.  Convert each
-        ;; % to its appropriate gensym, and record which argument
-        ;; its supposed to be.  %& and % are handled specially.
-        (if (symbolp elm)
-            ;; TODO(scheinholtz): should I raise an error if I find
-            ;; nested '|'s?
-            (progn
-              (if (equal '| elm)
-                  (error "Nested |'s are not allowed."))
 
-            (m-if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
-              (let ((new-name (gensym)))
-                ;; TODO(scheinholtz) caseq or case-eq?
-                ;; Does that exist?
-                (cond
-                 ((equal "&" arg-num) (if rest-arg
-                                          (setf new-name rest-arg)
-                                        (setf rest-arg new-name)))
-                 ((equal "" arg-num) (if single-arg
-                                         (setf new-name single-arg)
-                                       (setf single-arg new-name)))
-                 ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
-                 (t (m-if-let (old-sym (assoc1 arg-num alist-args))
-                              (setf new-name old-sym)
-                              (setf alist-args (acons arg-num new-name alist-args)))))
-                new-name)
-              elm))
-          elm)))
+   (let ((alist-args '())
+         (rest-arg nil)
+         (single-arg nil))
 
-     ;; Bindings for the state produced by the code processing functions.
-     (let* ((alist-args '())
-            (rest-arg nil)
-            (single-arg nil)
-            (new-forms (code-walker #'perc->gensym in-forms))
-            (arg-list (make-arg-list alist-args)))
+     (cl-labels
+         ((make-arg-list (arg-alist)
+             ;; Converts an alist of (argpos . gensym) pairs into the
+             ;; argument list for the function.
+             (let ((out-arg-list '()))
+               ;; TODO(scheinholtz): Switch to loop, to get rid of the (1+ i)
+               (dotimes (i (length arg-alist))
+                 (let ((arg-pos (1+ i)))
+                   (m-if-let (res (assoc (number-to-string arg-pos) arg-alist))
+                             (destructuring-bind (arg . sym) res
+                               (setf out-arg-list (cons sym out-arg-list)))
+                             (error "Missing argument %%%s in f form" arg-pos))))
+               (reverse out-arg-list)))
+          (perc->gensym (elm)
+             ;; Given an element in the code forms.  Convert each
+             ;; % to its appropriate gensym, and record which argument
+             ;; its supposed to be.  %& and % are handled specially.
+             (if (symbolp elm)
+                 ;; TODO(scheinholtz): should I raise an error if I find
+                 ;; nested '|'s?
+                 (progn
+                   (if (equal '| elm)
+                       (error "Nested |'s are not allowed."))
+                   (message "elm: %s" elm)
+                   (m-if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
+                      (let ((new-name (gensym)))
+                        ;; TODO(scheinholtz) caseq or case-eq?
+                        ;; Does that exist?
+                        (cond
+                         ((equal "&" arg-num) (if rest-arg
+                                                  (setf new-name rest-arg)
+                                                (setf rest-arg new-name)))
+                         ((equal "" arg-num) (if single-arg
+                                                 (setf new-name single-arg)
+                                               (setf single-arg new-name)))
+                         ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
+                         (t (m-if-let (old-sym (cdr (assoc arg-num alist-args)))
+                                      (setf new-name old-sym)
+                                      (setf alist-args (acons arg-num new-name alist-args)))))
+                        new-name)
+                      elm))
+               elm)))
 
-       ;; validate arguments and handle single %
-       (when single-arg
-         (if (or rest-arg alist-args)
-             (error "Cannot have %%& or %1-%n with %%"))
-         (setf arg-list (list single-arg)))
+       ;; Bindings for the state produced by the code processing functions.
+       (let ((new-forms (code-walker #'perc->gensym in-forms))
+             (arg-list (make-arg-list alist-args)))
 
-       `(lambda ,(if rest-arg
-                     (append arg-list `(&rest ,rest-arg))
-                   arg-list)
-          ,@(if (atom (car new-forms))
-                `(,new-forms)
-              new-forms)))))
+         ;; validate arguments and handle single %
+         (when single-arg
+           (if (or rest-arg alist-args)
+               (error "Cannot have %%& or %%1-%%n with %%"))
+           (setf arg-list (list single-arg)))
+
+         `(lambda ,(if rest-arg
+                       (append arg-list `(&rest ,rest-arg))
+                     arg-list)
+            ,@(if (atom (car new-forms))
+                  `(,new-forms)
+                new-forms))))))
 
 (defmacro fn (args &rest forms)
   "Makes a lambda with implicit argument destructuring.
@@ -626,15 +628,12 @@ Example:
 ;; The concept of "to" something may be an idiom
 ;; I can create.
 (defun to-buffer (name str)
-  (-> name generate-new-buffer set-buffer)
-  (insert str))
+  (let ((new-buffer (-> name generate-new-buffer set-buffer)))
+    (insert str)
+    new-buffer))
 
 (defun to-buffer-switch (name str)
-  (to-buffer name str)
-  (switch-to-buffer name))
-
-(defun to-buffer-switchf (name fmt &rest args)
-  (to-buffer-switch name (apply #'format fmt args)))
+  (switch-to-buffer (to-buffer name str)))
 
 (defun shell-command-to-buffer (name cmd)
   (to-buffer-switch name (shell-command-to-string cmd)))
@@ -656,6 +655,18 @@ Example:
     (switch-to-buffer name)
     (cd dir)
     (funcall handle-fn name)))
+
+(defmacro with-new-buffer (name-prefix &rest body)
+  (let ((old-buffer (gensym))
+        (new-buffer (gensym)))
+
+    `(let* ((,old-buffer (current-buffer))
+            (,new-buffer (generate-new-buffer ,name-prefix)))
+     (switch-to-buffer ,new-buffer)
+     (ignore-errors
+       ,@body)
+     (switch-to-buffer ,old-buffer))))
+
 
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
