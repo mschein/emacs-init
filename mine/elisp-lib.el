@@ -418,10 +418,10 @@ Example:
 (defun string-has-val (s)
   (not (string-nil-or-empty s)))
 
-(defun string-ends-with (str suffix)
+(defun string-ends-with (suffix str)
   (string-match (concat (regexp-quote suffix) "$") str))
 
-(defun string-starts-with (str prefix)
+(defun string-starts-with (prefix str)
   (string-match (concat "^" (regexp-quote prefix)) str))
 
 (defun string-or (&rest args)
@@ -432,6 +432,12 @@ Example:
 (defun string-trim-chars (str front-group back-group)
   "Remove leading and trailing characters from a string."
   (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group) "" str))
+
+(defun string-left-trim-regex (regex str)
+  (replace-regexp-in-string (format "^%s" regex) "" str))
+
+(defun string-right-trim-regex (regex str)
+  (replace-regexp-in-string (format "%s$" regex) "" str))
 
 ;; XXX This doesn't quite work the way I want
 ;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
@@ -854,7 +860,7 @@ Example:
 (defun path-join (&rest args)
   "Join a set of path parts together, removing any duplicate slashes (OSX/Unix only)."
   (cl-flet ((needs-slash (val check-for-slash)
-               (when (and val (funcall check-for-slash val directory-sep))
+               (when (and val (funcall check-for-slash directory-sep val))
                  directory-sep)))
     (let ((leading-slash (needs-slash (first args) #'string-starts-with))
           (trailing-slash (needs-slash (last-car args) #'string-ends-with)))
@@ -1081,7 +1087,7 @@ Example:
 (defun url-join (&rest args)
   (cl-flet ((clean-element (elm)
            (let ((trimmed (string-trim-chars elm "\\/" "\\")))
-             (if (string-ends-with elm "://")
+             (if (string-ends-with "://" elm)
                  (concat trimmed "/")
                trimmed))))
     (string-join (mapcar #'clean-element args) "/")))
@@ -1310,6 +1316,46 @@ python debugging session."
                                "="))
    "&"))
 
+(defun parse-http-header (header)
+  "A simple header splitter."
+  ;; see:
+  ;; http://www.bizcoder.com/everything-you-need-to-know-about-http-header-syntax-but-were-afraid-to-ask
+  ;; for more details
+  (if-let (result (string-find "\\([^:]+\\)[ \t]*:[ \t]*\\(.+\\)$"
+                               (string-trim-right header)))
+      (apply #'cons result)
+    (error "Unable to parse http header: %s" header)))
+
+(defun coalesce-alist (alist)
+  (let ((output))
+    (dolist (entry alist)
+      (destructuring-bind (k . v) entry
+        (if (assoc k output)
+            (setcdr (assoc k output)
+                  (concatenate 'list (to-list (assoc1 k output)) (list v)))
+          (push entry output))))
+    (nreverse output)))
+
+(defun parse-http-header-block (curl-header-block)
+  "Parse a response header block from curl\'s stderr"
+
+  (let ((seen-first-line nil)
+        (resp-line)
+        (headers))
+    (dolist (line (remove-if #'string-empty-p
+                             (mapcar (| string-left-trim-regex "< *" %)
+                                     (remove-if-not (| string-starts-with "<" %)
+                                                    (string-split "\r*\n+" curl-header-block)))))
+      (message "line: %s" line)
+
+      (if seen-first-line
+          (push (parse-http-header line) headers)
+        (progn
+          (setf resp-line (string-split " +" line))
+          (setf seen-first-line t))))
+    (list
+     (cons :resp-line resp-line)
+     (cons :headers (coalesce-alist headers)))))
 
 ;; I should integrate this with the json encoder/decoder
 ;;
@@ -1320,8 +1366,7 @@ python debugging session."
 ;; Look at the `ping` and other net-utilities for inspiration.
 
 (cl-defun web-request (url
-                       &key (cmd 'get)
-                       params auth body json file timeout)
+                       &key op params auth body json file timeout throw)
   "Make a web request with curl."
 
   ;; Check the args
@@ -1333,7 +1378,7 @@ python debugging session."
       (assert (integerp timeout)))
 
   ;; Build up the command list
-  (let ((cmd (list "curl" "-f" (upcase (format "-X%s" cmd))))
+  (let ((cmd (list "curl" "-f" "--verbose" "--silent"))
         (json (when json
                 (if (typep json 'string)
                     json
@@ -1341,6 +1386,8 @@ python debugging session."
     (cl-flet ((append-option (arg value-fn)
                 (when arg
                   (setf cmd (append cmd (funcall value-fn))))))
+      (when op
+        (append-option op (| `(upcase (format "-X%s" op)))))
       (append-option auth (| `("--user" ,auth)))
       (append-option body (| `("--data-raw" ,body)))
       (append-option json (| `("-H" "Content-Type: application/json"
@@ -1355,16 +1402,26 @@ python debugging session."
 
       ;; TODO(mls): better error handling.
       ;; it would be good to handle the error code + headers
-      (let* ((resp (do-cmd cmd :stdout 'string))
+      (let* ((resp (do-cmd cmd :stdout 'string :stderr 'string :throw throw))
              (output (assoc1 :stdout resp))
              (resp-json (ignore-errors
-                          (json-read-from-string (assoc1 :stdout resp)))))
+                          (json-read-from-string (assoc1 :stdout resp))))
+             ;; Split out the '< content-type: application/json' headers
+             ;; from curl, and turn them into an alist.
+             (resp-block (parse-http-header-block (assoc1 :stderr resp))))
 
-        ;; I should try to get the http code from curl
-        ;; and stderr.
-        `((:resp . ,output)
-          (:code . ,(assoc1 :code resp))
-          (:json . ,resp-json))))))
+        (let ((http-code (if (equal (assoc1 :code resp) 0)
+                             (string-to-int (second (assoc1 :resp-line resp-block)))
+                           -1))
+              (headers (assoc1 :headers resp-block)))
+          ;; I should try to get the http code from curl
+          ;; and stderr.
+          `((:resp . ,output)
+            (:code . ,(assoc1 :code resp))
+            (:http-code ,http-code)
+            (:headers . ,headers)
+            (:stderr . ,(assoc1 :stderr resp))
+            (:json . ,resp-json)))))))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
