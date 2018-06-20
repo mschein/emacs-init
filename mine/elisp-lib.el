@@ -32,6 +32,12 @@
       (cdr answer)
     (error "Key \'%s\' not found" key)))
 
+(defun symbol-equal-ignore-case (s1 s2)
+  (cl-flet ((upcase-symbol (s)
+              (upcase (symbol-name s))))
+    (equal (upcase-symbol s1) (upcase-symbol s2))))
+
+
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
   (print (apply #'format fmt args)))
@@ -519,7 +525,7 @@ Example:
 ;; for stuff like ecr access.
 ;;
 ;;
-(cl-defun do-cmd (cmd &key input stdout stderr no-throw)
+(cl-defun do-cmd (cmd &key input stdout stderr throw)
   ;; Add an async function
   "Be a main entry point for running shell commands."
 
@@ -548,10 +554,21 @@ Example:
   ;;          (:stdout . "string")  ; if any
   ;;          (:stderr . "string")) ; if any
   ;;
-
-  (let* ((stdout-buffer (if (equal stdout 'STRING)
-                            (generate-new-buffer "*do-cmd-stdout*")))
+  (let* ((stdout-buffer (when (equal stdout 'string)
+                          (generate-new-buffer "*do-cmd-stdout*")))
+         (stderr-file  (when (equal stderr 'string)
+                         (make-temp-file "do-cmd-stderr")))
          (stdout (if stdout-buffer t stdout))
+         (stderr (if stderr-file stderr-file stderr))
+
+         ;; Add a section to remap stderr/stdout
+         (stderr (ecase stderr
+                   (stdout t)
+                   (current-buffer t)
+                   (otherwise stderr)))
+         (stdout (ecase stdout
+                   (current-buffer t)
+                   (otherwise stdout)))
          (resp nil))
 
     (cl-flet ((my-call-process ()
@@ -563,41 +580,30 @@ Example:
             (my-call-process))
         (my-call-process))
 
+      (if (and (not (equal resp 0))
+               throw)
+          (error "Command %s failed, code: %s" cmd resp))
+
       (let ((output '()))
         (push (cons :code resp) output)
         (when stdout-buffer
           (with-current-buffer stdout-buffer
             (push (cons :stdout (buffer-string)) output))
           (kill-buffer stdout-buffer))
+        (when (and stderr-file (file-exists-p stderr-file))
+          (push (cons :stderr (slurp stderr-file)) output)
+          (delete-file stderr-file))
         output))))
-
-;; (cl-defun do-cmd2 (cmd &key input stdout stderr no-throw)
-;;   ;;
-;;   ;;
-;;   (cl-etypecase stdout
-;;     (symbol (cl-ecase stdout
-;;               (current-buffer)
-;;               (string)
-;;               (nil)
-;;               (stdout)))
-;;     (list (cl-ecase (first stdout)
-;;             (:file)
-;;             (:buffer)))
-;;     (buffer))
 
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `shell-command'
    for return value.
 
    Example:   (run \"hdiutil\" \"attach\" path)"
-  (shell-command (combine-and-quote-strings cmd-parts)))
-
+  (do-cmd cmd-parts))
 
 (defun run-to-str (&rest cmd-parts)
   (shell-command-to-string (combine-and-quote-strings cmd-parts)))
-
-(defun run-str (cmd)
-  (shell-command-to-string cmd))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str)
@@ -886,6 +892,14 @@ Example:
 (defun current-last-dirname ()
   (directory-last-dirname default-directory))
 
+(defun slurp (path)
+  "Read the contents of the file specified by `path' into a string.
+
+  Return that string to the caller, or throw an error on failure."
+
+  (with-temp-buffer
+    (insert-file-contents path)
+    (buffer-string)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer Utils.
@@ -1341,7 +1355,7 @@ python debugging session."
 
       ;; TODO(mls): better error handling.
       ;; it would be good to handle the error code + headers
-      (let* ((resp (do-cmd cmd :stdout 'STRING))
+      (let* ((resp (do-cmd cmd :stdout 'string))
              (output (assoc1 :stdout resp))
              (resp-json (ignore-errors
                           (json-read-from-string (assoc1 :stdout resp)))))
