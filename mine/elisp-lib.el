@@ -1346,8 +1346,6 @@ python debugging session."
                              (mapcar (| string-left-trim-regex "< *" %)
                                      (remove-if-not (| string-starts-with "<" %)
                                                     (string-split "\r*\n+" curl-header-block)))))
-      (message "line: %s" line)
-
       (if seen-first-line
           (push (parse-http-header line) headers)
         (progn
@@ -1404,8 +1402,8 @@ python debugging session."
     (cl-flet ((append-option (arg value-fn)
                 (when arg
                   (setf cmd (append cmd (funcall value-fn))))))
-      (when op
-        (append-option op (| `(upcase (format "-X%s" op)))))
+      (append-option op (| (list (upcase (format "-X%s" op)))))
+      (append-option insecure (| `("--insecure")))
       (append-option auth (| `("--user" ,auth)))
       (append-option body (| `("--data-raw" ,body)))
       (append-option json (| `("-H" "Content-Type: application/json"
@@ -1432,13 +1430,12 @@ python debugging session."
                              (string-to-int (second (assoc1 :resp-line resp-block)))
                            -1))
               (headers (assoc1 :headers resp-block)))
-          ;; I should try to get the http code from curl
-          ;; and stderr.
           `((:resp . ,output)
             (:code . ,(assoc1 :code resp))
             (:http-code ,http-code)
             (:headers . ,headers)
-            (:stderr . ,(assoc1 :stderr resp))
+            (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
+                          (assoc1 :stderr resp)))
             (:json . ,resp-json)))))))
 
 (defun normalize-dir-path (path)
