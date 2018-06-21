@@ -1432,7 +1432,7 @@ python debugging session."
               (headers (assoc1 :headers resp-block)))
           `((:resp . ,output)
             (:code . ,(assoc1 :code resp))
-            (:http-code ,http-code)
+            (:http-code . ,http-code)
             (:headers . ,headers)
             (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
                           (assoc1 :stderr resp)))
