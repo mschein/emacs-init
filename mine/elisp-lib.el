@@ -1357,17 +1357,35 @@ python debugging session."
      (cons :resp-line resp-line)
      (cons :headers (coalesce-alist headers)))))
 
-;; I should integrate this with the json encoder/decoder
-;;
-;; Other options:
-;;  1. ignore ssl
-;;  2. verbose
-;;
-;; Look at the `ping` and other net-utilities for inspiration.
-
 (cl-defun web-request (url
-                       &key op params auth body json file timeout throw)
-  "Make a web request with curl."
+                       &key op params auth body json file timeout insecure throw)
+  "Make a web request with curl.
+
+   Params:
+   `url': The url to fetch
+
+   Optional Params:
+   `op': Which http operation to perform, (defaults to GET).
+   `params': An alist of url parameters.
+   `auth': An auth string suitable for passing to curl.  So \"user:password\".
+   `body': A string that will be sent as a data body to the server.
+   `json': An alist that will be converted to json and sent to the server.
+   `file': A file to upload to the server.
+   `timeout': A time in seconds to wait for the request to finish before giving up.
+   `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
+   `throw': If `t' raise an error when something goes wrong, otherwise just return
+            the error code.
+
+   Returns:
+   An alist with the following information:
+   `:resp': The unparse response text from the server.
+   `:code': The return code from calling curl. 0 is success.
+   `:http-code': The http code returned by the request, if available.
+   `:headers': An alist of the http headers.  Duplicated headers are coalesced into
+               list.
+   `:stderr': Anything curl returns on stderr.
+   `:json': An alist representing any JSON returned by the server.
+   "
 
   ;; Check the args
   (assert url)
