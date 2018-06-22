@@ -699,6 +699,11 @@ Example:
 (defmacro insertf (fmt &rest args)
   `(with-fmt insert ,fmt ,@args))
 
+(defun get-chrome-path ()
+  (ecase system-type
+    (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+    (linux "google-chrome")))
+
 (defun browse-url-chrome (url)
   (interactive "surl: ")
   (let ((browse-url-generic-program "/opt/google/chrome/google-chrome"))
