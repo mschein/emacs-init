@@ -341,6 +341,11 @@ result of fun."
       '()
       (cons elm (repeat-elm (1- n) elm))))
 
+(defun repeat-string (n str)
+  (if (<= n 0)
+      ""
+    (concat str (repeat-string (1- n) str))))
+
 (defun* partition (n list &key (step n) (pad nil))
   "Split a list into sublists of length n.  A step
 value is optional.
@@ -612,8 +617,8 @@ Example:
   (shell-command-to-string (combine-and-quote-strings cmd-parts)))
 
 ;; TODO(scheinholtz): Unify buffer sections.
-(defun string->list (str)
-  (mapcar #'string-trim (split-string str "\n" t)))
+(defun string->list (str &optional regex)
+  (mapcar #'string-trim (split-string str (or regex "\n") t)))
 
 (defun buffer->list ()
   "Convert the current buffer into a list."
@@ -1180,6 +1185,14 @@ python debugging session."
       url
     (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
+(defun git-get-origin-info ()
+  (destructuring-bind (host project repo)
+      (string-find
+       ;; It's matching "ssh://git@(git.tcc.li):7999/(oe)/(auth).git"
+       "[[:word:]]+://[[:word:]]+@\\([[:alnum:]\.]+\\).*/\\([[:alnum:]]+\\)/\\([^.]+\\).git"
+       (git-remote-origin-url))
+    (list host project repo)))
+
 (defun git-symbolic-ref (&rest args)
   "Run the git symbolic-ref command, see the man page for details."
   (string-trim (apply #'run-to-str `("git" "symbolic-ref" ,@args))))
@@ -1350,7 +1363,7 @@ python debugging session."
     (dolist (line (remove-if #'string-empty-p
                              (mapcar (| string-left-trim-regex "< *" %)
                                      (remove-if-not (| string-starts-with "<" %)
-                                                    (string-split "\r*\n+" curl-header-block)))))
+                                                    (string->list curl-header-block "\r*\n+")))))
       (if seen-first-line
           (push (parse-http-header line) headers)
         (progn
@@ -1468,6 +1481,23 @@ python debugging session."
     (mapc (fn ((name . old-value))
               (setenv name old-value))
           old-env-values)))
+
+(defun open-custom-terminal (input-script name)
+  (let ((buffer (generate-new-buffer (format "*term-%s-term*" name))))
+    (with-current-buffer buffer
+        (term-mode)
+        (term-exec buffer "terminal" "/bin/bash" nil nil)
+        (insertf "%s" input-script)
+        (term-char-mode))
+    (switch-to-buffer buffer)
+   buffer))
+
+;; TODO: Work on this.
+;; It would be nice if it filled in the file names with
+;; tab completion.
+(defun tail-buffer (file)
+  (interactive "sfile: ")
+  (switch-to-buffer))
 
 ;; (defun find-virtualenv-file (root-dir)
 ;;   (car (first
