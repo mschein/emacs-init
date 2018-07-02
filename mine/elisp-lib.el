@@ -32,6 +32,19 @@
       (cdr answer)
     (error "Key \'%s\' not found" key)))
 
+(defun rassoc1 (value list)
+  "Lookup a key in an alist and raise an error if its not there.
+
+   Returns the value (The cdr of the element).
+   Values can be nil and it will still work.
+   `key`: The key to lookup
+   `alist`: The associated list to check.
+  "
+
+  (if-let (answer (rassoc value list))
+      (cdr answer)
+    (error "Value \'%s\' not found" value)))
+
 (defun symbol-equal-ignore-case (s1 s2)
   (cl-flet ((upcase-symbol (s)
               (upcase (symbol-name s))))
@@ -1491,6 +1504,26 @@ python debugging session."
         (term-char-mode))
     (switch-to-buffer buffer)
    buffer))
+
+;;
+;; this is supposed to be for matching lists of alists.
+;; I need to have a way to specify what data is returned.
+;;
+(defun assoc-query (query alist)
+  (cl-labels ((match-query (query item)
+                 (message "query: %s item: %s" query item)
+                 (let ((cmd (car query))
+                       (rest (cdr query)))
+                   (message "cmd: %s rest: %s first rest %s" cmd rest (first rest))
+                   (ecase cmd
+                     (and (and (mapcar (| match-query % item) rest)))
+                     (or  (or  (mapcar (| match-query % item) rest)))
+                     (not (not (match-query rest item)))
+                     (key (assoc (first rest) item))
+                     (value (rassoc (first rest) item))))))
+
+    (first (remove-if-not (| match-query query %) alist))))
+
 
 ;; TODO: Work on this.
 ;; It would be nice if it filled in the file names with
