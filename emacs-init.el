@@ -223,29 +223,12 @@
 (require 'cl)
 (require 'find-lisp)
 (require 'midnight)
-;; (require 's)
-;; (require 'dash)
-;; (require 'dash-functional)
-;(require 'cssh)
 
-;; My stuff
-(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0"))
-  (if (file-directory-p path)
-      (add-to-list 'load-path path)))
-
-;; Always load these.
-(require 'elisp-lib)
-(require 'one-off-scripts)
-
+;;
 ;; Add the new emacs package loader:
-
+;;
 
 ;; For Clojure work use nReple and ritz
-
-
-;; To run a slime, uncomment and slime-lisp and start
-;; a new emacs.
-(require 'slime-lisp)
 
 ;; Add more info paths
 (add-to-list 'Info-default-directory-list "/usr/local/share/info")
@@ -275,6 +258,22 @@
   (add-to-list 'package-archives '("gnu" . "http://elpa.gnu.org/packages/")))
 
 (package-initialize)
+
+;; My stuff
+(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0"))
+  (if (file-directory-p path)
+      (add-to-list 'load-path path)))
+
+;; Always load these.
+(require 'elisp-lib)
+(require 'one-off-scripts)
+
+;; To run a slime, uncomment and slime-lisp and start
+;; a new emacs.
+(require 'slime-lisp)
+
+;(require 'cssh)
+
 
 ;; Setup 'which-key' so we get a list of key binding options
 ;; as we type.
@@ -973,7 +972,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
