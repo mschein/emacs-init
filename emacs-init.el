@@ -481,6 +481,7 @@ that uses 'font-lock-warning-face'."
 ;; Thanks Steve.
 (defalias 'cr 'comment-region)
 (defalias 'eb 'eval-buffer)
+(defalias 'er 'eval-region)
 (defalias 'fnd 'find-name-dired)
 (defalias 'i 'insert-interactive)
 (defalias 'ia 'insert-author)

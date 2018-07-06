@@ -1219,6 +1219,10 @@ python debugging session."
   (interactive)
   (git-symbolic-ref "--short" "HEAD"))
 
+(defun git-project-root ()
+  "Return the root of a git project."
+  (string-trim (run-to-str "git" "rev-parse" "--show-toplevel")))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1302,6 +1306,43 @@ python debugging session."
         (cons (list file-pattern func)
               (remove-if (| equal file-pattern (first %))
                          flymake-allowed-file-name-masks))))
+
+(defun find-virtualenv-file (root-dir)
+  "Search a Python repo for the most like venv \'activate\' file.
+
+  `root-dir' is where to start the search."
+  ;; Does activate exist somewhere.
+  (car (first
+        (sort (mapcar (fn (path)
+                          (cons path (cond
+                                      ((equal (normalize-dir-path (file-name-directory path))
+                                              (normalize-dir-path root-dir)) 10)
+                                      ((search "/target/" path) 5)
+                                      (t 0))))
+                      (directory-files-recursively root-dir "^activate$"))
+              (fn (a b) (> (cdr a) (cdr b)))))))
+
+(defun activate-virtualenv (location)
+  (interactive (list (completing-read "location: " (mapcar #'first oe-project-table) nil t)))
+  (insertf "source %s" (find-virtualenv-file (assoc1 location oe-project-table))))
+
+(defun open-shell-dir-venv ()
+  "Start a virtual env in the current repo."
+  (interactive)
+  (switch-to-buffer (shell-open-dir default-directory))
+
+  (let* ((repo-root (git-project-root))
+         (repo-name (basename repo-root))
+         (activate-link (find-virtualenv-file repo-root)))
+    (rename-buffer (generate-new-buffer-name (format "*venv-%s-%s-venv*" repo-name (buffer-name))))
+
+    (message "Default directory: %s repo root: %s" default-directory repo-root)
+    (assert activate-link)
+    ;; Issue a command to setup the virualenv
+    (goto-char (point-max))
+    (insertf "source %s" activate-link)
+    (comint-send-input nil t)
+    (comint-clear-buffer)))
 
 (defun find-in-jira-at-point-internal (url ticket-valid-fn)
   "This is meant to be wrapped by another function.
