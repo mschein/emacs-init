@@ -1070,6 +1070,7 @@ Example:
 
 (defmacro make-bookmark (name url)
   `(defun ,name ()
+     ,(format "The `%s' function opens up the %s url." name url)
      (interactive)
      (browse-url ,url)))
 
