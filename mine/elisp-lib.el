@@ -730,6 +730,38 @@ Example:
   (let ((browse-url-generic-program "/opt/google/chrome/google-chrome"))
     (browse-url-generic url)))
 
+(defun browse-url-chrome-osx (url &optional new-window)
+  "A `browse-url' function for Chrome on OSX.  Normally we end up with
+   whatever the 'open' command does, but for me I like when it opens a new
+   window.  This function provides that feature.
+
+   To enable it as the default browser do:
+   (setq browse-url-browser-function 'browse-url-chrome-osx)
+   (setq browse-url-new-window-flag t)"
+
+  (interactive (browse-url-interactive-arg "URL: "))
+  (do-cmd `("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            ,@(if new-window
+                  (list "--new-window" url)
+                (list url))))
+  (run "open" "-a" "Google Chrome"))
+
+;; XXX Note! I haven't tested this one!
+(defun browse-url-firefox-osx (url &optional new-window)
+  "A `browse-url' function for firefox on OSX.  Normally we end up with
+   whatever the 'open' command does, but for me I like when it opens a new
+   window.  This function provides that feature.
+
+   To enable it as the default browser do:
+   (setq browse-url-browser-function 'browse-url-firefox-osx)
+   (setq browse-url-new-window-flag t)"
+  (interactive (browse-url-interactive-arg "URL: "))
+  (do-cmd `("/Applications/Firefox.app/Contents/MacOS/Firefox"
+            ,@(if new-window
+                  (list "-new-window" url)
+                (list url))))
+  (run "open" "-a" "Firefox"))
+
 (defun current-line ()
   "Return the line under the cursor, with properties."
   (string-trim-right (thing-at-point 'line)))
