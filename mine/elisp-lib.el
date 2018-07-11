@@ -583,8 +583,8 @@ Example:
   ;;
   (let* ((stdout-buffer (when (equal stdout 'string)
                           (generate-new-buffer "*do-cmd-stdout*")))
-         (stderr-file  (when (equal stderr 'string)
-                         (make-temp-file "do-cmd-stderr")))
+         ;; We always save stderr.
+         (stderr-file (make-temp-file "do-cmd-stderr"))
          (stdout (if stdout-buffer t stdout))
          (stderr (if stderr-file stderr-file stderr))
 
@@ -596,7 +596,8 @@ Example:
          (stdout (ecase stdout
                    (current-buffer t)
                    (otherwise stdout)))
-         (resp nil))
+         (resp)
+         (stderr-string))
 
     (cl-flet ((my-call-process ()
                 (setf resp (call-process "bash" input (list stdout stderr) nil
@@ -607,30 +608,37 @@ Example:
             (my-call-process))
         (my-call-process))
 
+      (when (and stderr-file (file-exists-p stderr-file))
+        (setq stderr-string (slurp stderr-file))
+        (delete-file stderr-file))
+
       (if (and (not (equal resp 0))
                throw)
-          (error "Command %s failed, code: %s" cmd resp))
-
+          (error "Command %s failed, code: %s, msg: \'%s\'" cmd resp (if stderr-string
+                                                                         (string-trim (s-truncate 1024 stderr-string))
+                                                                       "")))
       (let ((output '()))
         (push (cons :code resp) output)
         (when stdout-buffer
           (with-current-buffer stdout-buffer
             (push (cons :stdout (buffer-string)) output))
           (kill-buffer stdout-buffer))
-        (when (and stderr-file (file-exists-p stderr-file))
-          (push (cons :stderr (slurp stderr-file)) output)
-          (delete-file stderr-file))
+        (when stderr-string
+          (push (cons :stderr stderr-string) output))
         output))))
 
 (defun run (&rest cmd-parts)
-  "Execute a shell command given an argument list.  See `shell-command'
+  "Execute a shell command given an argument list.  See `do-cmd'
    for return value.
 
    Example:   (run \"hdiutil\" \"attach\" path)"
   (do-cmd cmd-parts))
 
 (defun run-to-str (&rest cmd-parts)
-  (shell-command-to-string (combine-and-quote-strings cmd-parts)))
+  "Run a command using `do-cmd' and return the result as a string.
+
+   It will throw an error if the command fails."
+  (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t)))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
@@ -1128,7 +1136,7 @@ Example:
         (| concat "_" (downcase %))
         (buffer-substring-no-properties begin end)))))
 
-
+;; Emacs' calculator might already have this.
 (defun linear-regression ()
   ;; http://en.wikipedia.org/wiki/Simple_linear_regression
   )
