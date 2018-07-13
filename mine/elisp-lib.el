@@ -537,6 +537,20 @@ Example:
       (-> cmd (concat "\n") insert)
     (if doit (shell-command cmd)))))
 
+(defun cmd-to-shell-string (cmd)
+  "Convert a list of raw strings into something you can
+  pass to bash -c."
+
+  ;; NOTE! I originally did this:
+  ;; (combine-and-quote-strings (mapcar #'shell-quote-argument cmd)
+  ;;
+  ;; But that is wrong, it's essentially doing a double quote,
+  ;; I either need to do something like:
+  ;; 'always quote' with ', or just do a regular string join
+  ;; on the shell-quote-argument strings.
+  ;;
+  (string-join (mapcar #'shell-quote-argument cmd) " "))
+
 ;; TODO(mls): See if I can unify this with run, and run-to-str.
 ;;
 ;; I should have run call this function.
@@ -600,8 +614,9 @@ Example:
          (stderr-string))
 
     (cl-flet ((my-call-process ()
+                (message "cmd: %s" (cmd-to-shell-string cmd))
                 (setf resp (call-process "bash" input (list stdout stderr) nil
-                                         "-c" (combine-and-quote-strings cmd)))))
+                                         "-c" (cmd-to-shell-string cmd)))))
 
       (if stdout-buffer
           (with-current-buffer stdout-buffer
