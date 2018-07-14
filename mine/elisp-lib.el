@@ -1123,11 +1123,13 @@ Example:
   (interactive "r")
   (message "%d" (sum-col-region-fn begin end)))
 
-(defmacro make-bookmark (name url)
+(defmacro make-bookmark (name url &rest urls)
   `(defun ,name ()
      ,(format "The `%s' function opens up the %s url." name url)
      (interactive)
-     (browse-url ,url)))
+     (browse-url ,url t)
+     ,@(mapcar (lambda (u)
+                 `(browse-url ,u nil)) urls)))
 
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
