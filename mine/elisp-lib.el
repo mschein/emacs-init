@@ -516,6 +516,9 @@ Example:
                      str)
            "\"")))
 
+;; (defun dequote-str ()
+;;   "Remove quotations ")
+
 
 (defun string-case= (s1 s2)
   "Compare s1 and s2 ignoring case"
@@ -1263,7 +1266,7 @@ python debugging session."
   (destructuring-bind (host project repo)
       (string-find
        ;; It's matching "ssh://git@(git.tcc.li):7999/(oe)/(auth).git"
-       "[[:word:]]+://[[:word:]]+@\\([[:alnum:]\.]+\\).*/\\([[:alnum:]]+\\)/\\([^.]+\\).git"
+       "[[:word:]]+://[[:word:]]+@\\([[:alnum:]\.]+\\).*/\\([^/]+\\)/\\([^.]+\\).git"
        (git-remote-origin-url))
     (list host project repo)))
 
