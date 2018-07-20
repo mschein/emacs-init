@@ -48,6 +48,14 @@
       (cdr answer)
     (error "Value \'%s\' not found" value)))
 
+(defun assoc-keys (alist)
+  "Return all of the keys in an alist.  That is the `car' values."
+  (mapcar #'car alist))
+
+(defun assoc-values (alist)
+  "Return all of the values in an alist.  That is the `cdr' values."
+  (mapcar #'cdr alist))
+
 (defun symbol-equal-ignore-case (s1 s2)
   (cl-flet ((upcase-symbol (s)
               (upcase (symbol-name s))))
@@ -554,12 +562,7 @@ Example:
   ;;
   (string-join (mapcar #'shell-quote-argument cmd) " "))
 
-;; TODO(mls): See if I can unify this with run, and run-to-str.
-;;
-;; I should have run call this function.
-;; It would also be nice to direct stdout or error to the message
-;; buffer.
-;;
+;; Design Notes:
 ;;
 ;; ideal interface:
 ;; (run-str "ls -l") -> "string of contents"
@@ -568,37 +571,44 @@ Example:
 ;; I may also want to add an 'environment' input to the function.
 ;; for stuff like ecr access.
 ;;
-;;
 (cl-defun do-cmd (cmd &key input stdout stderr throw)
   ;; Add an async function
-  "Be a main entry point for running shell commands."
+  "Be a main entry point for running shell commands.
 
-  ;;
-  ;; elisp version of arguments:
-  ;;  -> buffer (insert into buffer before point)
-  ;;  -> buffer name (string), make a new buffer for storing stuff.
-  ;;  -> t: current buffer
-  ;;  -> nil: ignore
-  ;;  -> 0: don't wait for subprocess
-  ;;  -> (:file <path>) dump output to file.
-  ;;
-  ;; (real error) -> do something else with stderr (otherwise shared with stdout).
-  ;;
-  ;; good options for me:
-  ;; 'current-buffer
-  ;; 'string
-  ;; <buffer object>
-  ;; nil
-  ;; 'stdout ; only use on stderr, means combine the two.
-  ;; (:buffer <buffer-name>)
-  ;; (:file <file-path 'append) ; append is optional.
-  ;;
-  ;; output: (list
-  ;;          (:code . <int>)
-  ;;          (:stdout . "string")  ; if any
-  ;;          (:stderr . "string")) ; if any
-  ;;
-  (let* ((stdout-buffer (when (equal stdout 'string)
+  Wrapper around emacs's external shell command function (call-process),
+  hopefully with a nicer interface.
+
+  It executes the command and returns an alist with the results
+  or any output if requested.
+
+  The arguments are:
+   1. cmd: a list of things to pass to bash -c.  The arguments shouldn't be
+           interpreted by the shell.
+
+   2. input: The file to hand to the input process.  nil is the same as dev
+
+   3. stdout: What to do with the stdout from the subprocess.
+             'current-buffer: Dump into the current buffer.
+             'string:         Return it as a string in the result alist.
+             <buffer object>
+             nil
+             (:buffer <buffer-name>)
+             (:file <file-path 'append) ; append is optional.
+
+   4. stderr: The same as stdout with one additional option.
+              NOTE: this is on by default to make error messages better.
+              'stdout: combine stdout and stderr.
+
+   5. throw: Raise an error on failure instead of returning the alist.
+
+  output: (list
+           (:code . <int>) ; Did it succeed or fail
+           (:stdout . \"string\")  ; if any
+           (:stderr . \"string\")) ; if any
+  "
+  (let* ((program (first cmd))
+         (arguments (cdr cmd))
+         (stdout-buffer (when (equal stdout 'string)
                           (generate-new-buffer "*do-cmd-stdout*")))
          ;; We always save stderr.
          (stderr-file (make-temp-file "do-cmd-stderr"))
@@ -618,9 +628,7 @@ Example:
 
     (cl-flet ((my-call-process ()
                 (message "cmd: %s" (cmd-to-shell-string cmd))
-                (setf resp (call-process "bash" input (list stdout stderr) nil
-                                         "-c" (cmd-to-shell-string cmd)))))
-
+                (setf resp (apply #'call-process program input (list stdout stderr) nil arguments))))
       (if stdout-buffer
           (with-current-buffer stdout-buffer
             (my-call-process))
