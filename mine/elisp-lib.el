@@ -371,14 +371,14 @@ result of fun."
      forms)))
 
 (defun repeat-elm (n elm)
-  (if (<= n 0)
-      '()
-      (cons elm (repeat-elm (1- n) elm))))
+  "Generate a list of `n' `elm's."
+  (cl-loop for x below n collect elm))
 
 (defun repeat-string (n str)
-  (if (<= n 0)
-      ""
-    (concat str (repeat-string (1- n) str))))
+  (let ((out ""))
+    (cl-loop for x below n do
+             (setf out (concat out str)))
+    out))
 
 (defun* partition (n list &key (step n) (pad nil))
   "A grouping function.
