@@ -61,6 +61,16 @@
               (upcase (symbol-name s))))
     (equal (upcase-symbol s1) (upcase-symbol s2))))
 
+(defun symbol-rename (sym cb)
+  "Create a new name based off the name of `sym'.
+
+   The `cb' function takes the string name of the symbol
+   and should return a string the caller wants converted into
+   a new symbol.
+
+   Example: (symbol-rename 'abc (| (concat % \"def\"))) -> abcdef
+   "
+  (make-symbol (funcall cb (symbol-name sym))))
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
@@ -371,8 +381,8 @@ result of fun."
     (concat str (repeat-string (1- n) str))))
 
 (defun* partition (n list &key (step n) (pad nil))
-  "Split a list into sublists of length n.  A step
-value is optional.
+  "A grouping function.
+  Split a list into sublists of length n.  A step value is optional.
 
 Example:
  (partition 2 '(1 2 3 4 5) :step 1)
