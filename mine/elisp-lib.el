@@ -85,11 +85,13 @@ So (m-when-let (res (+ 1 2 3))
      (- res 1))
 returns 5 and prints 6.  res is the name, and (+ 1 2 3) is the
 test.  If the test returned nil, then the body will not execute."
+  (declare (indent 2))
   `(let ((,name ,test))
      (when ,name ,@body)))
 
 (defmacro aif (test &rest forms)
   "Anaphoric if that sets the test value to _it_"
+  (declare (indent 2))
   `(let ((_it_ ,test))
      (if _it_ ,@forms)))
 
@@ -105,6 +107,7 @@ test clause.  If fetch-string returns nil, the
 error case is executed, otherwise the success
 case is executed.  res is bount to the result
 of the test."
+  (declare (indent 2))
   (destructuring-bind (name test) test-binding
       `(let ((,name ,test))
          (if ,name ,@forms))))
@@ -124,6 +127,7 @@ of the test."
 (defmacro when-let* (test-bindings &rest forms)
   ;; Would it be better to do this with a regular loop, to get rid of the
   ;; "car"
+  (declare (indent 2))
   (car
    (reduce (fn (prev-bindings binding)
                `((m-when-let ,binding
@@ -156,10 +160,14 @@ of the test."
 (defmacro if-test-val (test-fn val &rest forms)
   "run the first argument against val.  If val is true
    provide it to the forms as _it_"
+  (declare (indent 2))
+
   `(let ((_it_ ,val))
      (if (,test-fn _it_) ,@forms)))
 
 (defmacro if-not (test &rest forms)
+  (declare (indent 2))
+
   `(if (not ,test) ,@forms))
 
 (defun to-list (thing)
@@ -281,6 +289,7 @@ of the test."
           (destructuring-bind (c . d) gensym
            (destructuring-bind (g h) gensym)))
              forms)"
+  (declare (indent 2))
   (let* ((destruct-list '())
          (arg-list (mapcar
                     (lambda (elm)
@@ -411,20 +420,6 @@ Example:
   ;; Note, since or is a macro, we can't do 'or
   (reduce (| or %1 %2) list))
 
-(defmacro h_ (&rest args)
-  "Take list of pairs and convert them in to a hashtable.
-
-Example:
- (h_ \"one\" 'a \"two\" 'b)
- -> ... a hash table with one -> a, two -> b"
-  (let ((ht (gensym)))
-    `(let ((,ht (make-hash-table :test #'equal)))
-       ,@(mapcar (lambda (pair)
-                   (destructuring-bind (key val) pair
-                       `(puthash ,key ,val ,ht)))
-                 (partition 2 args))
-       ,ht)))
-
 (defun append-if-true (&rest elements)
   "Join the elements into a string if they aren't null
 Example:
@@ -507,6 +502,7 @@ Example:
 
 (defmacro if-string (obj &rest forms)
   "Execute the true form if the string is length > 0"
+  (declare (indent 2))
   `(if (string-has-val ,obj)
        ,@forms))
 
@@ -547,6 +543,7 @@ Example:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro with-fmt (fun str &rest args)
+  (declare (indent 2))
   `(,fun (format ,str ,@args)))
 
 ;; TODO(scheinholtz): Use the async I/O for this.
@@ -733,6 +730,7 @@ Example:
     (funcall handle-fn name)))
 
 (defmacro with-new-buffer (name-prefix &rest body)
+  (declare (indent 2))
   (let ((old-buffer (gensym))
         (new-buffer (gensym)))
 
@@ -1264,6 +1262,7 @@ python debugging session."
 
 (defmacro pushd (dir &rest body)
   "Run the body in this new default directory"
+  (declare (indent 2))
   (let ((old-dir (gensym)))
 
     `(let ((,old-dir default-directory))
