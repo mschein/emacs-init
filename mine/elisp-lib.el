@@ -966,6 +966,11 @@ Example:
 
 (defalias 'basename 'file-name-nondirectory)
 
+(defun ensure-makedirs (path)
+  (let ((dir (file-name-directory path)))
+    (unless (file-exists-p path)
+      (make-directory dir t))))
+
 (defun is-real-file (path)
   (let ((name (basename path)))
     (not (or (string= "." name)
@@ -1294,6 +1299,14 @@ python debugging session."
 (defun git-project-root ()
   "Return the root of a git project."
   (string-trim (run-to-str "git" "rev-parse" "--show-toplevel")))
+
+(defun git-init-repo (path)
+  (run "git" "init" path))
+
+(cl-defun git-commit-changes (path &key (message  "Save current files."))
+  (pushd path
+         (run "git" "add" ".")
+         (run "git" "commit" "-a" "-m" message)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands

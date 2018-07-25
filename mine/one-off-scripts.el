@@ -274,4 +274,58 @@ setup(name=package,
          (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
          (make-symbolic-link ".venv/bin/activate" "activate")))))
 
+(defun unique-file-name (name index)
+  "Make a unique name but save the extension"
+  (format "%s-%d%s"
+          (file-name-sans-extension name)
+          index
+          (if-let (ext (file-name-extension name))
+              (concat "." ext)
+            "")))
+
+(defun make-unique-file-name (dir file-name)
+  (let ((final-path (path-join dir file-name))
+        (index 0))
+    (when (file-exists-p final-path)
+      ;; Make it unique
+      (incf index)
+      (setf final-path (unique-file-name final-path index))
+      )
+    final-path))
+
+(defun buffer-backup-to-shared-repo (message)
+  (interactive "smessage: ")
+
+  (let ((emacs-one-off-backup-directory (expand-file-name "~/backup")))
+    ;;
+    ;; Make it a git repo (doing a re-init is safe according to git's) docs.
+    ;;
+    (ensure-makedirs emacs-one-off-backup-directory)
+    (git-init-repo emacs-one-off-backup-directory)
+
+    (let ((file-name (buffer-name))
+          (full-file-name (buffer-file-name)))
+      ;;
+      ;; Commit the file to disk, but don't try to save it directly to the
+      ;; backup directory, since that will mess stuff up.
+      ;;
+      (if full-file-name
+          (save-buffer)
+        (progn
+          (setf full-file-name (make-unique-file-name emacs-one-off-backup-directory file-name))
+          (write-file full-file-name)))
+
+      ;; Write out the file, but mimic the structure, so each place is unique.
+      (let ((final-path (path-join emacs-one-off-backup-directory full-file-name)))
+        (ensure-makedirs final-path)
+        (copy-file full-file-name final-path t))
+
+      ;; Commit the changes.
+      (git-commit-changes emacs-one-off-backup-directory
+                          :message (if (string-has-val message)
+                                       message
+                                     (format "Backup the %s file" file-name))))))
+
+(defalias 'bb 'buffer-backup-to-shared-repo)
+
 (provide 'one-off-scripts)
