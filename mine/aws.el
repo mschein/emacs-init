@@ -161,4 +161,44 @@
     (assoc1 'repositories
             (apply #'aws-ecr "describe-repositories" args))))
 
+(defun aws--filter-alist-to-str (filter)
+  (string-join
+   (mapcar (fn ((name . values))
+                   (format "Name=%s,Values=%s" name (string-join (to-list values) ",")))
+           filter)
+   ","))
+
+(defun aws--query-alist-to-str (return-value query)
+  (format "%s[*].{%s}" return-value
+          (string-join
+           (mapcar
+            (fn ((output-name . result-name))
+                (concat output-name ":" result-name))
+            query)
+           ",")))
+
+(cl-defun aws-ec2-describe-snapshots (&key filter query)
+  (let ((-aws-return-json t)
+        (args (list "describe-snapshots")))
+    (when filter
+      (setf args (concatenate 'list args
+                              (list "--filter" (aws--filter-alist-to-str filter)))))
+
+    (when query
+      (setf args (concatenate 'list args
+                              (list "--query" (aws--query-alist-to-str "Snapshots" query)))))
+
+    (apply #'aws-ec2 args)))
+
+(defun aws-ec2-snapshots-sorted (volume-id)
+  (let ((res (aws-ec2-describe-snapshots
+              :filter `(("volume-id" . ,volume-id))
+              :query '(("id" . "SnapshotId") ("time" . "StartTime")))))
+    (sort res (| time-less-p
+                 (safe-date-to-time (assoc1 'time %2))
+                 (safe-date-to-time (assoc1 'time %1))))))
+
+(defun aws-latest-snapshot (volume-id)
+  (aref (aws-ec2-snapshots-sorted volume-id) 0))
+
 (provide 'aws)
