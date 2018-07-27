@@ -177,7 +177,7 @@
             query)
            ",")))
 
-(cl-defun aws-ec2-describe-snapshots (&key filter query)
+(cl-defun aws-ec2-describe-snapshots (&key filter query snapshot-ids)
   (let ((-aws-return-json t)
         (args (list "describe-snapshots")))
     (when filter
@@ -187,6 +187,8 @@
     (when query
       (setf args (concatenate 'list args
                               (list "--query" (aws--query-alist-to-str "Snapshots" query)))))
+    (when snapshot-ids
+      (setf args (concatenate 'list args '("--snapshot-ids") (to-list snapshot-ids))))
 
     (apply #'aws-ec2 args)))
 
@@ -198,7 +200,29 @@
                  (safe-date-to-time (assoc1 'time %2))
                  (safe-date-to-time (assoc1 'time %1))))))
 
+(defun data-to-buffer (data fmt &rest args)
+  (to-buffer-switch
+   (apply #'format fmt args)
+   (pp-to-string data)))
+
 (defun aws-latest-snapshot (volume-id)
-  (aref (aws-ec2-snapshots-sorted volume-id) 0))
+  (interactive "svolume-id: ")
+  (data-to-buffer (aref (aws-ec2-snapshots-sorted volume-id) 0)
+                  "+latest-snapshot-%s-+" volume-id))
+
+(defun aws-describe-snapshot (snapshot-id)
+  (interactive "ssnapshot-id: ")
+  (data-to-buffer
+   (assoc1 'Snapshots
+           (aws-ec2-describe-snapshots
+            :snapshot-ids snapshot-id))
+    "+-snapshot-%s-description+" snapshot-id))
+
+(defun aws-describe-volume (volume-id)
+  (interactive "svolume-id: ")
+  (let ((-aws-return-json t))
+    (data-to-buffer (aws-ec2 "describe-volumes"
+                           "--filter" (format "Name=volume-id,Values=%s" volume-id))
+                  "+volume-data-for-%s-+" volume-id)))
 
 (provide 'aws)

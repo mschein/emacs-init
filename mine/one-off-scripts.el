@@ -293,39 +293,65 @@ setup(name=package,
       )
     final-path))
 
+(defconst buffer-backup-storage-directory (expand-file-name "~/backup"))
+
+(defun buffer-backup-file-in-backup-dir (path)
+  (directory-file-under-dir buffer-backup-file-in-backup-dir path))
+
+(defun buffer-backup-backup-path (buffer-name file-path)
+  (if file-path
+      (path-join buffer-backup-storage-directory file-path)
+    (make-unique-file-name buffer-backup-storage-directory buffer-name)))
+
 (defun buffer-backup-to-shared-repo (message)
   (interactive "smessage: ")
 
-  (let ((emacs-one-off-backup-directory (expand-file-name "~/backup")))
-    ;;
-    ;; Make it a git repo (doing a re-init is safe according to git's) docs.
-    ;;
-    (ensure-makedirs emacs-one-off-backup-directory)
-    (git-init-repo emacs-one-off-backup-directory)
+  ;;
+  ;; I think it would be better to save transient files to ~/tmp.
+  ;; rather than directly to backup, that would make the logic easier.
+  ;;
 
-    (let ((file-name (buffer-name))
-          (full-file-name (buffer-file-name)))
-      ;;
-      ;; Commit the file to disk, but don't try to save it directly to the
-      ;; backup directory, since that will mess stuff up.
-      ;;
-      (if full-file-name
-          (save-buffer)
+  ;;
+  ;; Make it a git repo (doing a re-init is safe according to git's) docs.
+  ;;
+  (ensure-makedirs buffer-backup-storage-directory)
+  (git-init-repo buffer-backup-storage-directory)
+
+  (let* ((buf-name (buffer-name))
+         (current-file-path (buffer-file-name))
+         (backup-file-path (buffer-backup-backup-path buf-name current-file-path)))
+    ;;
+    ;; Commit the file to disk, but don't try to save it directly to the
+    ;; backup directory, since that will mess stuff up which disk file
+    ;; is associated with a buffer.  However, if the buffer has no
+    ;; on disk file, than it can save directly to the backup directory.
+    ;;
+    (ensure-makedirs backup-file-path)
+
+    (if (and current-file-path
         (progn
-          (setf full-file-name (make-unique-file-name emacs-one-off-backup-directory file-name))
-          (write-file full-file-name)))
+          (save-buffer)
+          (copy-file current-file-path backup-file-path t))
+      (write-file backup-file-path))
 
-      ;; Write out the file, but mimic the structure, so each place is unique.
-      (let ((final-path (path-join emacs-one-off-backup-directory full-file-name)))
-        (ensure-makedirs final-path)
-        (copy-file full-file-name final-path t))
+    ;; Commit the changes.
+    (git-commit-changes buffer-backup-storage-directory
+                        :message (if (string-has-val message)
+                                     message
+                                   (format "Backup the %s file" buf-name)))))
 
-      ;; Commit the changes.
-      (git-commit-changes emacs-one-off-backup-directory
-                          :message (if (string-has-val message)
-                                       message
-                                     (format "Backup the %s file" file-name))))))
+(defun buffer-backup-diff ()
+  (interactive)
+
+  (let* ((name (buffer-name))
+         (current-file-path (buffer-file-name))
+         (backup-file-path (buffer-backup-backup-path name current-file-path)))
+
+    (switch-to-buffer (shell-open-dir buffer-backup-storage-directory))
+    (rename-buffer (generate-new-buffer-name (format "*diff-%s-diff*" name)))
+    (insertf "diff -u \'%s\' \'%s\'" backup-file-path current-file-path)))
 
 (defalias 'bb 'buffer-backup-to-shared-repo)
+(defalias 'bd 'buffer-backup-diff)
 
 (provide 'one-off-scripts)

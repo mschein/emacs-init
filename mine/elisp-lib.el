@@ -23,17 +23,26 @@
 
 (setf directory-sep "/")
 
-(defun assoc1 (key list)
+(defun assoc1 (keys list)
   "Lookup a key in an alist and raise an error if its not there.
 
    Returns the value (The cdr of the element).
    Values can be nil and it will still work.
-   `key`: The key to lookup
-   `alist`: The associated list to check.
+   `key': The key to lookup
+   `alist': The associated list to check.
   "
-  (if-let (answer (assoc key list))
-      (cdr answer)
-    (error "Key \'%s\' not found" key)))
+  (let ((keys (to-list keys)))
+    (cl-flet ((as (key al)
+                  (if-let (answer (assoc key al))
+                      (cdr answer)
+                    (error "Key \'%s\' not found" key))))
+
+      (while keys
+        (let ((res (as (car keys) list)))
+          (message "key: %s" (car keys))
+          (setf list res)
+          (setf keys (cdr keys)))))
+    list))
 
 (defun rassoc1 (value list)
   "Lookup a key in an alist and raise an error if its not there.
@@ -677,6 +686,15 @@ Example:
 (defun string->list (str &optional regex)
   (mapcar #'string-trim (split-string str (or regex "\n") t)))
 
+(defun tail (n cmd-result)
+  "Get the last line of a command result"
+  (let* ((lines (string->list cmd-result))
+         (len (length lines)))
+    (cl-loop for line in lines
+             for x from 0
+             if (>= x (- len n))
+             collect line)))
+
 (defun buffer->list ()
   "Convert the current buffer into a list."
   (string->list (buffer-string)))
@@ -1002,6 +1020,10 @@ Example:
 
 (defun current-last-dirname ()
   (directory-last-dirname default-directory))
+
+(defun directory-file-under-dir (dir file)
+  "Is the `file' path underneath the directory `dir'?"
+  (string-starts-with (file-truename dir) (file-truename file)))
 
 (defun slurp (path)
   "Read the contents of the file specified by `path' into a string.
