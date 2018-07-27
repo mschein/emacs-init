@@ -39,7 +39,6 @@
 
       (while keys
         (let ((res (as (car keys) list)))
-          (message "key: %s" (car keys))
           (setf list res)
           (setf keys (cdr keys)))))
     list))
