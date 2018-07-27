@@ -353,6 +353,8 @@
 (add-to-list 'load-path "~/emacs-init/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
+
 
 (autoload 'javascript-mode "javascript" nil t)
 
@@ -972,7 +974,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
