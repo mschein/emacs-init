@@ -293,52 +293,49 @@ setup(name=package,
       )
     final-path))
 
-(defconst buffer-backup-storage-directory (expand-file-name "~/backup"))
-
-(defun buffer-backup-file-in-backup-dir (path)
-  (directory-file-under-dir buffer-backup-file-in-backup-dir path))
-
-(defun buffer-backup-backup-path (buffer-name file-path)
-  (if file-path
-      (path-join buffer-backup-storage-directory file-path)
-    (make-unique-file-name buffer-backup-storage-directory buffer-name)))
+(defconst buffer-backup-storage-dir (expand-file-name "~/backup"))
+(defconst buffer-backup-transient-dir (expand-file-name "~/transient-files"))
 
 (defun buffer-backup-to-shared-repo (message)
   (interactive "smessage: ")
-
-  ;;
-  ;; I think it would be better to save transient files to ~/tmp.
-  ;; rather than directly to backup, that would make the logic easier.
-  ;;
-
   ;;
   ;; Make it a git repo (doing a re-init is safe according to git's) docs.
   ;;
-  (ensure-makedirs buffer-backup-storage-directory)
+  (message "Setup directories and init repo.")
+  (ensure-makedirs buffer-backup-storage-dir)
+  (ensure-makedirs buffer-backup-transient-dir)
   (git-init-repo buffer-backup-storage-directory)
 
   (let* ((buf-name (buffer-name))
          (current-file-path (buffer-file-name))
-         (backup-file-path (buffer-backup-backup-path buf-name current-file-path)))
+         (original-default-dir default-directory))
+
+    ;; Save transient files to a special directory.
+    (unless current-file-path
+      (setf current-file-path (make-unique-file-name buffer-backup-transient-dir buf-name))
+      (message "Save transient file to %s" current-file-path)
+      (write-file current-file-path)
+      (set-default-directory original-default-dir))
+
     ;;
     ;; Commit the file to disk, but don't try to save it directly to the
     ;; backup directory, since that will mess stuff up which disk file
     ;; is associated with a buffer.  However, if the buffer has no
     ;; on disk file, than it can save directly to the backup directory.
     ;;
-    (ensure-makedirs backup-file-path)
+    (let ((backup-file-path (path-join buffer-backup-storage-directory current-file-path)))
+      (message "Copy file to backup path: %s" backup-file-path)
+      (save-buffer)
+      (ensure-makedirs backup-file-path)
+      (copy-file current-file-path backup-file-path t)
 
-    (if (and current-file-path
-        (progn
-          (save-buffer)
-          (copy-file current-file-path backup-file-path t))
-      (write-file backup-file-path))
+      (message "Commit the changes to git.")
 
-    ;; Commit the changes.
-    (git-commit-changes buffer-backup-storage-directory
-                        :message (if (string-has-val message)
-                                     message
-                                   (format "Backup the %s file" buf-name)))))
+      ;; Commit the changes.
+      (git-commit-changes buffer-backup-storage-directory
+                          :message (if (string-has-val message)
+                                       message
+                                     (format "Backup the %s file" buf-name))))))
 
 (defun buffer-backup-diff ()
   (interactive)
