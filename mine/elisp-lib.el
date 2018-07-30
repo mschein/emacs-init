@@ -1601,7 +1601,7 @@ python debugging session."
                                    (concat url "?" (url-encode-params params))
                                  url)))
 
-      (message "Running %s" cmd)
+      (message "Web-request running %s" cmd)
 
       ;; TODO(mls): better error handling.
       ;; it would be good to handle the error code + headers
@@ -1617,6 +1617,10 @@ python debugging session."
                              (string-to-int (second (assoc1 :resp-line resp-block)))
                            -1))
               (headers (assoc1 :headers resp-block)))
+
+          (message "Web-request. code: %s http: %s\n headers: %s"
+                   (assoc1 :code resp) http-code headers)
+
           `((:resp . ,output)
             (:code . ,(assoc1 :code resp))
             (:http-code . ,http-code)
