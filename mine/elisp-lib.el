@@ -1315,7 +1315,7 @@ python debugging session."
 
 (defun git-symbolic-ref (&rest args)
   "Run the git symbolic-ref command, see the man page for details."
-  (string-trim (apply #'run-to-str `("git" "symbolic-ref" ,@args))))
+  (string-trim (apply #'run-to-str "git" "symbolic-ref" args)))
 
 (defun git-current-branch-ref ()
   "Get the full ref name of the current git branch."
