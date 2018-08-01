@@ -351,4 +351,9 @@ setup(name=package,
 (defalias 'bb 'buffer-backup-to-shared-repo)
 (defalias 'bd 'buffer-backup-diff)
 
+(defun edit-etc-hosts ()
+  "Open the /etc/hosts files for editing."
+  (interactive)
+  (find-file "/sudo::/etc/hosts"))
+
 (provide 'one-off-scripts)

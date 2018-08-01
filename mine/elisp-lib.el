@@ -1684,7 +1684,6 @@ python debugging session."
 
     (first (remove-if-not (| match-query query %) alist))))
 
-
 ;; TODO: Work on this.
 ;; It would be nice if it filled in the file names with
 ;; tab completion.
