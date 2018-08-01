@@ -6,6 +6,8 @@
 ;; 2. Need to figure out tab and hippie expand to
 ;;    get everything to play nicely
 ;;
+;; Widget library: https://www.gnu.org/software/emacs/manual/html_mono/widget.html
+;;
 ;; To open a file with sudo do:
 ;; /sudo::
 ;;

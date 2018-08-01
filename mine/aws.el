@@ -225,4 +225,19 @@
                            "--filter" (format "Name=volume-id,Values=%s" volume-id))
                   "+volume-data-for-%s-+" volume-id)))
 
+(cl-defun aws-describe-db-snapshots (&key filters snapshot-id db-id)
+  (let ((-aws-return-json t)
+        (args (list "describe-db-snapshots")))
+    (when filters
+      (setf args (concatenate 'list args
+                              (list "--filter" (aws--filter-alist-to-str filters)))))
+
+    (when snapshot-id
+      (setf args (concatenate 'list args (list "--db-snapshot-identifier" snapshot-id))))
+
+    (when db-id
+      (setf args (concatenate 'list args (list "--db-instance-identifier" db-id))))
+
+    (assoc1 'DBSnapshots (apply #'aws-rds args))))
+
 (provide 'aws)
