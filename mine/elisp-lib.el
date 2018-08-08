@@ -1170,7 +1170,10 @@ Example:
 
 (defmacro make-bookmark (name url &rest urls)
   `(defun ,name ()
-     ,(format "The `%s' function opens up the %s url." name url)
+     ,(format "The `%s' function opens up the %s url.%s" name url
+              (if (> (length urls) 1)
+                  (format "  And %d others." (length urls))
+                ""))
      (interactive)
      (browse-url ,url t)
      ,@(mapcar (lambda (u)

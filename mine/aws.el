@@ -225,7 +225,21 @@
                            "--filter" (format "Name=volume-id,Values=%s" volume-id))
                   "+volume-data-for-%s-+" volume-id)))
 
-(cl-defun aws-describe-db-snapshots (&key filters snapshot-id db-id)
+(defun aws-describe-volumes (volume-ids)
+  (interactive "svolume-id: ")
+  (let ((-aws-return-json t)
+        (volume-ids (to-list volume-ids)))
+    (data-to-buffer (apply #'aws-ec2 "describe-volumes" "--volume-ids" volume-ids)
+                    "+volume-data-for-%s-+" (string-join volume-ids "-"))))
+
+(defun aws-describe-instances (instance-ids)
+  (interactive "sinstances: ")
+  (let ((-aws-return-json t)
+        (instance-ids (to-list instance-ids)))
+    (data-to-buffer (apply #'aws-ec2 "describe-instances" "--instance-ids" instance-ids)
+                    "+instance-data-for-%s-+" (string-join instance-ids "-"))))
+
+(cl-defun aws-rds-describe-db-snapshots (&key filters snapshot-id db-id)
   (let ((-aws-return-json t)
         (args (list "describe-db-snapshots")))
     (when filters
@@ -239,5 +253,6 @@
       (setf args (concatenate 'list args (list "--db-instance-identifier" db-id))))
 
     (assoc1 'DBSnapshots (apply #'aws-rds args))))
+
 
 (provide 'aws)
