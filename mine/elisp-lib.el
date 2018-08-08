@@ -24,11 +24,16 @@
 (setf directory-sep "/")
 
 (defun assoc1 (keys list)
-  "Lookup a key in an alist and raise an error if its not there.
+  "Lookup a key (or keys) in an alist and raise an error if its not there.
 
    Returns the value (The cdr of the element).
    Values can be nil and it will still work.
-   `key': The key to lookup
+
+   Also note that you can traverse nested alists by providing a list of keys.
+
+   So (assoc1 '(a b c) '((a . ((b . ((c . 1))))))) -> 1
+
+   `keys': The key or a list of keys to lookup.
    `alist': The associated list to check.
   "
   (let ((keys (to-list keys)))
