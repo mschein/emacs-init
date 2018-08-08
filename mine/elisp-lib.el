@@ -14,7 +14,7 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'json)
-;; (require 's)
+(require 's)
 ;; (require 'dash)
 ;; (require 'ht)
 
