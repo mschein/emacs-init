@@ -1317,7 +1317,7 @@ python debugging session."
   (destructuring-bind (host project repo)
       (string-find
        ;; It's matching "ssh://git@(git.tcc.li):7999/(oe)/(auth).git"
-       "[[:word:]]+://[[:word:]]+@\\([^:]+\\).*/\\([^/]+\\)/\\([^.]+\\).git"
+       "[[:word:]]+://[[:word:]]+@\\([^:/]+\\).*/\\([^/]+\\)/\\([^.]+\\).git"
        (git-remote-origin-url))
     (list host project repo)))
 
