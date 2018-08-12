@@ -68,6 +68,9 @@
 ;; - M-m back to indent.... (a better C-a M-f)
 ;; - goto-line: M-g
 ;;
+;; Python development notes:
+;;   - https://emacs.stackexchange.com/questions/9696/how-do-you-create-a-robust-python-ide-with-emacs-as-the-text-editor
+;;
 ;; Rectangles
 ;; -
 ;;
