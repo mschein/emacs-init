@@ -304,7 +304,7 @@ setup(name=package,
   (message "Setup directories and init repo.")
   (ensure-makedirs buffer-backup-storage-dir)
   (ensure-makedirs buffer-backup-transient-dir)
-  (git-init-repo buffer-backup-storage-directory)
+  (git-init-repo buffer-backup-storage-dir)
 
   (let* ((buf-name (buffer-name))
          (current-file-path (buffer-file-name))
@@ -323,7 +323,7 @@ setup(name=package,
     ;; is associated with a buffer.  However, if the buffer has no
     ;; on disk file, than it can save directly to the backup directory.
     ;;
-    (let ((backup-file-path (path-join buffer-backup-storage-directory current-file-path)))
+    (let ((backup-file-path (path-join buffer-backup-storage-dir current-file-path)))
       (message "Copy file to backup path: %s" backup-file-path)
       (save-buffer)
       (ensure-makedirs backup-file-path)
@@ -332,7 +332,7 @@ setup(name=package,
       (message "Commit the changes to git.")
 
       ;; Commit the changes.
-      (git-commit-changes buffer-backup-storage-directory
+      (git-commit-changes buffer-backup-storage-dir
                           :message (if (string-has-val message)
                                        message
                                      (format "Backup the %s file" buf-name))))))
@@ -344,7 +344,7 @@ setup(name=package,
          (current-file-path (buffer-file-name))
          (backup-file-path (buffer-backup-backup-path name current-file-path)))
 
-    (switch-to-buffer (shell-open-dir buffer-backup-storage-directory))
+    (switch-to-buffer (shell-open-dir buffer-backup-storage-dir))
     (rename-buffer (generate-new-buffer-name (format "*diff-%s-diff*" name)))
     (insertf "diff -u \'%s\' \'%s\'" backup-file-path current-file-path)))
 
