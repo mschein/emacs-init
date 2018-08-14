@@ -296,6 +296,9 @@ setup(name=package,
 (defconst buffer-backup-storage-dir (expand-file-name "~/backup"))
 (defconst buffer-backup-transient-dir (expand-file-name "~/transient-files"))
 
+(defun buffer-backup-file-path (current-file-path)
+  (path-join buffer-backup-storage-dir current-file-path))
+
 (defun buffer-backup-to-shared-repo (message)
   (interactive "smessage: ")
   ;;
@@ -323,7 +326,7 @@ setup(name=package,
     ;; is associated with a buffer.  However, if the buffer has no
     ;; on disk file, than it can save directly to the backup directory.
     ;;
-    (let ((backup-file-path (path-join buffer-backup-storage-dir current-file-path)))
+    (let ((backup-file-path (buffer-backup-file-path current-file-path)))
       (message "Copy file to backup path: %s" backup-file-path)
       (save-buffer)
       (ensure-makedirs backup-file-path)
@@ -342,7 +345,10 @@ setup(name=package,
 
   (let* ((name (buffer-name))
          (current-file-path (buffer-file-name))
-         (backup-file-path (buffer-backup-backup-path name current-file-path)))
+         (backup-file-path (buffer-backup-file-path current-file-path)))
+    (unless (file-exists-p backup-file-path)
+      (error "File %s is not in backup repository at %s.  Giving up."
+             current-file-path backup-file-path))
 
     (switch-to-buffer (shell-open-dir buffer-backup-storage-dir))
     (rename-buffer (generate-new-buffer-name (format "*diff-%s-diff*" name)))
