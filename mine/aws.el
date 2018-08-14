@@ -264,7 +264,7 @@
 (defun aws-latest-rds-snapshot (db-id)
   "Return the latest rds snapshot for the given db id"
   (interactive "sdb-id: ")
-  (data-to-buffer (aref (aws-ec2-snapshots-sorted volume-id) 0)
+  (data-to-buffer (aref (aws-rds-snapshots-sorted db-id) 0)
                   "+latest-rds-snapshot-%s-+" db-id))
 
 
