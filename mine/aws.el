@@ -254,5 +254,18 @@
 
     (assoc1 'DBSnapshots (apply #'aws-rds args))))
 
+(defun aws-rds-snapshots-sorted (db-id)
+  (let ((time-symbol 'SnapshotCreateTime)
+        (res (aws-rds-describe-db-snapshots :db-id db-id)))
+    (sort res (| time-less-p
+                 (safe-date-to-time (assoc1 time-symbol %2))
+                 (safe-date-to-time (assoc1 time-symbol %1))))))
+
+(defun aws-latest-rds-snapshot (db-id)
+  "Return the latest rds snapshot for the given db id"
+  (interactive "sdb-id: ")
+  (data-to-buffer (aref (aws-ec2-snapshots-sorted volume-id) 0)
+                  "+latest-rds-snapshot-%s-+" db-id))
+
 
 (provide 'aws)
