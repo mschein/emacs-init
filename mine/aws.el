@@ -192,6 +192,10 @@
 
     (apply #'aws-ec2 args)))
 
+(defun aws-ec2-describe-snapshots-by-tag (tag-value)
+  (aws-ec2-describe-snapshots
+   :filter (list (cons "tag-value"  tag-value))))
+
 (defun aws-ec2-snapshots-sorted (volume-id)
   (let ((res (aws-ec2-describe-snapshots
               :filter `(("volume-id" . ,volume-id))

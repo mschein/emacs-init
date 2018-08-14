@@ -69,6 +69,10 @@
   "Return all of the values in an alist.  That is the `cdr' values."
   (mapcar #'cdr alist))
 
+(defmacro pushcons (key value alist)
+  "Push a new key value pair onto an alist."
+  `(push (cons ,key ,value) ,alist))
+
 (defun symbol-equal-ignore-case (s1 s2)
   (cl-flet ((upcase-symbol (s)
               (upcase (symbol-name s))))
