@@ -845,11 +845,13 @@ that uses 'font-lock-warning-face'."
 
 (defun setup-python3-mode ()
   (interactive)
-  (setup-python-mode-common "python3" #'flymake-flake83-checker))
+  (setup-python-mode-common "python3" #'flymake-flake83-checker)
+  (message "Set python3 mode"))
 
 (defun setup-python2-mode ()
   (interactive)
-  (setup-python-mode-common "python" #'flymake-flake8-checker))
+  (setup-python-mode-common "python" #'flymake-flake8-checker)
+  (message "Set python2 mode"))
 
 (when (load "flymake" t)
   ;; Do I need this, if I call this during the mode hook?

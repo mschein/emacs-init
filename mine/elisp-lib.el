@@ -1403,13 +1403,13 @@ python debugging session."
     ;; class Foo(object):
 
     (let* ((python-NAME-regex "[A-Za-z_][A-Za-z0-9_]+")
-           (python3-regex (list "python3"
-                                "print("
-                                (format "class\s+%s:" python-NAME-regex)
+           (python3-regex (list "#.*python3"
+                                "\s+print("
                                 "nonlocal"
                                 (format "{%s:\s*%s\s+for\s+"
                                         python-NAME-regex python-NAME-regex)))
-           (python2-regex (list "xrange("
+           (python2-regex (list "#.*python[^3]"
+                                "xrange("
                                 "print\s+[^(]"
                                 (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
                                 "\.iteritems("))
@@ -1420,8 +1420,8 @@ python debugging session."
                      (when (re-search-forward regex nil t)
                        (message "match regex %s" regex)
                        (funcall score-fn)))))
-        (run-searches python3-regex (fn () (incf py3-score)))
-        (run-searches python2-regex (fn () (decf py3-score))))
+        (run-searches python3-regex (| incf py3-score))
+        (run-searches python2-regex (| decf py3-score)))
 
       ;; If the score is positive or zero, assume python3.
       (message "final score: %d" py3-score)
