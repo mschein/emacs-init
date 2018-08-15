@@ -1677,6 +1677,15 @@ python debugging session."
     (switch-to-buffer buffer)
    buffer))
 
+(defun host-info-to-login (host-or-ip &optional user)
+  (concat (if user (concat user "@") "")
+          host-or-ip))
+
+;; Should read ips from your ssh file.
+(defun open-host (host-or-ip user)
+  (interactive "shost-or-ip: \nsuser: ")
+  (shell-open-dir "/ssh:%s:/" (host-info-to-login host-or-ip user)))
+
 ;;
 ;; this is supposed to be for matching lists of alists.
 ;; I need to have a way to specify what data is returned.

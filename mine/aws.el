@@ -236,6 +236,10 @@
     (data-to-buffer (apply #'aws-ec2 "describe-volumes" "--volume-ids" volume-ids)
                     "+volume-data-for-%s-+" (string-join volume-ids "-"))))
 
+(defun aws-ecs-describe-instances (instance-ids)
+  (let ((-aws-return-json t)
+        (apply #'aws-ec2 "describe-instances" "--instance-ids" (to-list instance-ids)))))
+
 (defun aws-describe-instances (instance-ids)
   (interactive "sinstances: ")
   (let ((-aws-return-json t)
@@ -271,5 +275,38 @@
   (data-to-buffer (aref (aws-rds-snapshots-sorted db-id) 0)
                   "+latest-rds-snapshot-%s-+" db-id))
 
+(defun aws-ecs-list-clusters ()
+  "Return a list of ecs clusters in the current account."
+  (let ((-aws-return-json t))
+    (assoc1 'clusterArns (aws-ecs "list-clusters"))))
 
+(defun aws-ecs-list-services (cluster)
+  "This the service arns in a given `cluster'"
+  (let ((-aws-return-json t))
+    (assoc1 'serviceArns (aws-ecs "list-services" "--cluster" cluster))))
+;; aws ecs describe-services --cluster "arn:aws:ecs:us-east-1:747953286079:cluster/bitbucket-backend-cluster-HYV7SDCTBJV3" --services "bitbucket-backend"
+
+(defun aws-ecs-describe-services (cluster services)
+  "Provide information about a list of `services' in an ecs `cluster'"
+  (let ((-aws-return-json t))
+    (assoc1 'services (apply #'aws-ecs "describe-services" "--cluster" cluster "--services" (to-list services)))))
+
+(defun aws-ecs-list-tasks (cluster service-name)
+  "Get a list of tasks for a given `service-name' in a `cluster'"
+  (let ((-aws-return-json t))
+    (assoc1 'taskArns (aws-ecs "list-tasks" "--cluster" cluster "--service-name" service-name))))
+
+(defun aws-ecs-describe-tasks (cluster tasks)
+  (let ((-aws-return-json t))
+    (assoc1 'tasks (apply #'aws-ecs "describe-tasks" "--cluster" cluster "--tasks" (to-list tasks)))))
+
+(defun aws-ecs-describe-task-definition (task-definition)
+  (let ((-aws-return-json t))
+    (assoc1 'taskDefinition (aws-ecs "describe-task-definition" "--task-definition" task-definition))))
+
+(defun aws-ecs-describe-container-instances (cluster container-instances)
+  (let ((-aws-return-json t))
+    (assoc1 'containerInstances (apply #'aws-ecs
+                                       "describe-container-instances" "--cluster" cluster "--container-instances"
+                                       (to-list container-instances)))))
 (provide 'aws)
