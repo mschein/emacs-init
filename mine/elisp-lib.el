@@ -595,7 +595,7 @@ Example:
 ;; I may also want to add an 'environment' input to the function.
 ;; for stuff like ecr access.
 ;;
-(cl-defun do-cmd (cmd &key input stdout stderr throw)
+(cl-defun do-cmd (cmd &key input stdout stderr throw ssh)
   ;; Add an async function
   "Be a main entry point for running shell commands.
 
@@ -606,8 +606,8 @@ Example:
   or any output if requested.
 
   The arguments are:
-   1. cmd: a list of things to pass to bash -c.  The arguments shouldn't be
-           interpreted by the shell.
+   1. cmd: a list with the program to run and its arguments.
+           The arguments won't be interpreted by the shell.
 
    2. input: The file to hand to the input process.  nil is the same as dev
 
@@ -650,8 +650,13 @@ Example:
          (resp)
          (stderr-string))
 
+    ;; Deal with ssh commands
+    (when ssh
+        (setf program "ssh")
+        (setf arguments (cons ssh cmd)))
+
     (cl-flet ((my-call-process ()
-                (message "cmd: %s" (cmd-to-shell-string cmd))
+                (message "cmd: %s %s" program (cmd-to-shell-string arguments))
                 (setf resp (apply #'call-process program input (list stdout stderr) nil arguments))))
       (if stdout-buffer
           (with-current-buffer stdout-buffer
@@ -664,9 +669,10 @@ Example:
 
       (if (and (not (equal resp 0))
                throw)
-          (error "Command %s failed, code: %s, msg: \'%s\'" cmd resp (if stderr-string
-                                                                         (string-trim (s-truncate 1024 stderr-string))
-                                                                       "")))
+          (error "Command %s %s failed, code: %s, msg: \'%s\'"
+                 program arguments resp (if stderr-string
+                                            (string-trim (s-truncate 1024 stderr-string))
+                                          "")))
       (let ((output '()))
         (push (cons :code resp) output)
         (when stdout-buffer
@@ -689,6 +695,10 @@ Example:
 
    It will throw an error if the command fails."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t)))
+
+(defun run-to-str-ssh (host &rest cmd-parts)
+  "Run a command with ssh on the remote host."
+  (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t :ssh host)))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
