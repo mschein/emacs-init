@@ -443,7 +443,6 @@ that uses 'font-lock-warning-face'."
 (push "~/emacs-init/snippets" yas-snippet-dirs)
 (yas/initialize)
 
-
 ;; We don't always need the final new line in a file.
 (setq require-final-newline nil)
 
@@ -477,6 +476,13 @@ that uses 'font-lock-warning-face'."
 ;; Magit options
 (add-hook 'magit-mode-hook 'magit-load-config-extensions)
 
+;; Enable ace-jump-mode
+;;
+;; use 'pop-mark' with it. (C-u C-<SPC>)
+;; global mark ring pop: (C-x C-<SPC>)
+(require 'ace-jump-mode)
+(define-key global-map (kbd "C-c C-<SPC>") 'ace-jump-mode)
+(define-key global-map (kbd "C-x C-<SPC>") 'ace-jump-mode-pop-mark)
 
 ;;
 ;; Make window navigation easier
@@ -981,7 +987,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (closql emacsql emacsql-mysql emacsql-psql emacsql-sqlite smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (ace-isearch ace-jump-mode closql emacsql emacsql-mysql emacsql-psql emacsql-sqlite smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
