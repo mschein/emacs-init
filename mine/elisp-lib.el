@@ -23,6 +23,8 @@
 
 (setf directory-sep "/")
 
+(defalias 'filter #'remove-if-not)
+
 (defun assoc1 (keys list)
   "Lookup a key (or keys) in an alist and raise an error if its not there.
 
@@ -72,22 +74,6 @@
 (defmacro pushcons (key value alist)
   "Push a new key value pair onto an alist."
   `(push (cons ,key ,value) ,alist))
-
-(defun symbol-equal-ignore-case (s1 s2)
-  (cl-flet ((upcase-symbol (s)
-              (upcase (symbol-name s))))
-    (equal (upcase-symbol s1) (upcase-symbol s2))))
-
-(defun symbol-rename (sym cb)
-  "Create a new name based off the name of `sym'.
-
-   The `cb' function takes the string name of the symbol
-   and should return a string the caller wants converted into
-   a new symbol.
-
-   Example: (symbol-rename 'abc (| (concat % \"def\"))) -> abcdef
-   "
-  (make-symbol (funcall cb (symbol-name sym))))
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
@@ -554,6 +540,33 @@ Example:
 (defun string-case= (s1 s2)
   "Compare s1 and s2 ignoring case"
   (string= (downcase s1) (downcase s2)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Symbol functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun symbol-starts-with (prefix symb)
+  (string-starts-with prefix (symbol-name symb)))
+
+(defun symbol-matches (re symb)
+  (string-match re (symbol-name symb)))
+
+(defun symbol-equal-ignore-case (s1 s2)
+  (cl-flet ((upcase-symbol (s)
+              (upcase (symbol-name s))))
+    (equal (upcase-symbol s1) (upcase-symbol s2))))
+
+(defun symbol-rename (sym cb)
+  "Create a new name based off the name of `sym'.
+
+   The `cb' function takes the string name of the symbol
+   and should return a string the caller wants converted into
+   a new symbol.
+
+   Example: (symbol-rename 'abc (| (concat % \"def\"))) -> abcdef
+   "
+  (make-symbol (funcall cb (symbol-name sym))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs utils
