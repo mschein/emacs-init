@@ -115,6 +115,20 @@
 ;; Need to make this take do-cmd's arguments?
 (defvar -aws-return-json nil "Control what the -aws function returns")
 
+(defun aws-traverse (steps data)
+  "Traverse a series of alists and arrays as returned by aws and
+   emacs's json parser.
+
+   Example: (aws-traverse '(Reservations 0 Instances 0) (aws-ec2-describe-instances instance-ids))"
+
+  (cl-loop for step in steps
+           with data = data do
+     (etypecase step
+       (integer (setf data (aref data step)))
+       (symbol (setf data (assoc1 step data)))
+       (string (setf data (assoc1 step data))))
+     finally return data))
+
 (defun* -aws (&rest args)
   (let ((resp (do-cmd (cons "aws" args) :stdout 'string :stderr 'string :throw t)))
     (when (equal (assoc1 :code resp) 0)
@@ -236,16 +250,21 @@
     (data-to-buffer (apply #'aws-ec2 "describe-volumes" "--volume-ids" volume-ids)
                     "+volume-data-for-%s-+" (string-join volume-ids "-"))))
 
-(defun aws-ecs-describe-instances (instance-ids)
-  (let ((-aws-return-json t)
-        (apply #'aws-ec2 "describe-instances" "--instance-ids" (to-list instance-ids)))))
+(defun aws-ec2-describe-instances (instance-ids)
+  (let ((-aws-return-json t))
+        (apply #'aws-ec2 "describe-instances" "--instance-ids" (to-list instance-ids))))
 
 (defun aws-describe-instances (instance-ids)
   (interactive "sinstances: ")
   (let ((-aws-return-json t)
         (instance-ids (to-list instance-ids)))
-    (data-to-buffer (apply #'aws-ec2 "describe-instances" "--instance-ids" instance-ids)
+    (data-to-buffer (aws-ec2-describe-instances instance-ids)
                     "+instance-data-for-%s-+" (string-join instance-ids "-"))))
+
+(defun aws-get-instance-ips (instance-id)
+  (aws-traverse
+   '(Reservations 0 Instances 0 PrivateIpAddress)
+   (aws-ec2-describe-instances (list instance-id))))
 
 (cl-defun aws-rds-describe-db-snapshots (&key filters snapshot-id db-id)
   (let ((-aws-return-json t)
@@ -309,4 +328,53 @@
     (assoc1 'containerInstances (apply #'aws-ecs
                                        "describe-container-instances" "--cluster" cluster "--container-instances"
                                        (to-list container-instances)))))
+
+(defun array-swap (first second array)
+  (let ((tmp (aref array first)))
+    (aset array first (aref array second))
+    (aset array second tmp)))
+
+(defun search-substring (re seq)
+  "Search a sequence for "
+  (search (list re) seq :test #'string-match))
+
+(defun aws-task->instance (cluster task)
+  (aws-traverse '(0 ec2InstanceId)
+                (aws-ecs-describe-container-instances cluster
+                 (aws-traverse '(0 containerInstanceArn) (aws-ecs-describe-tasks cluster task)))))
+
+(defun aws-task->ip (cluster task)
+  (aws-get-instance-ips (aws-task->instance cluster task)))
+
+(defun aws-ecs-get-ips (service-name)
+  (let ((-aws-return-json t))
+    ;; algorithm
+    ;;
+    ;; 1. list clusters in the environment
+    ;; 2. search for the service in the default cluster.
+    ;; 3. search in the bitbucket cluster.
+    ;; 4. then try all of them.
+    ;;
+    ;;
+    ;;
+    (let* ((clusters (aws-ecs-list-clusters))
+           (default-index (search-substring "default" clusters))
+           (bitbucket-index (search-substring "bitbucket-backend" clusters)))
+
+      (assert (and default-index bitbucket-index))
+
+      ;; Put default and bitbucket up front.
+      (array-swap 0 default-index clusters)
+      (array-swap 1 bitbucket-index clusters)
+
+      ;; clusters should be ready now
+      (cl-loop for cluster across clusters do
+         (progn
+           (message "Check cluster %s for service %s" cluster service-name)
+           (when-let (tasks (with-demoted-errors "Check cluster for task: %S"
+                          (aws-ecs-list-tasks cluster service-name)))
+             (progn
+               (let ((res (mapcar (| aws-task->ip cluster %) tasks)))
+                 (return res)))))))))
+
 (provide 'aws)

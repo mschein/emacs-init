@@ -533,9 +533,27 @@ Example:
                      str)
            "\"")))
 
-;; (defun dequote-str ()
-;;   "Remove quotations ")
+;;
+;; Not working just yet :p.
+;;
+;; (defun dequote-str (str)
+;;   "Remove quotations "
 
+;;   (let ((i 0)
+;;         (out-str "")
+;;         (in-quote nil))
+;;     (flet ((append-char (c)
+;;              (setf out-str (concat out-str (char-to-string c)))))
+;;       (while (< i (length str))
+;;         (let ((c (arref str i)))
+;;           (if in-quote
+;;               (ecase c
+;;                 (?\" (setf in-quote nil))
+;;                 (?\\ nil)
+;;                 (t (append-char c)))
+;;             (ecase c
+;;               (?\" (setf in-quote t))
+;;               (t (append-char c)))))))))
 
 (defun string-case= (s1 s2)
   "Compare s1 and s2 ignoring case"
@@ -1689,6 +1707,16 @@ python debugging session."
     (mapc (fn ((name . old-value))
               (setenv name old-value))
           old-env-values)))
+
+(defun enumerate (seq)
+  (cl-loop for elm in seq
+           for x from 0
+           collect (cons x elm)))
+
+(cl-defun make-counter (&optional (start 0) (inc 1))
+  (lexical-let ((amount start))
+    (fn ()
+        (incf amount inc))))
 
 (defun open-custom-terminal (input-script name)
   (let ((buffer (generate-new-buffer (format "*term-%s-term*" name))))
