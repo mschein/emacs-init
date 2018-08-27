@@ -71,6 +71,13 @@
   "Return all of the values in an alist.  That is the `cdr' values."
   (mapcar #'cdr alist))
 
+(defun identity (arg)
+  arg)
+
+(defun unique (seq)
+  "return a copy of the sequence with only unique elements"
+  (delete-dups (mapcar #'identity seq)))
+
 (defmacro pushcons (key value alist)
   "Push a new key value pair onto an alist."
   `(push (cons ,key ,value) ,alist))

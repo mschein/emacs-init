@@ -348,6 +348,7 @@
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
+    ;;
     ;; algorithm
     ;;
     ;; 1. list clusters in the environment
@@ -355,17 +356,15 @@
     ;; 3. search in the bitbucket cluster.
     ;; 4. then try all of them.
     ;;
-    ;;
-    ;;
     (let* ((clusters (aws-ecs-list-clusters))
            (default-index (search-substring "default" clusters))
            (bitbucket-index (search-substring "bitbucket-backend" clusters)))
 
-      (assert (and default-index bitbucket-index))
-
       ;; Put default and bitbucket up front.
-      (array-swap 0 default-index clusters)
-      (array-swap 1 bitbucket-index clusters)
+      (when default-index
+          (array-swap 0 default-index clusters))
+      (when bitbucket-index
+        (array-swap 1 bitbucket-index clusters))
 
       ;; clusters should be ready now
       (cl-loop for cluster across clusters do
