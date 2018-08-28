@@ -1726,6 +1726,10 @@ python debugging session."
         (incf amount inc))))
 
 (defun open-custom-terminal (input-script name)
+  "Open a terminal and insert `input-script'.
+
+   Also give the terminal the name `name'."
+
   (let ((buffer (generate-new-buffer (format "*term-%s-term*" name))))
     (with-current-buffer buffer
         (term-mode)
