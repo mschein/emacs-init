@@ -16,7 +16,7 @@
 (require 'json)
 (require 's)
 ;; (require 'dash)
-;; (require 'ht)
+(require 'ht)
 
 ;; Wrap in try catch
 (setf lexical-binding t)
@@ -590,7 +590,7 @@ Example:
 
    Example: (symbol-rename 'abc (| (concat % \"def\"))) -> abcdef
    "
-  (make-symbol (funcall cb (symbol-name sym))))
+  (intern (funcall cb (symbol-name sym))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1766,6 +1766,39 @@ python debugging session."
                      (value (rassoc (first rest) item))))))
 
     (first (remove-if-not (| match-query query %) alist))))
+
+(defun memoize (fn &optional timeout-sec)
+  (lexical-let ((ht (ht))
+                (fn fn)
+                (timeout-sec timeout-sec))
+    (fn (&rest args)
+        (message "Memoize: ht keys: %s timeout-sec: %s" (ht-keys ht) timeout-sec)
+        (cl-labels ((lookup ()
+                    (if-let (entry (ht-get ht args))
+                        ;; Delete the current value if there is a timeout.
+                        ;; car entry: value
+                        ;; cdr entry: create time
+                        (if (and timeout-sec
+                                 (>= (time-to-seconds (time-subtract (current-time) (cdr entry))) timeout-sec))
+                            (progn
+                              (message "Memoize: Delete entry %s" args)
+                              (ht-remove ht args)
+                              (lookup))
+                          (progn
+                              (message "Time remaining: %s" (time-to-seconds (time-subtract (current-time) (cdr entry))))
+                              (car entry)))
+                      (progn
+                        (let ((res (apply fn args)))
+                          (ht-set ht args (cons res (current-time)))
+                          res)))))
+          (lookup)))))
+
+(defmacro memoize-fn (func &optional timeout name)
+  (let ((memoized-fn (gensym)))
+    ;; Only use ,timeout once!
+    `(lexical-let ((,memoized-fn (memoize #',func ,timeout)))
+       (defun ,(or name (symbol-rename func (| concat % "-cached"))) (&rest args)
+         (apply ,memoized-fn args)))))
 
 ;; TODO: Work on this.
 ;; It would be nice if it filled in the file names with
