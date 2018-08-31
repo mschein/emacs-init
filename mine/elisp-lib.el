@@ -655,7 +655,7 @@ Example:
              <buffer object>
              nil
              (:buffer <buffer-name>)
-             (:file <file-path 'append) ; append is optional.
+             (:file <file-path> 'append) ; append is optional.
 
    4. stderr: The same as stdout with one additional option.
               NOTE: this is on by default to make error messages better.
