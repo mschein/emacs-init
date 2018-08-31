@@ -1501,10 +1501,10 @@ python debugging session."
   (interactive (list (completing-read "location: " (mapcar #'first oe-project-table) nil t)))
   (insertf "source %s" (find-virtualenv-file (assoc1 location oe-project-table))))
 
-(defun open-shell-dir-venv ()
+(defun open-shell-dir-venv (&optional dir)
   "Start a virtual env in the current repo."
   (interactive)
-  (switch-to-buffer (shell-open-dir default-directory))
+  (switch-to-buffer (shell-open-dir (or dir default-directory)))
 
   (let* ((repo-root (git-project-root))
          (repo-name (basename repo-root))
