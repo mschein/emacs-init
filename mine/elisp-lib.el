@@ -25,6 +25,11 @@
 
 (defalias 'filter #'remove-if-not)
 
+(defmacro with-gensyms (syms &rest body)
+  (declare (indent 2))
+  `(let ,(mapcar (| list % '(gensym)) syms)
+     ,@body))
+
 (defun assoc1 (keys list)
   "Lookup a key (or keys) in an alist and raise an error if its not there.
 
@@ -543,24 +548,39 @@ Example:
 ;;
 ;; Not working just yet :p.
 ;;
-;; (defun dequote-str (str)
-;;   "Remove quotations "
+(defun dequote-str (str)
+  "Remove quotations from a string.
 
-;;   (let ((i 0)
-;;         (out-str "")
-;;         (in-quote nil))
-;;     (flet ((append-char (c)
-;;              (setf out-str (concat out-str (char-to-string c)))))
-;;       (while (< i (length str))
-;;         (let ((c (arref str i)))
-;;           (if in-quote
-;;               (ecase c
-;;                 (?\" (setf in-quote nil))
-;;                 (?\\ nil)
-;;                 (t (append-char c)))
-;;             (ecase c
-;;               (?\" (setf in-quote t))
-;;               (t (append-char c)))))))))
+   Not sure that this is the best implementation, but
+   it supports ' \" ` and \\ to escape"
+
+  (let ((i 0)
+        (out-str "")
+        (quote-char nil)
+        (in-quote nil))
+    (while (< i (length str))
+      (let ((c (aref str i)))
+        (message "str[%d] = %s out-str: %s in-quote: %s quote-char: %s" i c out-str in-quote
+                 quote-char)
+        (if in-quote
+            (cond
+              ((equal c quote-char) (progn
+                                      (message "here..")
+                                      (setf in-quote nil)))
+              ((equal c ?\\) (progn
+                               (incf i)
+                               (append! out-str (aref str i))))
+              (t (append! out-str c)))
+          (cond
+            ((member c '(?\" ?\' ?\`))
+             ;; record the quote character
+             (progn
+               (setf quote-char c)
+               (setf in-quote t)))
+            ;; pass it on like normal.
+            (t (append! out-str c)))))
+      (incf i))
+    (concatenate 'string out-str)))
 
 (defun string-case= (s1 s2)
   "Compare s1 and s2 ignoring case"
@@ -923,6 +943,11 @@ Example:
     (find-file (buffer-name))
     (set-window-vscroll nil curr-scroll)
     (message "Reloaded file")))
+
+(defmacro append! (list value)
+  "NOTE! This only works with a symbol, not a complex type."
+  (assert (symbolp list))
+  `(setf ,list (append ,list (to-list ,value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Time utils
@@ -1321,6 +1346,38 @@ python debugging session."
 
 (defun umount-dmg (path)
   (run "hdiutil" "detach" path))
+
+(cl-defun mount-smbfs (host remote-path local-path
+                            &key user password domain dir-mode file-mode options new-session)
+  "Run the osx mount_smbfs command."
+  (let ((args nil)
+        (auth nil))
+    (when user
+      (setf auth user))
+    (when password
+      (assert user)
+      (setf auth (concat auth (format ":%s" password))))
+
+    (when options
+      (append! args (list "-o" options)))
+
+    (when dir-mode
+      (append! args (list "-d" dir-mode)))
+
+    (when file-mode
+      (append! args (list "-f" file-mode)))
+
+    (when new-session
+      (append! args "-s"))
+
+    (append! args (format "//%s%s%s%s"
+                             (if domain (format "%s;" domain) "")
+                             (if auth (format "%s@" auth) "")
+                             host
+                             (if remote-path (format "/%s" remote-path) "")))
+    (append! args local-path)
+
+  (do-cmd "mount_smbfs" args)))
 
 (defun osx-screen-lock ()
   "Lock the screen immediately"
