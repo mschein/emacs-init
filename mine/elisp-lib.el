@@ -758,6 +758,12 @@ Example:
   "Run a command with ssh on the remote host."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t :ssh host)))
 
+(defun do-cmd-was-true (results)
+  (equal 0 (assoc1 :code results)))
+
+(defun run-is-true (&rest cmd-parts)
+  (do-cmd-was-true (do-cmd cmd-parts)))
+
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
   (mapcar #'string-trim (split-string str (or regex "\n") t)))
@@ -1463,6 +1469,14 @@ python debugging session."
   (pushd path
          (run "git" "add" ".")
          (run "git" "commit" "-a" "-m" message)))
+
+(defun git-rev-parse-is-inside-working-tree ()
+  (run "git" "rev-parse" "--is-inside-work-tree"))
+
+(defun git-in-working-tree (&optional dir)
+  "Is the current or provided directory inside a valid git repo?"
+  (pushd (or dir default-directory)
+      (do-cmd-was-true (git-rev-parse-is-inside-working-tree))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
