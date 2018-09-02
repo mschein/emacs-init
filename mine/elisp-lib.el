@@ -1422,6 +1422,12 @@ python debugging session."
       url
     (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
+(defun git-remote-add-origin (origin)
+  (run "git" "remote" "add" "origin" origin))
+
+(defun git-push-origin-master ()
+  (run "git" "push" "-u" "origin" "master"))
+
 (defun git-get-origin-info ()
   (destructuring-bind (host project repo)
       (string-find
@@ -1447,8 +1453,11 @@ python debugging session."
   "Return the root of a git project."
   (string-trim (run-to-str "git" "rev-parse" "--show-toplevel")))
 
-(defun git-init-repo (path)
-  (run "git" "init" path))
+(defun git-init-repo (path &optional bare)
+  (let ((args (list path)))
+    (when bare
+      (append! args "--bare"))
+  (apply #'run "git" "init" args)))
 
 (cl-defun git-commit-changes (path &key (message  "Save current files."))
   (pushd path
