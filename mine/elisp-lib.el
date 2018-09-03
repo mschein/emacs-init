@@ -1478,6 +1478,32 @@ python debugging session."
   (pushd (or dir default-directory)
       (do-cmd-was-true (git-rev-parse-is-inside-working-tree))))
 
+(defcustom git-repo-remote-dir nil
+  "A variable pointing to a 'local' directory for storing git repos.")
+
+(cl-defun git-repo-init-remote (dir)
+  ;; I could try prompting for the password and automounting
+  (assert git-repo-remote-dir)
+
+  (let ((repo-name (basename dir)))
+    (assert repo-name)
+    (message "Add repo %s to our remote repository." repo-name)
+    (let ((remote-repo-dir (path-join git-repo-remote-dir (concat repo-name ".git"))))
+      (message "Init remote repo: %s" remote-repo-dir)
+      (git-init-repo remote-repo-dir t)
+
+      (pushd dir
+          (if (git-in-working-tree)
+              (progn (message "Set origin of existing repo.")
+                     (git-remote-add-origin remote-repo-dir)
+                     (git-push-origin-master))
+            (progn
+              (message "Initialize non-git repo dir: %s" dir)
+              (git-init-repo ".")
+              (run "git" "add" ".")
+              (git-commit-changes "." :message "Initial repo commit.")
+              (git-remote-add-origin remote-repo-dir)
+              (git-push-origin-master)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
