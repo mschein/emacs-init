@@ -15,6 +15,7 @@
 (require 'subr-x)
 (require 'json)
 (require 's)
+(require 'uuidgen)
 ;; (require 'dash)
 (require 'ht)
 
@@ -862,48 +863,6 @@ Example:
 (defmacro insertf (fmt &rest args)
   `(with-fmt insert ,fmt ,@args))
 
-(defun get-chrome-path ()
-  (ecase system-type
-    (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
-    (linux "google-chrome")))
-
-(defun browse-url-chrome (url)
-  (interactive "surl: ")
-  (let ((browse-url-generic-program "/opt/google/chrome/google-chrome"))
-    (browse-url-generic url)))
-
-(defun browse-url-chrome-osx (url &optional new-window)
-  "A `browse-url' function for Chrome on OSX.  Normally we end up with
-   whatever the 'open' command does, but for me I like when it opens a new
-   window.  This function provides that feature.
-
-   To enable it as the default browser do:
-   (setq browse-url-browser-function 'browse-url-chrome-osx)
-   (setq browse-url-new-window-flag t)"
-
-  (interactive (browse-url-interactive-arg "URL: "))
-  (do-cmd `("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-            ,@(if new-window
-                  (list "--new-window" url)
-                (list url))))
-  (run "open" "-a" "Google Chrome"))
-
-;; XXX Note! I haven't tested this one!
-(defun browse-url-firefox-osx (url &optional new-window)
-  "A `browse-url' function for firefox on OSX.  Normally we end up with
-   whatever the 'open' command does, but for me I like when it opens a new
-   window.  This function provides that feature.
-
-   To enable it as the default browser do:
-   (setq browse-url-browser-function 'browse-url-firefox-osx)
-   (setq browse-url-new-window-flag t)"
-  (interactive (browse-url-interactive-arg "URL: "))
-  (do-cmd `("/Applications/Firefox.app/Contents/MacOS/Firefox"
-            ,@(if new-window
-                  (list "-new-window" url)
-                (list url))))
-  (run "open" "-a" "Firefox"))
-
 (defun current-line ()
   "Return the line under the cursor, with properties."
   (string-trim-right (thing-at-point 'line)))
@@ -1120,6 +1079,12 @@ Example:
   (with-temp-buffer
     (insert-file-contents path)
     (buffer-string)))
+
+(defun barf (str path)
+  "Write a file to disk."
+  (with-temp-buffer
+    (insert str)
+    (write-region (point-min) (point-max) path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer Utils.
@@ -1347,6 +1312,47 @@ python debugging session."
   (with-current-buffer buffer
     (delete-region (point-min) (point-max))))
 
+(defmacro pushd (dir &rest body)
+  "Run the body in this new default directory"
+  (declare (indent 2))
+  (let ((old-dir (gensym)))
+
+    `(let ((,old-dir default-directory))
+       (unwind-protect
+           (progn
+             (setf default-directory (if (file-name-absolute-p ,dir)
+                                         ,dir
+                                       (path-join ,old-dir ,dir)))
+             ,@body)
+         (setf default-directory ,old-dir)))))
+
+(cl-defmacro with-tempdir ((&key root-dir
+                                 leave-dir)
+                        &rest body)
+  "Run body inside a temporary directory.  It uses
+   a uuid-4 for the directory name.
+
+   It will be cleaned up unless `:leave-dir' is specified.
+   `:root-dir' controls where the tempdir is created.
+   "
+
+  (with-gensyms (root dir-name)
+      `(let* ((,root ,root-dir)
+              (,root (or ,root default-directory))
+              (,dir-name (path-join ,root (uuidgen-4))))
+         (unwind-protect
+             (progn
+               (make-directory ,dir-name t)
+               (pushd ,dir-name
+                   ,@body))
+           (when (and (not ,leave-dir)
+                      (file-exists-p ,dir-name))
+             (delete-directory ,dir-name t))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; OSX Utilities
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun mount-dmg (path)
   (run "hdiutil" "attach" path))
 
@@ -1404,19 +1410,69 @@ python debugging session."
   (interactive "smins: ")
   (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
-(defmacro pushd (dir &rest body)
-  "Run the body in this new default directory"
-  (declare (indent 2))
-  (let ((old-dir (gensym)))
+(defun run-osascript (script &rest args)
+  (with-tempdir (:leave-dir t :root-dir "/tmp")
+     (let ((script-path "firefox-script"))
+       (barf script script-path)
+       (do-cmd (append (list "osascript" script-path) args) :throw t))))
 
-    `(let ((,old-dir default-directory))
-       (unwind-protect
-           (progn
-             (setf default-directory (if (file-name-absolute-p ,dir)
-                                         ,dir
-                                       (path-join ,old-dir ,dir)))
-             ,@body)
-         (setf default-directory ,old-dir)))))
+(defun osx-firefox-open-new-window (url)
+  (run-osascript "on run argv
+    tell application \"System Events\"
+        if (name of processes) contains \"Firefox\" then
+            tell application \"Firefox\" to activate
+            keystroke \"n\" using command down
+            delay 0.5 -- UI scripting delay
+        else
+            tell application \"Firefox\" to activate
+            delay 0.5 -- more delay
+        end if
+        keystroke \"l\" using command down
+        keystroke item 1 of argv
+        keystroke return
+    end tell
+end run
+" url))
+
+(defun get-chrome-path ()
+  (ecase system-type
+    (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+    (linux "google-chrome")))
+
+(defun browse-url-chrome (url)
+  (interactive "surl: ")
+  (let ((browse-url-generic-program "/opt/google/chrome/google-chrome"))
+    (browse-url-generic url)))
+
+(defun browse-url-chrome-osx (url &optional new-window)
+  "A `browse-url' function for Chrome on OSX.  Normally we end up with
+   whatever the 'open' command does, but for me I like when it opens a new
+   window.  This function provides that feature.
+
+   To enable it as the default browser do:
+   (setq browse-url-browser-function 'browse-url-chrome-osx)
+   (setq browse-url-new-window-flag t)"
+
+  (interactive (browse-url-interactive-arg "URL: "))
+  (do-cmd `("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            ,@(if new-window
+                  (list "--new-window" url)
+                (list url))))
+  (run "open" "-a" "Google Chrome"))
+
+(defun browse-url-firefox-osx (url &optional new-window)
+  "A `browse-url' function for firefox on OSX.  Normally we end up with
+   whatever the 'open' command does, but for me I like when it opens a new
+   window.  This function provides that feature.
+
+   To enable it as the default browser do:
+   (setq browse-url-browser-function 'browse-url-firefox-osx)
+   (setq browse-url-new-window-flag t)"
+  (interactive (browse-url-interactive-arg "URL: "))
+
+  (if new-window
+      (osx-firefox-open-new-window url)
+    (run "open" url)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Git commands
@@ -1912,6 +1968,7 @@ python debugging session."
 (defun tail-buffer (file)
   (interactive "sfile: ")
   (switch-to-buffer))
+
 
 ;; (defun find-virtualenv-file (root-dir)
 ;;   (car (first
