@@ -1430,6 +1430,7 @@ python debugging session."
         keystroke \"l\" using command down
         keystroke item 1 of argv
         keystroke return
+        delay 1.5
     end tell
 end run
 " url))
