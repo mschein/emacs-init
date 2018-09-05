@@ -116,7 +116,7 @@ test.  If the test returned nil, then the body will not execute."
 
 (defmacro m-if-let (test-binding &rest forms)
   "Provides an if macro that binds a value a la let.
-v
+
 Example:
  (m-if-let (res (fetch-string))
    (convert-to-something res)
