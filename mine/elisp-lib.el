@@ -7,6 +7,9 @@
 ;;
 ;; http://xahlee.org/emacs/elisp_common_functions.html, a good reference.
 ;;
+;; Also:
+;; https://github.com/alphapapa/emacs-package-dev-handbook
+;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lisp functions
