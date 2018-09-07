@@ -154,6 +154,18 @@ of the test."
            (reverse test-bindings)
            :initial-value forms)))
 
+(defmacro acond (&rest clauses)
+  "An anaphoric cond.  Each test binds its result to it
+  for use in the corresponding clause."
+  (cl-labels ((process (clauses)
+                (when clauses
+                    (destructuring-bind ((test &rest body) . rest) clauses
+                      `(if-let (it ,test)
+                           (progn
+                             ,@body)
+                         ,(process rest))))))
+    (process clauses)))
+
 (defun append-if (test list)
   (m-if-let (res test)
           (append list (to-list res))))
