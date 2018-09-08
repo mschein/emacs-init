@@ -30,7 +30,7 @@
 (defalias 'filter #'remove-if-not)
 
 (defmacro with-gensyms (syms &rest body)
-  (declare (indent 2))
+  (declare (indent defun))
   `(let ,(mapcar (| list % '(gensym)) syms)
      ,@body))
 
@@ -146,7 +146,7 @@ of the test."
 (defmacro when-let* (test-bindings &rest forms)
   ;; Would it be better to do this with a regular loop, to get rid of the
   ;; "car"
-  (declare (indent 2))
+  (declare (indent defun))
   (car
    (reduce (fn (prev-bindings binding)
                `((m-when-let ,binding
@@ -320,7 +320,7 @@ of the test."
           (destructuring-bind (c . d) gensym
            (destructuring-bind (g h) gensym)))
              forms)"
-  (declare (indent 2))
+  (declare (indent defun))
   (let* ((destruct-list '())
          (arg-list (mapcar
                     (lambda (elm)
@@ -634,7 +634,7 @@ Example:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro with-fmt (fun str &rest args)
-  (declare (indent 2))
+  (declare (indent defun))
   `(,fun (format ,str ,@args)))
 
 ;; TODO(scheinholtz): Use the async I/O for this.
@@ -846,7 +846,7 @@ Example:
     (funcall handle-fn name)))
 
 (defmacro with-new-buffer (name-prefix &rest body)
-  (declare (indent 2))
+  (declare (indent defun))
   (let ((old-buffer (gensym))
         (new-buffer (gensym)))
 
@@ -1329,7 +1329,7 @@ python debugging session."
 
 (defmacro pushd (dir &rest body)
   "Run the body in this new default directory"
-  (declare (indent 2))
+  (declare (indent defun))
   (let ((old-dir (gensym)))
 
     `(let ((,old-dir default-directory))
