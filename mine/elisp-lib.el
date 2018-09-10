@@ -762,7 +762,7 @@ Example:
    for return value.
 
    Example:   (run \"hdiutil\" \"attach\" path)"
-  (do-cmd cmd-parts))
+  (do-cmd cmd-parts :throw t))
 
 (defun run-to-str (&rest cmd-parts)
   "Run a command using `do-cmd' and return the result as a string.
@@ -1555,7 +1555,7 @@ end run
 
 (cl-defun git-repo-init-remote (dir)
   ;; I could try prompting for the password and automounting
-  (assert git-repo-remote-dir)
+  (assert (file-exists-p git-repo-remote-dir))
 
   (let ((repo-name (basename dir)))
     (assert repo-name)
@@ -1576,6 +1576,8 @@ end run
               (git-commit-changes "." :message "Initial repo commit.")
               (git-remote-add-origin remote-repo-dir)
               (git-push-origin-master)))))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
