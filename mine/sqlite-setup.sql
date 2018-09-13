@@ -31,10 +31,12 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS clusters (
        id integer primary key,
-       cluster_name TEXT unique not null, -- index me
+       cluster_name TEXT unique not null,
+       environment TEXT not null,
        insert_time TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS clusters_cluster_name ON clusters(cluster_name);
+CREATE INDEX IF NOT EXISTS clusters_environment ON clusters(environment);
 
 CREATE TRIGGER IF NOT EXISTS cluster_insert_trigger
    AFTER INSERT
@@ -68,9 +70,7 @@ CREATE TABLE IF NOT EXISTS instances (
        id integer primary key,
        instance_name TEXT unique not null, -- index me
        ip TEXT,
-       cluster_id integer,
-       insert_time TEXT,
-       FOREIGN KEY (cluster_id) REFERENCES clusters(id) ON DELETE CASCADE
+       insert_time TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS instances_instance_name ON instances(instance_name);
 CREATE UNIQUE INDEX IF NOT EXISTS instances_ip ON instances(ip);
@@ -87,7 +87,7 @@ CREATE TRIGGER IF NOT EXISTS instances_insert_trigger
 CREATE TABLE IF NOT EXISTS services (
        id integer primary key,
        service_name TEXT unique not null, -- index me
-       cluster_id integer,
+       cluster_id integer,  -- does this belong here?
        insert_time TEXT,
        FOREIGN KEY (cluster_id) REFERENCES clusters(id) ON DELETE CASCADE
 );
