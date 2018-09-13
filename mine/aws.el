@@ -1,4 +1,8 @@
 (require 'elisp-lib)
+
+
+;; I think this was a bad idea.
+;; switch to something else.
 (require 'emacsql)
 (require 'emacsql-sqlite)
 
@@ -357,6 +361,10 @@
 (ensure-makedirs aws--emacs-data-dir)
 (defconst aws--cluster-map-db (emacsql-sqlite (path-join aws--emacs-data-dir "aws-task-cluster.sqlite3")))
 
+(defun aws--db (&rest cmd)
+  (apply #'emacsql aws--cluster-map-db cmd))
+
+
 ;;
 ;; so in my current code,
 ;; i can query a cluster for a service name.
@@ -396,14 +404,81 @@
 ;;   )
 
 (emacsql-fix-vector-indentation)
-(defun aws--save-cluster (cluster)
-  (emacsql aws--cluster-map-db [:insert :into clusters [cluster-name]
-                                :values $v1] [cluster]))
-(defun aws--save-task (task cluster))
-(defun aws--save-instance (instance ip cluster))
-(defun aws--save-service (service cluster))
 
-(defun aws--query-cluster-map ())
+;; I may need to make this more generic in the future.
+(defmacro value-or-error (value &optional error)
+  (with-gensyms (result)
+     `(let ((,result ,value))
+        (if ,result
+            ,result
+          (error (or ,error "Failed value check."))))))
+
+(defmacro with-transaction (&rest body)
+  ;; it might be better to do this with an exception handler
+  ;;
+  (with-gensyms (err)
+      `(condition-case ,err
+           (progn
+             (aws--db [:begin :transaction])
+             ,@body
+             (aws--db [:commit :transaction]))
+         (error (progn
+                  (message "do rollback, err: %s" ,err)
+                  (with-demoted-errors
+                      (aws--db [:rollback :transaction]))
+                  (signal (car ,err) (cdr ,err)))))))
+
+(defun aws--save-cluster (cluster)
+  (aws--db [:insert :into clusters [cluster-name environment]
+            :values $v1] (vector cluster (current-tcc-env))))
+
+(defun aws--save-task (task cluster)
+  ;; Is it better to try to do this all in one sql statement?
+  ;; see:
+  ;; https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contains-a-foreign-key
+  ;;
+  (with-transaction
+   (aws--db [:insert :into tasks [task-name cluster-id]
+             :values $v1]
+            (vector task (value-or-error
+                          (caar (aws--db [:select id :from clusters
+                                          :where (= cluster_name $s1)] cluster)))))))
+
+(defun aws--save-instance (instance ip cluster)
+  (with-transaction
+   (aws--db [:insert :into instances [instance-name ip cluster-id]
+             :values $v1]
+            (vector instance ip
+                    (value-or-error
+                          (caar (aws--db [:select id :from clusters
+                                          :where (= cluster_name $s1)] cluster)))))))
+
+(defun aws--save-service (service cluster)
+  (with-transaction
+   (aws--db [:insert :into instances [service-name cluster-id]
+             :values $v1]
+             (vector instance
+                    (value-or-error
+                     (caar (aws--db [:select id :from clusters
+                                     :where (= cluster_name $s1)] cluster)))))))
+
+;; how should queries work
+;;
+;; query
+;;   :service name
+;;   :
+;;
+(defun aws--query-cm ()
+  )
+
+(defun aws-ecs-list-clusters-cached ()
+  ;;
+  ;; Check the db.
+  ;;
+)
+
+(defun save-clusters (service-name)
+  (mapc #'aws--save-cluster (aws-ecs-list-clusters)))
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
