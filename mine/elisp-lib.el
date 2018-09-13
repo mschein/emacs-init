@@ -1177,6 +1177,10 @@ Example:
 ;; It seems like I should really be able to do this with a function,
 ;; but lexical stuff wasn't quite working.
 ;;
+(defun mls--magit-branch-view (dir)
+  (pushd dir
+      (magit-show-refs-head)))
+
 (defmacro setup-jump-to-abbrev (abbrev-table)
   (let* ((table (eval abbrev-table))
          (abbreviations (mapcar #'car table))
@@ -1199,19 +1203,22 @@ Example:
                        (completing-read "abbrev: " ',abbreviations)))
          (jump-to-abbrev #'magit-status ,abbrev ',table))
        (global-set-key "\C-x\M-g" #'jump-to-magit)
+       (defun jump-to-magit-branch (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'mls--magit-branch-view ,abbrev ',table))
+       (global-set-key "\C-x\M-b" #'jump-to-magit-branch)
        (defun yank-abbrev-path (,abbrev)
          (interactive (list
                        (completing-read "abbrev: " ',abbreviations)))
          (jump-to-abbrev #'kill-new ,abbrev ',table))
        (defalias 'yap #'yank-abbrev-path)
 
-       ;; Should figure this out, but later:
-       ;; (defun insert-abbrev-path (,abbrev)
-       ;;   (interactive (list
-       ;;                 (completing-read "abbrev: " ',abbreviations)))
-       ;;   (jump-to-abbrev #'insert ,abbrev ',table))
-       ;; (defalias 'iap #'insert-abbrev-path)
-       )))
+       (defun insert-abbrev-path (,abbrev)
+         (interactive (list
+                       (completing-read "abbrev: " ',abbreviations)))
+         (jump-to-abbrev #'insert ,abbrev ',table))
+       (defalias 'iap #'insert-abbrev-path))))
 
 (defun return-to-pos (fn &rest args)
   "get the current position and pass it to the calling fun.
@@ -1537,7 +1544,7 @@ end run
       (append! args "--bare"))
   (apply #'run "git" "init" args)))
 
-(cl-defun git-commit-changes (path &key (message  "Save current files."))
+(cl-defun git-commit-changes (path &key (message "Save current files."))
   (pushd path
          (run "git" "add" ".")
          (run "git" "commit" "-a" "-m" message)))
@@ -1576,7 +1583,6 @@ end run
               (git-commit-changes "." :message "Initial repo commit.")
               (git-remote-add-origin remote-repo-dir)
               (git-push-origin-master)))))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands

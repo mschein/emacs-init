@@ -1,4 +1,6 @@
 (require 'elisp-lib)
+(require 'emacsql)
+(require 'emacsql-sqlite)
 
 (defconst aws-subcommands
   '("acm"
@@ -345,6 +347,63 @@
 
 (defun aws-task->ip (cluster task)
   (aws-get-instance-ips (aws-task->instance cluster task)))
+
+;; cmd as of now:
+;; cd ~/emacs-init/mine/
+;; mkdir -p ~/.emacs-data/
+;; sqlite3 ~/.emacs-data/aws-task-cluster.sqlite3
+;; .read sqlite-setup.sql
+(defconst aws--emacs-data-dir "~/.emacs-data/")
+(ensure-makedirs aws--emacs-data-dir)
+(defconst aws--cluster-map-db (emacsql-sqlite (path-join aws--emacs-data-dir "aws-task-cluster.sqlite3")))
+
+;;
+;; so in my current code,
+;; i can query a cluster for a service name.
+;;
+;; can I do a better check for validity?
+;;
+;; Table:
+;;
+;;  Metadata:
+;;     cluster_timeout
+;;     task_timeout
+;;
+;;  Clusters:
+;;     id
+;;     cluster-name
+;;     insert-time
+;;
+;;  Tasks:
+;;    id
+;;    task-name
+;;    cluster-id (foreign-key: cluster id)
+;;    insert-time
+;;
+;;  Services:
+;;    id
+;;    service-name
+;;
+;; SELECT id from tasks
+;;   where
+;;
+
+;; (defun setup-cluster-map-cache ()
+;;   (emacsql aws--cluster-map-db [:create-table :if :not :exists clusters
+;;                                   ([(id integer :primary-key)
+;;                                     (name text unique)
+;;                                     (insert-time TEXT)])])
+;;   )
+
+(emacsql-fix-vector-indentation)
+(defun aws--save-cluster (cluster)
+  (emacsql aws--cluster-map-db [:insert :into clusters [cluster-name]
+                                :values $v1] [cluster]))
+(defun aws--save-task (task cluster))
+(defun aws--save-instance (instance ip cluster))
+(defun aws--save-service (service cluster))
+
+(defun aws--query-cluster-map ())
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
