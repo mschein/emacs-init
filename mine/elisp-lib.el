@@ -1178,8 +1178,9 @@ Example:
 ;; but lexical stuff wasn't quite working.
 ;;
 (defun mls--magit-branch-view (dir)
-  (pushd dir
-      (magit-show-refs-head)))
+  (with-temp-buffer
+    (set-default-directory dir)
+    (magit-show-refs-head)))
 
 (defmacro setup-jump-to-abbrev (abbrev-table)
   (let* ((table (eval abbrev-table))
