@@ -1,11 +1,5 @@
 (require 'elisp-lib)
 
-
-;; I think this was a bad idea.
-;; switch to something else.
-(require 'emacsql)
-(require 'emacsql-sqlite)
-
 (defconst aws-subcommands
   '("acm"
     "apigateway"
@@ -352,133 +346,6 @@
 (defun aws-task->ip (cluster task)
   (aws-get-instance-ips (aws-task->instance cluster task)))
 
-;; cmd as of now:
-;; cd ~/emacs-init/mine/
-;; mkdir -p ~/.emacs-data/
-;; sqlite3 ~/.emacs-data/aws-task-cluster.sqlite3
-;; .read sqlite-setup.sql
-(defconst aws--emacs-data-dir "~/.emacs-data/")
-(ensure-makedirs aws--emacs-data-dir)
-(defconst aws--cluster-map-db (emacsql-sqlite (path-join aws--emacs-data-dir "aws-task-cluster.sqlite3")))
-
-(defun aws--db (&rest cmd)
-  (apply #'emacsql aws--cluster-map-db cmd))
-
-
-;;
-;; so in my current code,
-;; i can query a cluster for a service name.
-;;
-;; can I do a better check for validity?
-;;
-;; Table:
-;;
-;;  Metadata:
-;;     cluster_timeout
-;;     task_timeout
-;;
-;;  Clusters:
-;;     id
-;;     cluster-name
-;;     insert-time
-;;
-;;  Tasks:
-;;    id
-;;    task-name
-;;    cluster-id (foreign-key: cluster id)
-;;    insert-time
-;;
-;;  Services:
-;;    id
-;;    service-name
-;;
-;; SELECT id from tasks
-;;   where
-;;
-
-;; (defun setup-cluster-map-cache ()
-;;   (emacsql aws--cluster-map-db [:create-table :if :not :exists clusters
-;;                                   ([(id integer :primary-key)
-;;                                     (name text unique)
-;;                                     (insert-time TEXT)])])
-;;   )
-
-(emacsql-fix-vector-indentation)
-
-;; I may need to make this more generic in the future.
-(defmacro value-or-error (value &optional error)
-  (with-gensyms (result)
-     `(let ((,result ,value))
-        (if ,result
-            ,result
-          (error (or ,error "Failed value check."))))))
-
-(defmacro with-transaction (&rest body)
-  ;; it might be better to do this with an exception handler
-  ;;
-  (with-gensyms (err)
-      `(condition-case ,err
-           (progn
-             (aws--db [:begin :transaction])
-             ,@body
-             (aws--db [:commit :transaction]))
-         (error (progn
-                  (message "do rollback, err: %s" ,err)
-                  (with-demoted-errors
-                      (aws--db [:rollback :transaction]))
-                  (signal (car ,err) (cdr ,err)))))))
-
-(defun aws--save-cluster (cluster)
-  (aws--db [:insert :into clusters [cluster-name environment]
-            :values $v1] (vector cluster (current-tcc-env))))
-
-(defun aws--save-task (task cluster)
-  ;; Is it better to try to do this all in one sql statement?
-  ;; see:
-  ;; https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contains-a-foreign-key
-  ;;
-  (with-transaction
-   (aws--db [:insert :into tasks [task-name cluster-id]
-             :values $v1]
-            (vector task (value-or-error
-                          (caar (aws--db [:select id :from clusters
-                                          :where (= cluster_name $s1)] cluster)))))))
-
-(defun aws--save-instance (instance ip cluster)
-  (with-transaction
-   (aws--db [:insert :into instances [instance-name ip cluster-id]
-             :values $v1]
-            (vector instance ip
-                    (value-or-error
-                          (caar (aws--db [:select id :from clusters
-                                          :where (= cluster_name $s1)] cluster)))))))
-
-(defun aws--save-service (service cluster)
-  (with-transaction
-   (aws--db [:insert :into instances [service-name cluster-id]
-             :values $v1]
-             (vector instance
-                    (value-or-error
-                     (caar (aws--db [:select id :from clusters
-                                     :where (= cluster_name $s1)] cluster)))))))
-
-;; how should queries work
-;;
-;; query
-;;   :service name
-;;   :
-;;
-(defun aws--query-cm ()
-  )
-
-(defun aws-ecs-list-clusters-cached ()
-  ;;
-  ;; Check the db.
-  ;;
-)
-
-(defun save-clusters (service-name)
-  (mapc #'aws--save-cluster (aws-ecs-list-clusters)))
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
@@ -511,3 +378,135 @@
                  (return res)))))))))
 
 (provide 'aws)
+
+
+;;
+;; Dead sql caching code.
+;;
+;; cmd as of now:
+;; cd ~/emacs-init/mine/
+;; mkdir -p ~/.emacs-data/
+;; sqlite3 ~/.emacs-data/aws-task-cluster.sqlite3
+;; .read sqlite-setup.sql
+;; (defconst aws--emacs-data-dir "~/.emacs-data/")
+;; (ensure-makedirs aws--emacs-data-dir)
+;; (defconst aws--cluster-map-db (emacsql-sqlite (path-join aws--emacs-data-dir "aws-task-cluster.sqlite3")))
+
+;; (defun aws--db (&rest cmd)
+;;   (apply #'emacsql aws--cluster-map-db cmd))
+
+
+;; ;;
+;; ;; so in my current code,
+;; ;; i can query a cluster for a service name.
+;; ;;
+;; ;; can I do a better check for validity?
+;; ;;
+;; ;; Table:
+;; ;;
+;; ;;  Metadata:
+;; ;;     cluster_timeout
+;; ;;     task_timeout
+;; ;;
+;; ;;  Clusters:
+;; ;;     id
+;; ;;     cluster-name
+;; ;;     insert-time
+;; ;;
+;; ;;  Tasks:
+;; ;;    id
+;; ;;    task-name
+;; ;;    cluster-id (foreign-key: cluster id)
+;; ;;    insert-time
+;; ;;
+;; ;;  Services:
+;; ;;    id
+;; ;;    service-name
+;; ;;
+;; ;; SELECT id from tasks
+;; ;;   where
+;; ;;
+
+;; ;; (defun setup-cluster-map-cache ()
+;; ;;   (emacsql aws--cluster-map-db [:create-table :if :not :exists clusters
+;; ;;                                   ([(id integer :primary-key)
+;; ;;                                     (name text unique)
+;; ;;                                     (insert-time TEXT)])])
+;; ;;   )
+
+;; (emacsql-fix-vector-indentation)
+
+;; ;; I may need to make this more generic in the future.
+;; (defmacro value-or-error (value &optional error)
+;;   (with-gensyms (result)
+;;      `(let ((,result ,value))
+;;         (if ,result
+;;             ,result
+;;           (error (or ,error "Failed value check."))))))
+
+;; (defmacro with-transaction (&rest body)
+;;   ;; it might be better to do this with an exception handler
+;;   ;;
+;;   (with-gensyms (err)
+;;       `(condition-case ,err
+;;            (progn
+;;              (aws--db [:begin :transaction])
+;;              ,@body
+;;              (aws--db [:commit :transaction]))
+;;          (error (progn
+;;                   (message "do rollback, err: %s" ,err)
+;;                   (with-demoted-errors
+;;                       (aws--db [:rollback :transaction]))
+;;                   (signal (car ,err) (cdr ,err)))))))
+
+;; (defun aws--save-cluster (cluster)
+;;   (aws--db [:insert :into clusters [cluster-name environment]
+;;             :values $v1] (vector cluster (current-tcc-env))))
+
+;; (defun aws--save-task (task cluster)
+;;   ;; Is it better to try to do this all in one sql statement?
+;;   ;; see:
+;;   ;; https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contains-a-foreign-key
+;;   ;;
+;;   (with-transaction
+;;    (aws--db [:insert :into tasks [task-name cluster-id]
+;;              :values $v1]
+;;             (vector task (value-or-error
+;;                           (caar (aws--db [:select id :from clusters
+;;                                           :where (= cluster_name $s1)] cluster)))))))
+
+;; (defun aws--save-instance (instance ip cluster)
+;;   (with-transaction
+;;    (aws--db [:insert :into instances [instance-name ip cluster-id]
+;;              :values $v1]
+;;             (vector instance ip
+;;                     (value-or-error
+;;                           (caar (aws--db [:select id :from clusters
+;;                                           :where (= cluster_name $s1)] cluster)))))))
+
+;; (defun aws--save-service (service cluster)
+;;   (with-transaction
+;;    (aws--db [:insert :into instances [service-name cluster-id]
+;;              :values $v1]
+;;              (vector instance
+;;                     (value-or-error
+;;                      (caar (aws--db [:select id :from clusters
+;;                                      :where (= cluster_name $s1)] cluster)))))))
+
+;; how should queries work
+;;
+;; query
+;;   :service name
+;;   :
+;;
+;; (defun aws--query-cm ()
+;;   )
+
+;; (defun aws-ecs-list-clusters-cached ()
+;;   ;;
+;;   ;; Check the db.
+;;   ;;
+;; )
+
+;; (defun save-clusters (service-name)
+;;   (mapc #'aws--save-cluster (aws-ecs-list-clusters)))
