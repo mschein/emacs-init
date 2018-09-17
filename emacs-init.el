@@ -797,10 +797,10 @@ that uses 'font-lock-warning-face'."
   :ensure t
   :config
 
-  ;; XXX Do I really want this?
-  ;; make sure we have lsp-imenu everywhere we have LSP
-  (require 'lsp-imenu)
-  (add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
+  ;; ;; XXX Do I really want this?
+  ;; ;; make sure we have lsp-imenu everywhere we have LSP
+  ;; (require 'lsp-imenu)
+  ;; (add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
 
   ;; get lsp-python-enable defined
   ;; NB: use either projectile-project-root or ffip-get-project-root-directory
@@ -815,11 +815,12 @@ that uses 'font-lock-warning-face'."
 
   ;; make sure this is activated when python-mode is activated
   ;; lsp-python-enable is created by macro above
-  (add-hook 'python-mode-hook
-            (lambda ()
-              (lsp-python-enable)))
+  (add-hook 'python-mode-hook (| lsp-python-enable))
 
   ;; lsp extras
+  ;;
+  ;; I think it's the lsp-ui, that is a little funky.
+  ;;
   (use-package lsp-ui
     :ensure t
     :config
@@ -830,18 +831,22 @@ that uses 'font-lock-warning-face'."
     :config
     (push 'company-lsp company-backends))
 
-  ;; NB: only required if you prefer flake8 instead of the default
-  ;; send pyls config via lsp-after-initialize-hook -- harmless for
-  ;; other servers due to pyls key, but would prefer only sending this
-  ;; when pyls gets initialised (:initialize function in
-  ;; lsp-define-stdio-client is invoked too early (before server
-  ;; start)) -- cpbotha
-  (defun lsp-set-cfg ()
-    (let ((lsp-cfg `(:pyls (:configurationSources ("flake8")))))
-      ;; TODO: check lsp--cur-workspace here to decide per server / project
-      (lsp--set-configuration lsp-cfg)))
 
-  (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg))
+  (add-hook 'prog-major-mode #'lsp-prog-major-mode-enable)
+
+  ;; ;; NB: only required if you prefer flake8 instead of the default
+  ;; ;; send pyls config via lsp-after-initialize-hook -- harmless for
+  ;; ;; other servers due to pyls key, but would prefer only sending this
+  ;; ;; when pyls gets initialised (:initialize function in
+  ;; ;; lsp-define-stdio-client is invoked too early (before server
+  ;; ;; start)) -- cpbotha
+  ;; (defun lsp-set-cfg ()
+  ;;   (let ((lsp-cfg `(:pyls (:configurationSources ("flake8")))))
+  ;;     ;; TODO: check lsp--cur-workspace here to decide per server / project
+  ;;     (lsp--set-configuration lsp-cfg)))
+
+  ;; (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg)
+  )
 
 ;;
 ;; Autopair mode
@@ -1046,7 +1051,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (company-jedi company-lsp company-shell use-package lsp-css lsp-html lsp-java lsp-javascript-flow lsp-mode lsp-python lsp-ui hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime ac-sly company-jedi company-lsp company-shell use-package lsp-css lsp-html lsp-java lsp-javascript-flow lsp-mode lsp-python lsp-ui hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
