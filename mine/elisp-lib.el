@@ -1556,7 +1556,8 @@ end run
 (defun git-in-working-tree (&optional dir)
   "Is the current or provided directory inside a valid git repo?"
   (pushd (or dir default-directory)
-      (do-cmd-was-true (git-rev-parse-is-inside-working-tree))))
+    (ignore-errors
+        (do-cmd-was-true (git-rev-parse-is-inside-working-tree)))))
 
 (defcustom git-repo-remote-dir nil
   "A variable pointing to a 'local' directory for storing git repos.")
@@ -1979,6 +1980,12 @@ python debugging session."
                           (ht-set ht args (cons res (current-time)))
                           res)))))
           (lookup)))))
+
+(defun python-get-project-root ()
+  "Find the `root' of a python project."
+  (if (git-in-working-tree)
+      (git-project-root)
+    default-directory))
 
 (defmacro memoize-fn (func &optional timeout name)
   (let ((memoized-fn (gensym)))
