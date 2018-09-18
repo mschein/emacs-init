@@ -810,7 +810,7 @@ that uses 'font-lock-warning-face'."
   ;;                          '("pyls"))
 
   (lsp-define-stdio-client lsp-python "python"
-                           #'python-get-project-root
+                           #'python-setup-lsp-project
                            '("pyls"))
 
   ;; make sure this is activated when python-mode is activated

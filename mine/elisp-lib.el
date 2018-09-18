@@ -1053,6 +1053,10 @@ Example:
 
 (defalias 'basename 'file-name-nondirectory)
 
+(defun touch (path)
+  "Create an empty file at the given `path'"
+  (barf "" path))
+
 (defun ensure-makedirs (path)
   (let ((dir (file-name-directory path)))
     (unless (file-exists-p path)
@@ -1358,6 +1362,7 @@ python debugging session."
    It will be cleaned up unless `:leave-dir' is specified.
    `:root-dir' controls where the tempdir is created.
    "
+  (declare (indent defun))
 
   (with-gensyms (root dir-name)
       `(let* ((,root ,root-dir)
@@ -1371,6 +1376,7 @@ python debugging session."
            (when (and (not ,leave-dir)
                       (file-exists-p ,dir-name))
              (delete-directory ,dir-name t))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSX Utilities
@@ -1406,13 +1412,13 @@ python debugging session."
       (append! args "-s"))
 
     (append! args (format "//%s%s%s%s"
-                             (if domain (format "%s;" domain) "")
-                             (if auth (format "%s@" auth) "")
-                             host
-                             (if remote-path (format "/%s" remote-path) "")))
+                          (if domain (format "%s;" domain) "")
+                          (if auth (format "%s@" auth) "")
+                          host
+                          (if remote-path (format "/%s" remote-path) "")))
     (append! args local-path)
 
-  (do-cmd "mount_smbfs" args)))
+    (do-cmd "mount_smbfs" args)))
 
 (defun osx-screen-lock ()
   "Lock the screen immediately"
@@ -1434,10 +1440,10 @@ python debugging session."
   (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
 (defun run-osascript (script &rest args)
-  (with-tempdir (:leave-dir t :root-dir "/tmp")
-     (let ((script-path "firefox-script"))
-       (barf script script-path)
-       (do-cmd (append (list "osascript" script-path) args) :throw t))))
+  (with-tempdir (:root-dir "/tmp")
+    (let ((script-path "firefox-script"))
+      (barf script script-path)
+      (do-cmd (append (list "osascript" script-path) args) :throw t))))
 
 (defun osx-firefox-open-new-window (url)
   (run-osascript "on run argv
@@ -1498,6 +1504,32 @@ end run
       (osx-firefox-open-new-window url)
     (run "open" url)))
 
+(defun dumpenv ()
+  "Dump the current environment into an alist."
+  (mapcar (lambda (var)
+            (if-let (key-value (parse-env-var var))
+                (apply #'cons key-value)
+              (cons var nil)))
+          process-environment))
+
+;; I haven't ever used this, do I need it?
+;; would something like it make the "with-env" or
+;; "with-venv" functions easier to write?
+(defun in-new-env (env callback-fn)
+  (let ((old-env-values '()))
+
+    ;; Push the new environment values.
+    (mapc (fn ((name . new-value))
+              (push (cons name (getenv name)) old-env-values)
+              (setenv name new-value))
+          env)
+
+    (ignore-errors
+      (funcall callback-fn))
+
+    (mapc (fn ((name . old-value))
+              (setenv name old-value))
+          old-env-values)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Git commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1543,12 +1575,12 @@ end run
   (let ((args (list path)))
     (when bare
       (append! args "--bare"))
-  (apply #'run "git" "init" args)))
+    (apply #'run "git" "init" args)))
 
 (cl-defun git-commit-changes (path &key (message "Save current files."))
   (pushd path
-         (run "git" "add" ".")
-         (run "git" "commit" "-a" "-m" message)))
+    (run "git" "add" ".")
+    (run "git" "commit" "-a" "-m" message)))
 
 (defun git-rev-parse-is-inside-working-tree ()
   (run "git" "rev-parse" "--is-inside-work-tree"))
@@ -1557,7 +1589,7 @@ end run
   "Is the current or provided directory inside a valid git repo?"
   (pushd (or dir default-directory)
     (ignore-errors
-        (do-cmd-was-true (git-rev-parse-is-inside-working-tree)))))
+      (do-cmd-was-true (git-rev-parse-is-inside-working-tree)))))
 
 (defcustom git-repo-remote-dir nil
   "A variable pointing to a 'local' directory for storing git repos.")
@@ -1574,17 +1606,17 @@ end run
       (git-init-repo remote-repo-dir t)
 
       (pushd dir
-          (if (git-in-working-tree)
-              (progn (message "Set origin of existing repo.")
-                     (git-remote-add-origin remote-repo-dir)
-                     (git-push-origin-master))
-            (progn
-              (message "Initialize non-git repo dir: %s" dir)
-              (git-init-repo ".")
-              (run "git" "add" ".")
-              (git-commit-changes "." :message "Initial repo commit.")
-              (git-remote-add-origin remote-repo-dir)
-              (git-push-origin-master)))))))
+        (if (git-in-working-tree)
+            (progn (message "Set origin of existing repo.")
+                   (git-remote-add-origin remote-repo-dir)
+                   (git-push-origin-master))
+          (progn
+            (message "Initialize non-git repo dir: %s" dir)
+            (git-init-repo ".")
+            (run "git" "add" ".")
+            (git-commit-changes "." :message "Initial repo commit.")
+            (git-remote-add-origin remote-repo-dir)
+            (git-push-origin-master)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
@@ -1651,11 +1683,11 @@ python debugging session."
                                 "\.iteritems("))
            (py3-score 0))
       (cl-flet ((run-searches (regexes score-fn)
-                   (dolist (regex regexes)
-                     (goto-char 0)
-                     (when (re-search-forward regex nil t)
-                       (message "match regex %s" regex)
-                       (funcall score-fn)))))
+                              (dolist (regex regexes)
+                                (goto-char 0)
+                                (when (re-search-forward regex nil t)
+                                  (message "match regex %s" regex)
+                                  (funcall score-fn)))))
         (run-searches python3-regex (| incf py3-score))
         (run-searches python2-regex (| decf py3-score)))
 
@@ -1677,17 +1709,43 @@ python debugging session."
   ;; Does activate exist somewhere.
   (car (first
         (sort (mapcar (fn (path)
-                          (cons path (cond
-                                      ((equal (normalize-dir-path (file-name-directory path))
-                                              (normalize-dir-path root-dir)) 10)
-                                      ((search "/target/" path) 5)
-                                      (t 0))))
+                        (cons path (cond
+                                    ((equal (normalize-dir-path (file-name-directory path))
+                                            (normalize-dir-path root-dir)) 10)
+                                    ((search "/target/" path) 5)
+                                    (t 0))))
                       (directory-files-recursively root-dir "^activate$"))
               (fn (a b) (> (cdr a) (cdr b)))))))
 
 (defun activate-virtualenv (location)
   (interactive (list (completing-read "location: " (mapcar #'first oe-project-table) nil t)))
   (insertf "source %s" (find-virtualenv-file (assoc1 location oe-project-table))))
+
+(defun parse-env-var (line)
+  (string-find "^\\([^=]+\\)=\\(.+\\|\\)$" line))
+
+(defun parse-env-lines (lines)
+  (mapcar (fn (line)
+            (when-let (key-value (parse-env-var line))
+                (apply #'cons key-value)))
+          (string->list lines)))
+
+(defconst venv-required-vars '("VIRTUAL_ENV" "PATH"))
+
+(defun find-venv-variables (root-dir)
+  (if-let (activate-file (find-virtualenv-file root-dir))
+      (with-tempdir (:root-dir "/tmp")
+        (let ((input-path "find-python-script"))
+          (barf (format "source %s; env" (cmd-to-shell-string (list activate-file)))
+                input-path)
+          (filter (| member (car %) venv-required-vars)
+                  (parse-env-lines (run-to-str "bash" input-path)))))
+    (error "Unable to find virtualenv activation file in %s" root-dir)))
+
+(defun python-project-has-venv (root-dir)
+  (condition-case nil
+      (find-venv-variables root-dir)
+    (error nil)))
 
 (defun open-shell-dir-venv (&optional dir)
   "Start a virtual env in the current repo."
@@ -1706,6 +1764,58 @@ python debugging session."
     (insertf "source %s" activate-link)
     (comint-send-input nil t)
     (comint-clear-buffer)))
+
+(defun python-get-project-root ()
+  "Find the `root' of a python project."
+  (if (git-in-working-tree)
+      (git-project-root)
+    default-directory))
+
+(defvar virtualenv-saved-vars (let ((env (dumpenv)))
+                                (mapcar
+                                 (| cons % (cdr (assoc % env)))
+                                      venv-required-vars)))
+
+(defun activate-virtualenv-emacs (location)
+  (let ((vars (find-venv-variables location)))
+    (dolist (var venv-required-vars)
+      (setenv var (assoc1 var vars))
+      (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))))
+
+(defun clear-virtualenv-emacs ()
+  (mapc (| setenv % (assoc1 % virtualenv-saved-vars)) virtualenv-saved-vars))
+
+(defun restore-env-from-alist (env-alist)
+  (loop for (k . v) in env-alist do (setenv k v)))
+
+(defmacro with-venv (project-root &rest body)
+  (declare (indent defun))
+  (with-gensyms (root-dir old-env)
+    `(let* ((,root-dir ,project-root)
+            (,old-env (dumpenv)))
+       (activate-virtualenv-emacs ,root-dir)
+       (unwind-protect
+           (progn
+             ,@body)
+         (restore-env-from-alist ,old-env)))))
+
+(defun python-setup-lsp-project ()
+  (let* ((is-git-project (git-in-working-tree))
+         (project-root (python-get-project-root)))
+    (message "Is git project: %s, root: %s" is-git-project project-root)
+    (when is-git-project
+      ;; Setup the virtualenv
+      (activate-virtualenv-emacs project-root)
+
+      ;; This is safe to do here, since we're in the venv.
+      (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
+        (unless (file-exists-p installation-finished-file)
+          (run "pip" "install" "python-language-server" "autopep8" "pydocstyle" "yapf" "rope")
+          (touch installation-finished-file))))
+    project-root))
+
+(defun current-virtualenv ()
+  (getenv "VIRTUAL_ENV"))
 
 (defun find-in-jira-at-point-internal (url ticket-valid-fn)
   "This is meant to be wrapped by another function.
@@ -1880,29 +1990,6 @@ python debugging session."
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
 
-(defun dumpenv ()
-  (mapcar (lambda (var)
-            (if-let (key-value (string-find "^\\([^=]+\\)=\\(.+\\)$" var))
-                (apply #'cons key-value)
-              (cons var nil)))
-          process-environment))
-
-(defun in-new-env (env callback-fn)
-  (let ((old-env-values '()))
-
-    ;; Push the new environment values.
-    (mapc (fn ((name . new-value))
-              (push (cons name (getenv name)) old-env-values)
-              (setenv name new-value))
-          env)
-
-    (ignore-errors
-      (funcall callback-fn))
-
-    (mapc (fn ((name . old-value))
-              (setenv name old-value))
-          old-env-values)))
-
 (defun enumerate (seq)
   (cl-loop for elm in seq
            for x from 0
@@ -1980,12 +2067,6 @@ python debugging session."
                           (ht-set ht args (cons res (current-time)))
                           res)))))
           (lookup)))))
-
-(defun python-get-project-root ()
-  "Find the `root' of a python project."
-  (if (git-in-working-tree)
-      (git-project-root)
-    default-directory))
 
 (defmacro memoize-fn (func &optional timeout name)
   (let ((memoized-fn (gensym)))
