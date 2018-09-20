@@ -521,6 +521,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'ucr 'uncomment-region)
 (defalias 'ul 'underline)
 (defalias 'ytp 'yank-to-file-location-python)
+(defalias 'pii 'python-insert-import-region)
 (defalias 'ji 'jump-to-imports-python)
 (defalias 'bu 'browse-url)
 (defalias 'tf 'toggle-frame-fullscreen)
