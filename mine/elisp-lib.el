@@ -1829,25 +1829,25 @@ python debugging session."
 (defun python-insert-class ())
 (defun python-insert-import-region (begin end)
   (interactive "r")
-  (beginning-of-buffer)
+  (save-excursion
+    (beginning-of-buffer)
+    (let ((import-name (buffer-substring-no-properties begin end))
+          (import-start nil)
+          (import-end nil))
 
-  (let ((import-name (buffer-substring-no-properties begin end))
-        (import-start nil)
-        (import-end nil))
+      ;; find the first import block
+      (re-search-forward "^import +[a-zA-Z0-9]+")
+      (beginning-of-line)
+      (setf import-start (point))
 
-    ;; find the first import block
-    (re-search-forward "^import +[a-zA-Z0-9]+")
-    (beginning-of-line)
-    (setf import-start (point))
-
-    (message "Adding import %s" import-name)
-    (insert (format "import %s
+      (message "Adding import %s" import-name)
+      (insert (format "import %s
 " import-name))
-    (beginning-of-line)
-    (re-search-forward "^ *$")
-    (setf import-end (point))
+      (beginning-of-line)
+      (re-search-forward "^ *$")
+      (setf import-end (point))
 
-    (sort-lines nil import-start import-end)))
+      (sort-lines nil import-start import-end))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other Commands
