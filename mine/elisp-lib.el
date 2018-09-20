@@ -1782,6 +1782,15 @@ python debugging session."
       (setenv var (assoc1 var vars))
       (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))))
 
+(defun run-python-in-venv ()
+  "Run the special emacs python interpreter inside a venv associated with the buffer."
+  (interactive)
+  (let ((python-interpreter (path-join
+                             (assoc1 "VIRTUAL_ENV"
+                                     (find-venv-variables (git-project-root))) "bin/python")))
+    (message "Run python interpreter: %s" python-interpreter)
+    (run-python python-interpreter t)))
+
 (defun clear-virtualenv-emacs ()
   (mapc (| setenv % (assoc1 % virtualenv-saved-vars)) virtualenv-saved-vars))
 
@@ -1816,6 +1825,34 @@ python debugging session."
 
 (defun current-virtualenv ()
   (getenv "VIRTUAL_ENV"))
+
+(defun python-insert-class ())
+(defun python-insert-import-region (begin end)
+  (interactive "r")
+  (beginning-of-buffer)
+
+  (let ((import-name (buffer-substring-no-properties begin end))
+        (import-start nil)
+        (import-end nil))
+
+    ;; find the first import block
+    (re-search-forward "^import +[a-zA-Z0-9]+")
+    (beginning-of-line)
+    (setf import-start (point))
+
+    (message "Adding import %s" import-name)
+    (insert (format "import %s
+" import-name))
+    (beginning-of-line)
+    (re-search-forward "^ *$")
+    (setf import-end (point))
+
+    (sort-lines nil import-start import-end)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Other Commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (defun find-in-jira-at-point-internal (url ticket-valid-fn)
   "This is meant to be wrapped by another function.
