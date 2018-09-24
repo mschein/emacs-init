@@ -80,6 +80,14 @@
   "Return all of the values in an alist.  That is the `cdr' values."
   (mapcar #'cdr alist))
 
+(defun assoc-uniqify (alist)
+  "Return an alist with only unique keys."
+  (cl-loop for (k . v) in alist
+           with h = (ht)
+           unless (ht-contains? h k)
+           collect (cons k v)
+           do (ht-set h k t)))
+
 (defun identity (arg)
   arg)
 
@@ -2118,7 +2126,6 @@ python debugging session."
 (defun tail-buffer (file)
   (interactive "sfile: ")
   (switch-to-buffer))
-
 
 ;; (defun find-virtualenv-file (root-dir)
 ;;   (car (first

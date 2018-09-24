@@ -250,21 +250,26 @@
     (data-to-buffer (apply #'aws-ec2 "describe-volumes" "--volume-ids" volume-ids)
                     "+volume-data-for-%s-+" (string-join volume-ids "-"))))
 
-(defun aws-ec2-describe-instances (instance-ids)
-  (let ((-aws-return-json t))
-        (apply #'aws-ec2 "describe-instances" "--instance-ids" (to-list instance-ids))))
-
-(defun aws-describe-instances (instance-ids)
-  (interactive "sinstances: ")
+;; XXX Fix filters vs filter elsewhere.
+(cl-defun aws-ec2-describe-instances (&key instance-ids filters)
   (let ((-aws-return-json t)
-        (instance-ids (to-list instance-ids)))
-    (data-to-buffer (aws-ec2-describe-instances instance-ids)
-                    "+instance-data-for-%s-+" (string-join instance-ids "-"))))
+        (args '()))
+    (when instance-ids
+      (append! args (list "--instance-ids" (string-join (to-list instance-ids) ","))))
+    (when filters
+      (append! args (list "--filter" (aws--filter-alist-to-str filters))))
+    (apply #'aws-ec2 "describe-instances" args)))
+
+(defun aws-describe-instances (&rest args)
+  (interactive "sinstances: ")
+  (let ((-aws-return-json t))
+    (data-to-buffer (apply #'aws-ec2-describe-instances args)
+                    "+instance-data-for-%s-+" (string-join (mapcar #'pp-to-string args) "-"))))
 
 (defun aws-get-instance-ips (instance-id)
   (aws-traverse
    '(Reservations 0 Instances 0 PrivateIpAddress)
-   (aws-ec2-describe-instances (list instance-id))))
+   (aws-ec2-describe-instances :instance-ids instance-id)))
 
 (cl-defun aws-rds-describe-db-snapshots (&key filters snapshot-id db-id)
   (let ((-aws-return-json t)
@@ -377,6 +382,17 @@
            (when-let (ips (with-demoted-errors "Check cluster for task: %S"
                             (aws-ecs-get-ips-in-cluster service-name cluster)))
              (return ips)))))))
+
+(defun aws-ec2-lookup-instance-info (tag-value)
+  (aws-traverse '(Reservations 0 Instances 0)
+                (aws-ec2-describe-instances :filters `((tag-value . ,tag-value)))))
+
+(defun aws-ec2-lookup-instance (tag-value)
+  (assoc1 'InstanceId
+          (aws-ec2-lookup-instance-info tag-value)))
+
+(defun aws-ec2-lookup-ip (tag-value)
+  (aws-get-instance-ips (aws-ec2-lookup-instance tag-value)))
 
 (provide 'aws)
 
