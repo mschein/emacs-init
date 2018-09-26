@@ -1117,6 +1117,27 @@ Example:
     (insert str)
     (write-region (point-min) (point-max) path)))
 
+(defun list-to-alist (list map)
+  (cl-loop for l in list
+           for key in map
+           collect (cons key l)))
+
+(defun file-info (path)
+  (list-to-alist
+   (file-attributes path)
+   '(type
+     num-links
+     uid
+     gid
+     last-access-time
+     last-modification-time
+     last-status-change-time
+     size
+     mode
+     ignore
+     inode-number
+     device-number)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer Utils.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
