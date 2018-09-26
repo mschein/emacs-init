@@ -103,6 +103,37 @@
 (defun printf (fmt &rest args)
   (print (apply #'format fmt args)))
 
+;;
+;; The macros use string-find, so keep it here.
+;;
+;; XXX This doesn't quite work the way I want
+;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
+;; find all numbers and put them in a list.
+;;
+(defun* string-find (regex str &optional (start 0))
+  (if (string-match regex str start)
+      (let ((i 1)
+            (out '())
+            (matched t))
+        (while matched
+          (aif (match-string-no-properties i str)
+               (progn
+                 (setf out (cons  _it_ out)))
+               (setf matched nil))
+          (setf i (1+ i)))
+        (reverse out))))
+
+(defun string-find-all (regex str)
+  (let ((index 0)
+        (out '()))
+    (while (< index (length str))
+      (m-if-let (matched (string-find regex str index))
+         (progn
+           (setq index (match-end 0))
+           (setq out (append out matched)))
+         (setq index (length str))))
+    out))
+
 (defmacro* m-when-let ((name test) &rest body)
   "Provides a (when) macro with a let binding.
 When-let binds a name to the result of the a test for use inside the BODY.
@@ -511,33 +542,6 @@ Example:
 
 (defun string-right-trim-regex (regex str)
   (replace-regexp-in-string (format "%s$" regex) "" str))
-
-;; XXX This doesn't quite work the way I want
-;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
-;; find all numbers and put them in a list.
-(defun* string-find (regex str &optional (start 0))
-  (if (string-match regex str start)
-      (let ((i 1)
-            (out '())
-            (matched t))
-        (while matched
-          (aif (match-string-no-properties i str)
-               (progn
-                 (setf out (cons  _it_ out)))
-               (setf matched nil))
-          (setf i (1+ i)))
-        (reverse out))))
-
-(defun string-find-all (regex str)
-  (let ((index 0)
-        (out '()))
-    (while (< index (length str))
-      (m-if-let (matched (string-find regex str index))
-         (progn
-           (setq index (match-end 0))
-           (setq out (append out matched)))
-         (setq index (length str))))
-    out))
 
 (defmacro if-string (obj &rest forms)
   "Execute the true form if the string is length > 0"
