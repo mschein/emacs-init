@@ -792,6 +792,11 @@ Example:
 (defun run-is-true (&rest cmd-parts)
   (do-cmd-was-true (do-cmd cmd-parts)))
 
+(defun which (executable)
+  (let ((res (do-cmd (list "which" executable) :stdout 'string)))
+    (when (do-cmd-was-true res)
+        (assoc1 ':stdout res))))
+
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
   (mapcar #'string-trim (split-string str (or regex "\n") t)))
@@ -1063,6 +1068,7 @@ Example:
                                       directory-sep)
                          trailing-slash)))))
 
+;; The opposite of basename is file-name-directory
 (defalias 'basename 'file-name-nondirectory)
 
 (defun touch (path)
@@ -1122,7 +1128,7 @@ Example:
            for key in map
            collect (cons key l)))
 
-(defun file-info (path)
+(defun get-file-info (path)
   (list-to-alist
    (file-attributes path)
    '(type
@@ -1545,6 +1551,10 @@ end run
               (cons var nil)))
           process-environment))
 
+(defun dumpenv-debug ()
+  (interactive)
+  (cl-loop for (k . v) in (dumpenv) do (message "env: %s %s" k v)))
+
 ;; I haven't ever used this, do I need it?
 ;; would something like it make the "with-env" or
 ;; "with-venv" functions easier to write?
@@ -1688,45 +1698,56 @@ python debugging session."
   "Attempt to guess if a buffer contains python2 or python3 code"
   (interactive)
 
-  (save-excursion
-    ;; This is hacky, but it should work.
-    ;; scan for regexes and score python3 vs 2.
-    ;;
-    ;; python3 indicators
-    ;; Search for python3
-    ;; Search for print()
-    ;; class Foo:
-    ;; nonlocal
-    ;; {k: v for k, v in stuff}
-    ;;
-    ;; python2 indicators
-    ;; xrange
-    ;; class Foo(object):
+  (message "Guess python version.")
 
-    (let* ((python-NAME-regex "[A-Za-z_][A-Za-z0-9_]+")
-           (python3-regex (list "#.*python3"
-                                "\s+print("
-                                "nonlocal"
-                                (format "{%s:\s*%s\s+for\s+"
-                                        python-NAME-regex python-NAME-regex)))
-           (python2-regex (list "#.*python[^3]"
-                                "xrange("
-                                "print\s+[^(]"
-                                (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
-                                "\.iteritems("))
-           (py3-score 0))
-      (cl-flet ((run-searches (regexes score-fn)
-                              (dolist (regex regexes)
-                                (goto-char 0)
-                                (when (re-search-forward regex nil t)
-                                  (message "match regex %s" regex)
-                                  (funcall score-fn)))))
-        (run-searches python3-regex (| incf py3-score))
-        (run-searches python2-regex (| decf py3-score)))
+  (condition-case nil
+      (progn
+        (message "Attempt to find the virtualenv's python in default dir %s" default-directory)
+        (let ((python-version-string (find-venv-python-version (git-project-root))))
+          (message "Found python and its version is: %s" python-version-string)
+          (python-version-is-python-3 python-version-string)))
+    (error
+     ;; For the error case, try to guess.
+     (save-excursion
+       ;; This is hacky, but it should work.
+       ;; scan for regexes and score python3 vs 2.
+       ;;
+       ;; python3 indicators
+       ;; Search for python3
+       ;; Search for print()
+       ;; class Foo:
+       ;; nonlocal
+       ;; {k: v for k, v in stuff}
+       ;;
+       ;; python2 indicators
+       ;; xrange
+       ;; class Foo(object):
+       (message "Fallback to guessing")
 
-      ;; If the score is positive or zero, assume python3.
-      (message "final score: %d" py3-score)
-      (>= py3-score 0))))
+       (let* ((python-NAME-regex "[A-Za-z_][A-Za-z0-9_]+")
+              (python3-regex (list "#.*python3"
+                                   "\s+print("
+                                   "nonlocal"
+                                   (format "{%s:\s*%s\s+for\s+"
+                                           python-NAME-regex python-NAME-regex)))
+              (python2-regex (list "#.*python[^3]"
+                                   "xrange("
+                                   "print\s+[^(]"
+                                   (format "class\s+%s\s*(object)\s*:" python-NAME-regex)
+                                   "\.iteritems("))
+              (py3-score 0))
+         (cl-flet ((run-searches (regexes score-fn)
+                                 (dolist (regex regexes)
+                                   (goto-char 0)
+                                   (when (re-search-forward regex nil t)
+                                     (message "match regex %s" regex)
+                                     (funcall score-fn)))))
+           (run-searches python3-regex (| incf py3-score))
+           (run-searches python2-regex (| decf py3-score)))
+
+         ;; If the score is positive or zero, assume python3.
+         (message "final score: %d" py3-score)
+         (>= py3-score 0))))))
 
 (defun update-flymake-mask (file-pattern func)
   "Update the flyname mask for `file-pattern'.  This removes any previous matches"
@@ -1774,6 +1795,42 @@ python debugging session."
           (filter (| member (car %) venv-required-vars)
                   (parse-env-lines (run-to-str "bash" input-path)))))
     (error "Unable to find virtualenv activation file in %s" root-dir)))
+
+(defun find-venv-binary (root-dir binary)
+  (let ((bin-path (path-join (assoc1 "VIRTUAL_ENV" (find-venv-variables root-dir))
+                             binary)))
+    (assert (file-exists-p bin-path))
+    bin-path))
+
+(defun find-venv-python-binary (root-dir)
+  (find-venv-binary root-dir "bin/python"))
+
+(defun find-venv-pip-binary (root-dir)
+  (find-venv-binary root-dir "bin/pip"))
+
+(defun python-return-version-string (python-bin)
+  "Amusingly, python switched between stdout and stderr between versions 2
+   and 3.  So account for that."
+
+  (let ((res (do-cmd (list python-bin "--version") :stdout 'string :stderr 'string)))
+    (string-trim
+     (cond
+      ((string-has-val (assoc1 :stderr res))
+       (assoc1 :stderr res))
+      ((string-has-val (assoc1 :stdout res))
+                       (assoc1 :stdout res))))))
+
+(defun find-venv-python-version (root-dir)
+  (mapcar #'string-to-int
+          (string-find "[pP]ython \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)"
+                       (python-return-version-string
+                        (find-venv-python-binary root-dir)))))
+
+(defun python-version-is-python-3 (version)
+  (= 3 (first version)))
+
+(defun find-venv-is-python-3 (root-dir)
+  (python-version-is-python-3 (find-venv-python-version root-dir)))
 
 (defun python-project-has-venv (root-dir)
   (condition-case nil
@@ -1844,13 +1901,18 @@ python debugging session."
 (defun python-setup-lsp-project ()
   (let* ((is-git-project (git-in-working-tree))
          (project-root (python-get-project-root)))
-    (message "Is git project: %s, root: %s" is-git-project project-root)
+    (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
+             default-directory is-git-project project-root)
     (when is-git-project
+      (message "This is a git project, so activate the virtualenv if possible")
       ;; Setup the virtualenv
       (activate-virtualenv-emacs project-root)
 
+      (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
+
       ;; This is safe to do here, since we're in the venv.
       (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
+        (message "Check to see if the install has already been run: %s" (file-exists-p installation-finished-file))
         (unless (file-exists-p installation-finished-file)
           (run "pip" "install" "python-language-server" "autopep8" "pydocstyle" "yapf" "rope")
           (touch installation-finished-file))))
@@ -2151,18 +2213,6 @@ python debugging session."
 (defun tail-buffer (file)
   (interactive "sfile: ")
   (switch-to-buffer))
-
-;; (defun find-virtualenv-file (root-dir)
-;;   (car (first
-;;         (sort (mapcar (fn (path)
-;;                           (cons path (cond
-;;                                       ((equal (normalize-dir-path (file-name-directory path))
-;;                                               (normalize-dir-path root-dir)) 10)
-;;                                       ((search "/target/" path) 5)
-;;                                       (t 0))))
-;;                       (directory-files-recursively root-dir "^activate$"))
-;;               (fn (a b) (> (cdr a) (cdr b)))))))
-
 
 ;; (defun export-org-table ()
 ;;   (interactive)

@@ -810,6 +810,7 @@ that uses 'font-lock-warning-face'."
   ;;                          #'projectile-project-root
   ;;                          '("pyls"))
 
+  ;; XXX Do I need to make sure this is running inside a venv?
   (lsp-define-stdio-client lsp-python "python"
                            #'python-setup-lsp-project
                            '("pyls"))
