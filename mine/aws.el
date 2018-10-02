@@ -355,6 +355,14 @@
   (let ((-aws-return-json t))
     (mapcar (| aws-task->ip cluster %) (aws-ecs-list-tasks cluster service))))
 
+(defun aws-find-service-cluster (service-name)
+  (cl-loop for cluster across (aws-ecs-list-clusters) do
+           (progn
+             (message "Check cluster %s for service %s" cluster service-name)
+             (when (with-demoted-errors "Check cluster for task: %S"
+                     (aws-ecs-list-tasks cluster service-name))
+               (return cluster)))))
+
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
     ;;
@@ -393,6 +401,11 @@
 
 (defun aws-ec2-lookup-ip (tag-value)
   (aws-get-instance-ips (aws-ec2-lookup-instance tag-value)))
+
+(defun aws-cluster-short-name (cluster)
+  (let ((cluster (second (string-split "/" cluster))))
+    (assert cluster)
+    cluster))
 
 (provide 'aws)
 

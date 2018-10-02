@@ -95,6 +95,17 @@
   "return a copy of the sequence with only unique elements"
   (delete-dups (mapcar #'identity seq)))
 
+;;
+;; This was more annoying than I expected.
+;; you lose the form, and it doesn't seem like
+;; assert is meant to build on.
+;;
+;; (defmacro assert-value (form &rest args)
+;;   (with-gensyms (value)
+;;     `(let ((,value ,form))
+;;        (assert ,value ,@args)
+;;        ,value)))
+
 (defmacro pushcons (key value alist)
   "Push a new key value pair onto an alist."
   `(push (cons ,key ,value) ,alist))
@@ -1992,6 +2003,9 @@ python debugging session."
                                (url-hexify-string (format "%s" v)))
                                "="))
    "&"))
+
+(defun url-build (url params)
+  (concat url "?" (url-encode-params params)))
 
 (defun parse-http-header (header)
   "A simple header splitter."
