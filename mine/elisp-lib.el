@@ -255,6 +255,13 @@ of the test."
   "Convert thing to a list if it isnt already."
   (if (atom thing) (list thing) thing))
 
+(defun to-array (thing)
+  (etypecase thing
+    (string (vector thing))
+    (array thing)
+    (list (vconcat thing))
+    (t (vector thing))))
+
 (defun last-car (list)
   (car (last list)))
 
@@ -2047,7 +2054,7 @@ python debugging session."
      (cons :headers (coalesce-alist headers)))))
 
 (cl-defun web-request (url
-                       &key op params auth body json file timeout insecure throw)
+                       &key (op "GET") params auth body json file timeout insecure throw)
   "Make a web request with curl.
 
    Params:
@@ -2085,53 +2092,59 @@ python debugging session."
       (assert (integerp timeout)))
 
   ;; Build up the command list
-  (let ((cmd (list "curl" "-f" "--verbose" "--silent"))
-        (json (when json
-                (if (typep json 'string)
-                    json
-                  (json-encode json)))))
-    (cl-flet ((append-option (arg value-fn)
-                (when arg
-                  (setf cmd (append cmd (funcall value-fn))))))
-      (append-option op (| (list (upcase (format "-X%s" op)))))
-      (append-option insecure (| `("--insecure")))
-      (append-option auth (| `("--user" ,auth)))
-      (append-option body (| `("--data-raw" ,body)))
-      (append-option json (| `("-H" "Content-Type: application/json"
-                               "--data-raw" ,json)))
-      (append-option file (| `("--data-binary" ,file)))
-      (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
-      (append-option t (| list (if params
-                                   (concat url "?" (url-encode-params params))
-                                 url)))
+  (with-tempdir (:root-dir "/tmp")
+    (let* ((cmd (list "curl" "-f" "--verbose" "--silent"))
+           (json-file "request-attachment.json"))
 
-      (message "Web-request running %s" cmd)
+      ;; Dump out the json to a file, if needed.
+      (when json
+        (barf (if (typep json 'string)
+                  json
+                (json-encode json))
+              json-file))
 
-      ;; TODO(mls): better error handling.
-      ;; it would be good to handle the error code + headers
-      (let* ((resp (do-cmd cmd :stdout 'string :stderr 'string :throw throw))
-             (output (assoc1 :stdout resp))
-             (resp-json (ignore-errors
-                          (json-read-from-string (assoc1 :stdout resp))))
-             ;; Split out the '< content-type: application/json' headers
-             ;; from curl, and turn them into an alist.
-             (resp-block (parse-http-header-block (assoc1 :stderr resp))))
+      (cl-flet ((append-option (arg value-fn)
+                               (when arg
+                                 (setf cmd (append cmd (funcall value-fn))))))
+        (append-option op (| (list (upcase (format "-X%s" op)))))
+        (append-option insecure (| `("--insecure")))
+        (append-option auth (| `("--user" ,auth)))
+        (append-option body (| `("--data-raw" ,body)))
+        (append-option json (| `("-H" "Content-Type:application/json"
+                                 "--data" ,(concat "@" json-file))))
+        (append-option file (| `("--data-binary" ,file)))
+        (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
+        (append-option t (| list (if params
+                                     (concat url "?" (url-encode-params params))
+                                   url)))
 
-        (let ((http-code (if (equal (assoc1 :code resp) 0)
-                             (string-to-int (second (assoc1 :resp-line resp-block)))
-                           -1))
-              (headers (assoc1 :headers resp-block)))
+        (message "Web-request running %s" cmd)
 
-          (message "Web-request. code: %s http: %s\n headers: %s"
-                   (assoc1 :code resp) http-code headers)
+        ;; TODO(mls): better error handling.
+        ;; it would be good to handle the error code + headers
+        (let* ((resp (do-cmd cmd :stdout 'string :stderr 'string :throw throw))
+               (output (assoc1 :stdout resp))
+               (resp-json (ignore-errors
+                            (json-read-from-string (assoc1 :stdout resp))))
+               ;; Split out the '< content-type: application/json' headers
+               ;; from curl, and turn them into an alist.
+               (resp-block (parse-http-header-block (assoc1 :stderr resp))))
 
-          `((:resp . ,output)
-            (:code . ,(assoc1 :code resp))
-            (:http-code . ,http-code)
-            (:headers . ,headers)
-            (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
-                          (assoc1 :stderr resp)))
-            (:json . ,resp-json)))))))
+          (let ((http-code (if (equal (assoc1 :code resp) 0)
+                               (string-to-int (second (assoc1 :resp-line resp-block)))
+                             -1))
+                (headers (assoc1 :headers resp-block)))
+
+            (message "Web-request. code: %s http: %s\n headers: %s"
+                     (assoc1 :code resp) http-code headers)
+
+            `((:resp . ,output)
+              (:code . ,(assoc1 :code resp))
+              (:http-code . ,http-code)
+              (:headers . ,headers)
+              (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
+                            (assoc1 :stderr resp)))
+              (:json . ,resp-json))))))))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
