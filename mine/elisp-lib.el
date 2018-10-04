@@ -762,30 +762,40 @@ Example:
     (cl-flet ((my-call-process ()
                 (message "cmd: %s %s" program (cmd-to-shell-string arguments))
                 (setf resp (apply #'call-process program input (list stdout stderr) nil arguments))))
-      (if stdout-buffer
-          (with-current-buffer stdout-buffer
-            (my-call-process))
-        (my-call-process))
+      ;; Use unwind protect here, so we always cleanup the stdout buffer.
+      (unwind-protect
+          (progn
+            ;; Do the execution.
+            (if stdout-buffer
+                (with-current-buffer stdout-buffer
+                  (my-call-process))
+              (my-call-process))
 
-      (when (and stderr-file (file-exists-p stderr-file))
-        (setq stderr-string (slurp stderr-file))
-        (delete-file stderr-file))
+            ;; Handle stderr output.
+            (when (and stderr-file (file-exists-p stderr-file))
+              (setq stderr-string (slurp stderr-file))
+              (delete-file stderr-file))
 
-      (if (and (not (equal resp 0))
-               throw)
-          (error "Command %s %s failed, code: %s, msg: \'%s\'"
-                 program arguments resp (if stderr-string
-                                            (string-trim (s-truncate 1024 stderr-string))
-                                          "")))
-      (let ((output '()))
-        (push (cons :code resp) output)
+            ;; Check for any errors, do we need to throw?
+            (when (and (not (equal resp 0))
+                       throw)
+              (error "Command %s %s failed, code: %s, msg: \'%s\'"
+                     program arguments resp (if stderr-string
+                                                (string-trim (s-truncate 1024 stderr-string))
+                                              "")))
+            ;; return the result
+            (let ((output '()))
+              (push (cons :code resp) output)
+              (when stdout-buffer
+                (with-current-buffer stdout-buffer
+                  (push (cons :stdout (buffer-string)) output)))
+              (when stderr-string
+                (push (cons :stderr stderr-string) output))
+              output))
+        ;; Always cleanup the stdout buffer we created.
+        ;; all cleanup code should go there.
         (when stdout-buffer
-          (with-current-buffer stdout-buffer
-            (push (cons :stdout (buffer-string)) output))
-          (kill-buffer stdout-buffer))
-        (when stderr-string
-          (push (cons :stderr stderr-string) output))
-        output))))
+          (kill-buffer stdout-buffer))))))
 
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `do-cmd'
