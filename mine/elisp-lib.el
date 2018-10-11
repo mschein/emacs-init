@@ -1129,6 +1129,8 @@ Example:
   (directory-last-dirname \"/a/b/c.txt\") -> \"b\""
   (-> path directory-file-name split-path last-car))
 
+
+
 (defun current-last-dirname ()
   (directory-last-dirname default-directory))
 
@@ -1315,16 +1317,27 @@ Example:
   (interactive "r")
   (message "%d" (sum-col-region-fn begin end)))
 
+(defvar m-bookmark-table (ht))
+
+(defun list-bookmark-functions ()
+  (ht-keys m-bookmark-table))
+
 (defmacro make-bookmark (name url &rest urls)
-  `(defun ,name ()
-     ,(format "The `%s' function opens up the %s url.%s" name url
-              (if (> (length urls) 1)
-                  (format "  And %d others." (length urls))
-                ""))
-     (interactive)
-     (browse-url ,url t)
-     ,@(mapcar (lambda (u)
-                 `(browse-url ,u nil)) urls)))
+  (assert (symbolp name))
+
+  (with-gensyms (main-url)
+    (let ((url url))
+      `(let ((,main-url ,url))
+         (ht-set! m-bookmark-table ',name ,main-url)
+         (defun ,name ()
+           ,(format "The `%s' function opens up the %s url.%s" name url
+                    (if (> (length urls) 1)
+                        (format "  And %d others." (length urls))
+                      ""))
+           (interactive)
+           (browse-url ,main-url t)
+           ,@(mapcar (lambda (u)
+                       `(browse-url ,u nil)) urls))))))
 
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
@@ -1391,15 +1404,6 @@ Example:
 (defun multi-occur-all (pattern)
   (interactive "spattern: ")
   (multi-occur (buffer-list) pattern))
-
-(defun yank-to-file-location-python ()
-  "Take the path and line number of the current cursor position
-and put it into the kill ring.
-
-The idea is that this is an easy way to set a break point in a
-python debugging session."
-  (interactive)
-  (kill-new (format "b %s:%d" (buffer-file-name) (line-number-at-pos))))
 
 (defun clear-buffer (buffer)
   "Clear the contents of the named buffer."
@@ -1882,6 +1886,14 @@ python debugging session."
     (insertf "source %s" activate-link)
     (comint-send-input nil t)
     (comint-clear-buffer)))
+
+(defun yank-venv-link (&optional dir)
+  (interactive)
+
+  (let* ((root-dir (or dir default-directory))
+         (activate-link (find-virtualenv-file root-dir)))
+    (message "Found %s in root dir %s" activate-link root-dir)
+    (kill-new activate-link)))
 
 (defun python-get-project-root ()
   "Find the `root' of a python project."
