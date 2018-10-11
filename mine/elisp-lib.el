@@ -1324,20 +1324,20 @@ Example:
 
 (defmacro make-bookmark (name url &rest urls)
   (assert (symbolp name))
+  (assert (or (symbolp url) (stringp url)))
+  (dolist (u urls)
+    (assert (or (symbolp u) (stringp u))))
 
-  (with-gensyms (main-url)
-    (let ((url url))
-      `(let ((,main-url ,url))
-         (ht-set! m-bookmark-table ',name ,main-url)
-         (defun ,name ()
-           ,(format "The `%s' function opens up the %s url.%s" name url
-                    (if (> (length urls) 1)
-                        (format "  And %d others." (length urls))
-                      ""))
-           (interactive)
-           (browse-url ,main-url t)
-           ,@(mapcar (lambda (u)
-                       `(browse-url ,u nil)) urls))))))
+  (ht-set! m-bookmark-table ',name ',url)
+  `(defun ,name ()
+    ,(format "The `%s' function opens up the %s url.%s" name url
+             (if (> (length urls) 1)
+                 (format "  And %d others." (length urls))
+               ""))
+    (interactive)
+    (browse-url ,url t)
+    ,@(mapcar (lambda (u)
+                `(browse-url ,u nil)) urls)))
 
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
