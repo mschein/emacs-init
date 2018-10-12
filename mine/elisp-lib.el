@@ -2130,7 +2130,10 @@ python debugging session."
            (input-file (when auth
                          (let ((input-file-path "input-file"))
                            (barf (format "user = \"%s\"" (web-request--handle-auth auth)) input-file-path)
-                           input-file-path))))
+                           input-file-path)))
+           (final-url (if params
+                          (concat url "?" (url-encode-params params))
+                        url)))
 
       ;; Dump out the json to a file, if needed.
       (when json
@@ -2143,17 +2146,14 @@ python debugging session."
                                (when arg
                                  (setf cmd (append cmd (funcall value-fn))))))
         (append-option op (| (list (upcase (format "-X%s" op)))))
-        (when input-file
-          (append! cmd "-K" "-"))
+        (append-option input-file (| '("-K" "-")))
         (append-option insecure (| `("--insecure")))
         (append-option body (| `("--data-raw" ,body)))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
         (append-option file (| `("--data-binary" ,file)))
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
-        (append-option t (| list (if params
-                                     (concat url "?" (url-encode-params params))
-                                   url)))
+        (append-option t (| list final-url ))
 
         (message "Web-request running %s" cmd)
         ;;
@@ -2183,6 +2183,7 @@ python debugging session."
 
             `((:resp . ,output)
               (:code . ,(assoc1 :code resp))
+              (:url . ,final-url)
               (:http-code . ,http-code)
               (:headers . ,headers)
               (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
