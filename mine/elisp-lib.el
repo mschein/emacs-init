@@ -734,6 +734,8 @@ Example:
            (:stdout . \"string\")  ; if any
            (:stderr . \"string\")) ; if any
   "
+  ;; TODO: Consider switching to with-tempdir, and using
+  ;; it to cleanup the stderr file, and generate/cleanup the input file.
   (let* ((program (first cmd))
          (arguments (cdr cmd))
          (stdout-buffer (when (equal stdout 'string)
@@ -969,10 +971,10 @@ Example:
     (set-window-vscroll nil curr-scroll)
     (message "Reloaded file")))
 
-(defmacro append! (list value)
+(defmacro append! (l &rest values)
   "NOTE! This only works with a symbol, not a complex type."
-  (assert (symbolp list))
-  `(setf ,list (append ,list (to-list ,value))))
+  (assert (symbolp l))
+  `(setf ,l (append ,l ,@(mapcar (fn (a) `(list ,a)) values))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Time utils
@@ -2075,6 +2077,11 @@ python debugging session."
      (cons :resp-line resp-line)
      (cons :headers (coalesce-alist headers)))))
 
+(defun web-request--handle-auth (auth)
+  (if (search ":" auth)
+      auth
+    (concat auth ":" (read-passwd (format "Password(%s):" auth)))))
+
 (cl-defun web-request (url
                        &key (op "GET") params auth body json file timeout insecure throw)
   "Make a web request with curl.
@@ -2085,7 +2092,8 @@ python debugging session."
    Optional Params:
    `op': Which http operation to perform, (defaults to GET).
    `params': An alist of url parameters.
-   `auth': An auth string suitable for passing to curl.  So \"user:password\".
+   `auth': Auth can be, a user name with no colon, which will trigger a prompt for
+           a password, or a full curl auth string like \"user:password\".
    `body': A string that will be sent as a data body to the server.
    `json': An alist that will be converted to json and sent to the server.
    `file': A file to upload to the server.
@@ -2107,16 +2115,22 @@ python debugging session."
 
   ;; Check the args
   (assert url)
-  (if auth
-      (assert (search ":" auth)))
   (assert (not (and body json)))
   (if timeout
       (assert (integerp timeout)))
 
-  ;; Build up the command list
+  ;; Build up the command list.  Use a tmpdir to
+  ;; cleanup any files created.
   (with-tempdir (:root-dir "/tmp")
+    ;; TODO: "-f" may not be the best option, as sometimes server
+    ;; response bodies are useful, and this won't return them if
+    ;; there is a failure.
     (let* ((cmd (list "curl" "-f" "--verbose" "--silent"))
-           (json-file "request-attachment.json"))
+           (json-file "request-attachment.json")
+           (input-file (when auth
+                         (let ((input-file-path "input-file"))
+                           (barf (format "user = \"%s\"" (web-request--handle-auth auth)) input-file-path)
+                           input-file-path))))
 
       ;; Dump out the json to a file, if needed.
       (when json
@@ -2129,8 +2143,9 @@ python debugging session."
                                (when arg
                                  (setf cmd (append cmd (funcall value-fn))))))
         (append-option op (| (list (upcase (format "-X%s" op)))))
+        (when input-file
+          (append! cmd "-K" "-"))
         (append-option insecure (| `("--insecure")))
-        (append-option auth (| `("--user" ,auth)))
         (append-option body (| `("--data-raw" ,body)))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
@@ -2141,10 +2156,16 @@ python debugging session."
                                    url)))
 
         (message "Web-request running %s" cmd)
-
+        ;;
+        ;; When passwords are used, we must use stdin to send
+        ;; them without them being recorded.  So create a tempdir
+        ;; where we can dump things like this.
+        ;;
         ;; TODO(mls): better error handling.
         ;; it would be good to handle the error code + headers
-        (let* ((resp (do-cmd cmd :stdout 'string :stderr 'string :throw throw))
+        (let* ((resp (do-cmd cmd
+                             :input input-file
+                             :stdout 'string :stderr 'string :throw throw))
                (output (assoc1 :stdout resp))
                (resp-json (ignore-errors
                             (json-read-from-string (assoc1 :stdout resp))))
