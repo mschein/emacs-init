@@ -2183,7 +2183,9 @@ python debugging session."
 
             `((:resp . ,output)
               (:code . ,(assoc1 :code resp))
-              (:url . ,final-url)
+              (:url . ,url)
+              (:params . ,params)
+              (:op . ,op)
               (:http-code . ,http-code)
               (:headers . ,headers)
               (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
