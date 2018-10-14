@@ -1940,24 +1940,27 @@ python debugging session."
              ,@body)
          (restore-env-from-alist ,old-env)))))
 
+;; To use, install: sudo -H pip install python-language-server
+;; and sudo -H pip3 install python-language-server
 (defun python-setup-lsp-project ()
   (let* ((is-git-project (git-in-working-tree))
          (project-root (python-get-project-root)))
     (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
              default-directory is-git-project project-root)
     (when is-git-project
-      (message "This is a git project, so activate the virtualenv if possible")
-      ;; Setup the virtualenv
-      (activate-virtualenv-emacs project-root)
+      (make-local-variable 'process-environment)
+      (with-venv project-root
+        (message "This is a git project, so activate the virtualenv if possible")
+        ;; Setup the virtualenv
 
-      (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
+        (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
 
-      ;; This is safe to do here, since we're in the venv.
-      (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
-        (message "Check to see if the install has already been run: %s" (file-exists-p installation-finished-file))
-        (unless (file-exists-p installation-finished-file)
-          (run "pip" "install" "python-language-server" "autopep8" "pydocstyle" "yapf" "rope")
-          (touch installation-finished-file))))
+        ;; This is safe to do here, since we're in the venv.
+        (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
+          (message "Check to see if the install has already been run: %s" (file-exists-p installation-finished-file))
+          (unless (file-exists-p installation-finished-file)
+            (run "pip" "install" "python-language-server" "autopep8" "pydocstyle" "yapf" "rope")
+            (touch installation-finished-file)))))
     project-root))
 
 (defun current-virtualenv ()
