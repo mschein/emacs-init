@@ -1617,6 +1617,12 @@ end run
       url
     (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
+(defun git-get-project-repo ()
+  (destructuring-bind (project repo)
+      (string-find "://.*/\\([a-zA-Z9-0-.]+\\)/\\([a-zA-Z9-0-.]+\\)\.git" (git-remote-origin-url))
+    `((project . ,project)
+      (repo . ,repo))))
+
 (defun git-remote-add-origin (origin)
   (run "git" "remote" "add" "origin" origin))
 
@@ -1667,6 +1673,10 @@ end run
   (pushd (or dir default-directory)
     (ignore-errors
       (do-cmd-was-true (git-rev-parse-is-inside-working-tree)))))
+
+(defun git-clone (clone-url)
+  "Clone a git repo into the current directory."
+  (run "git" "clone" clone-url))
 
 (defcustom git-repo-remote-dir nil
   "A variable pointing to a 'local' directory for storing git repos.")
@@ -2132,6 +2142,8 @@ python debugging session."
            (json-file "request-attachment.json")
            (input-file (when auth
                          (let ((input-file-path "input-file"))
+                           (touch input-file-path)
+                           (chmod input-file-path #o600)
                            (barf (format "user = \"%s\"" (web-request--handle-auth auth)) input-file-path)
                            input-file-path)))
            (final-url (if params
@@ -2159,6 +2171,7 @@ python debugging session."
         (append-option t (| list final-url ))
 
         (message "Web-request running %s" cmd)
+
         ;;
         ;; When passwords are used, we must use stdin to send
         ;; them without them being recorded.  So create a tempdir
