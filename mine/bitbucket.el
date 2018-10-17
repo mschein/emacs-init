@@ -23,37 +23,44 @@
 (defun bitbucket-get-password ()
   (read-passwd "Bitbucket password: "))
 
-(defun bitbucket-request (bb path &rest args)
-  (let* ((url (path-join (assoc1 :url bb) path))
-         (auth (when-let (user (cdr (assoc :user bb)))
+(defun bitbucket-get-auth (bb)
+  (when-let (user (cdr (assoc :user bb)))
                  (concat user ":" (bitbucket-get-password))))
-         (resp (apply #'web-request url :auth auth :throw t args)))
-    (when auth
-        (append! resp (cons :auth auth)))
-    resp))
 
-(defun bitbucket-next-page (bb resp)
-  (when-let (start (cdr (assoc 'nextPageStart (assoc1 :json resp))))
-    (web-request (assoc1 :url resp)
-                 :auth (cdr (assoc :auth bb))
-                 :op (assoc1 :op resp)
-                 :params (cons
-                          (cons "start" start)
-                          (assoc1 :params resp)))))
+(defun bitbucket-request-common (bb path &rest args)
+  (apply #'web-request (path-join (assoc1 :url bb) path)
+         :throw t args))
+
+(defun bitbucket-request (bb path &rest args)
+  (apply #'bitbucket-request-common bb path
+         :auth (bitbucket-get-auth bb)
+         args))
+
+(defun bitbucket-inject-param (new-param in-args)
+  (let* ((copied-args (copy-list in-args))
+         (params (plist-get copied-args :params)))
+         (plist-put copied-args :params (cons new-param params))))
+
+(defun bitbucket-request-all (bb path &rest args)
+  (let ((values [])
+        (auth (bitbucket-get-auth bb))
+        (resp nil))
+    (cl-flet ((do-request (args)
+                 (apply #'bitbucket-request-common bb path :auth auth args)))
+      (setf resp (do-request args))
+      (while resp
+        (setf values (vconcat values (assoc1 '(:json values) resp)))
+        (if-let (start (cdr (assoc 'nextPageStart (assoc1 :json resp))))
+            (let ((args (bitbucket-inject-param (cons 'start start) args)))
+              (setf resp (do-request args)))
+          (setf resp nil))))
+    values))
 
 (defun bitbucket-application-properties (bb)
   (bitbucket-request bb "application-properties"))
 
 (defun bitbucket-version (bb)
   (assoc1 '(:json version) (bitbucket-application-properties)))
-
-(defun bitbucket-request-all (bb &rest args)
-  (let ((values [])
-        (resp (apply #'bitbucket-request bb args)))
-    (while resp
-      (setf values (vconcat values (assoc1 '(:json values) resp)))
-      (setf resp (bitbucket-next-page bb resp)))
-    values))
 
 (defun bitbucket-list-projects (bb)
   (bitbucket-request-all bb "projects"))
@@ -82,7 +89,7 @@
 
 (cl-defun bitbucket-open-pull-request (bb project repo &key title branch reviewers)
   (let* ((json `((title . ,title)
-                 (fromRef . ,(bitbucket-ref-dict branch (concat "~" (assoc1 :user bb)) repo))
+                 (fromRef . ,(bitbucket-ref-dict branch project repo))
                  (toRef . ,(bitbucket-ref-dict "master" project repo)))))
 
     (when reviewers
@@ -98,4 +105,5 @@
 (defun bitbucket-fetch-pull-request (bb project repo id)
   (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests"
                                    (format "%s" id))))
+
 (provide 'bitbucket)
