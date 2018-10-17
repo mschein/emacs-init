@@ -92,4 +92,10 @@
                        :op "POST"
                        :json json)))
 
+(defun bitbucket-fetch-pull-requests (bb project repo)
+  (bitbucket-request-all bb (path-join "projects" project "repos" repo "pull-requests")))
+
+(defun bitbucket-fetch-pull-request (bb project repo id)
+  (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests"
+                                   (format "%s" id))))
 (provide 'bitbucket)
