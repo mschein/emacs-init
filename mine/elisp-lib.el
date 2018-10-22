@@ -138,7 +138,7 @@
   (let ((index 0)
         (out '()))
     (while (< index (length str))
-      (m-if-let (matched (string-find regex str index))
+      (if-let (matched (string-find regex str index))
          (progn
            (setq index (match-end 0))
            (setq out (append out matched)))
@@ -164,11 +164,12 @@ test.  If the test returned nil, then the body will not execute."
   `(let ((_it_ ,test))
      (if _it_ ,@forms)))
 
-(defmacro m-if-let (test-binding &rest forms)
-  "Provides an if macro that binds a value a la let.
+(unless (fboundp 'if-let)
+  (defmacro if-let (test-binding &rest forms)
+    "Provides an if macro that binds a value a la let.
 
 Example:
- (m-if-let (res (fetch-string))
+ (if-let (res (fetch-string))
    (convert-to-something res)
    (error \"failed to fetch string\"))
 Here res is the name, and (fetch-string) is the
@@ -176,22 +177,23 @@ test clause.  If fetch-string returns nil, the
 error case is executed, otherwise the success
 case is executed.  res is bount to the result
 of the test."
-  (declare (indent 2))
-  (destructuring-bind (name test) test-binding
+    (declare (indent 2))
+    (destructuring-bind (name test) test-binding
       `(let ((,name ,test))
-         (if ,name ,@forms))))
+         (if ,name ,@forms)))))
 
-(defmacro if-let* (test-bindings &rest forms)
-  "Provides an if-let macro that only works if all lets are true"
+(unless (fboundp 'if-let*)
+  (defmacro if-let* (test-bindings &rest forms)
+    "Provides an if-let macro that only works if all lets are true"
 
-  ;; build up a chain of if-lets, with the false case always the same.
-  (destructuring-bind (pos &rest neg) forms
-    (reduce (fn (prev-bindings binding)
+    ;; build up a chain of if-lets, with the false case always the same.
+    (destructuring-bind (pos &rest neg) forms
+      (reduce (fn (prev-bindings binding)
                 `(if-let ,binding
-                   ,prev-bindings
+                     ,prev-bindings
                    ,@neg))
-            (reverse test-bindings)
-            :initial-value pos)))
+              (reverse test-bindings)
+              :initial-value pos))))
 
 (defmacro when-let* (test-bindings &rest forms)
   ;; Would it be better to do this with a regular loop, to get rid of the
@@ -217,18 +219,18 @@ of the test."
     (process clauses)))
 
 (defun append-if (test list)
-  (m-if-let (res test)
+  (if-let (res test)
           (append list (to-list res))))
 
 (defun cons-if (test list)
-  (m-if-let (res test)
+  (if-let (res test)
           (cons res list)))
 
 (defun _make-arg-list (arg-alist)
   (let ((out-arg-list '()))
     (dotimes (i (length arg-alist))
       ;; &rest doesn't work yet... how to deal with it?
-      (m-if-let (res (assoc (number-to-string  (1+ i)) arg-alist))
+      (if-let (res (assoc (number-to-string  (1+ i)) arg-alist))
        (destructuring-bind (arg . sym) res
          (setf out-arg-list (cons sym out-arg-list)))
        (error "Missing argument %%%s in | form" (1+ i))))
@@ -307,7 +309,7 @@ of the test."
                ;; TODO(scheinholtz): Switch to loop, to get rid of the (1+ i)
                (dotimes (i (length arg-alist))
                  (let ((arg-pos (1+ i)))
-                   (m-if-let (res (assoc (number-to-string arg-pos) arg-alist))
+                   (if-let (res (assoc (number-to-string arg-pos) arg-alist))
                              (destructuring-bind (arg . sym) res
                                (setf out-arg-list (cons sym out-arg-list)))
                              (error "Missing argument %%%s in f form" arg-pos))))
@@ -322,7 +324,7 @@ of the test."
                  (progn
                    (if (equal '| elm)
                        (error "Nested |'s are not allowed."))
-                   (m-if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
+                   (if-let (arg-num (car (string-find "^%\\(.*\\)" (symbol-name elm))))
                       (let ((new-name (gensym)))
                         ;; TODO(scheinholtz) caseq or case-eq?
                         ;; Does that exist?
@@ -334,7 +336,7 @@ of the test."
                                                  (setf new-name single-arg)
                                                (setf single-arg new-name)))
                          ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
-                         (t (m-if-let (old-sym (cdr (assoc arg-num alist-args)))
+                         (t (if-let (old-sym (cdr (assoc arg-num alist-args)))
                                       (setf new-name old-sym)
                                       (setf alist-args (acons arg-num new-name alist-args)))))
                         new-name)
@@ -1029,7 +1031,7 @@ Example:
 
 ;; sun: 0, mon: 1, Sat: 6
 (defun prev-day-of-week (time day-of-week)
-  (m-if-let (day-of-week (if (numberp day-of-week)
+  (if-let (day-of-week (if (numberp day-of-week)
                              day-of-week
                          (assoc1 day-of-week week-days)))
     (do ((i 1 (+ i 1)))
@@ -1210,7 +1212,7 @@ Example:
   (interactive)
   (let ((pos (point)))
     (re-search-backward "(defun +[^ ]+ +(\\(.*?\\))")
-    (m-if-let (arg-str (match-string-no-properties 1))
+    (if-let (arg-str (match-string-no-properties 1))
        (progn
          (printf "arg-str: |%s|\n" arg-str)
          (goto-char pos)
@@ -1310,7 +1312,7 @@ Example:
       (dolist (line lines)
         (if-let* ((nums (string-find-all "\\(-\\{0,1\\}[0-9]+[0-9\.]*\\)" line))
                   (num-str (car nums))
-                  (num (string-to-int num-str)))
+                  (num (string-to-number num-str)))
           (setq total (+ total num))))
       total)))
 
@@ -1865,7 +1867,7 @@ python debugging session."
                        (assoc1 :stdout res))))))
 
 (defun find-venv-python-version (root-dir)
-  (mapcar #'string-to-int
+  (mapcar #'string-to-number
           (string-find "[pP]ython \\([0-9]+\\)\\.\\([0-9]+\\)\\.\\([0-9]+\\)"
                        (python-return-version-string
                         (find-venv-python-binary root-dir)))))
@@ -2191,7 +2193,7 @@ python debugging session."
                (resp-block (parse-http-header-block (assoc1 :stderr resp))))
 
           (let ((http-code (if (equal (assoc1 :code resp) 0)
-                               (string-to-int (second (assoc1 :resp-line resp-block)))
+                               (string-to-number (second (assoc1 :resp-line resp-block)))
                              -1))
                 (headers (assoc1 :headers resp-block)))
 
