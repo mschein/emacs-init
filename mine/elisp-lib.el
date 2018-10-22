@@ -1620,8 +1620,8 @@ end run
 (defun git-get-project-repo ()
   (destructuring-bind (project repo)
       (string-find "://.*/\\([a-zA-Z9-0-.]+\\)/\\([a-zA-Z9-0-.]+\\)\.git" (git-remote-origin-url))
-    `((project . ,project)
-      (repo . ,repo))))
+    `((:project . ,project)
+      (:repo . ,repo))))
 
 (defun git-remote-add-origin (origin)
   (run "git" "remote" "add" "origin" origin))
@@ -1902,6 +1902,7 @@ python debugging session."
 (defun yank-venv-link (&optional dir)
   (interactive)
 
+  ;; NOTE! This doesn't find the root of a repo.
   (let* ((root-dir (or dir default-directory))
          (activate-link (find-virtualenv-file root-dir)))
     (message "Found %s in root dir %s" activate-link root-dir)
