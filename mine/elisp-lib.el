@@ -976,7 +976,7 @@ Example:
 (defmacro append! (l &rest values)
   "NOTE! This only works with a symbol, not a complex type."
   (assert (symbolp l))
-  `(setf ,l (append ,l ,@(mapcar (fn (a) `(list ,a)) values))))
+  `(setf ,l (append ,l ,@(mapcar (fn (a) `(to-list ,a)) values))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Time utils
@@ -1111,6 +1111,11 @@ Example:
   (let ((dir (file-name-directory path)))
     (unless (file-exists-p path)
       (make-directory dir t))))
+
+(defun recreate-directory (path)
+  (when (file-exists-p path)
+    (delete-directory path t))
+  (make-directory path t))
 
 (defun is-real-file (path)
   (let ((name (basename path)))
@@ -1795,6 +1800,7 @@ python debugging session."
          (message "final score: %d" py3-score)
          (>= py3-score 0))))))
 
+;; TODO(mscheinh): make this work with emacs 26
 (defun update-flymake-mask (file-pattern func)
   "Update the flyname mask for `file-pattern'.  This removes any previous matches"
   (setq flymake-allowed-file-name-masks
