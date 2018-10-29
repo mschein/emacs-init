@@ -1162,6 +1162,15 @@ Example:
     (insert str)
     (write-region (point-min) (point-max) path)))
 
+(defun overwrite (str path)
+  (assert (file-regular-p path))
+  (let ((tmp-path (concat path ".tmp")))
+    (unwind-protect
+        (with-temp-file tmp-path
+          (insert str))
+      (when (file-exists-p tmp-path)
+        (delete-file tmp-path)))))
+
 (defun list-to-alist (list map)
   (cl-loop for l in list
            for key in map
