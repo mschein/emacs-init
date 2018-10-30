@@ -31,7 +31,13 @@
   ;; XXX Add support for schemas
   ))
 
+(defun store-exists-p (store-name)
+  (ensure-makedirs store--directory)
+
+  (file-exists-p (store-get-path store-name)))
+
 (defun store-delete-store (store-name)
+  (ensure-makedirs store--directory)
   (delete-file (store-get-path store-name)))
 
 (defun store-set (store-name key value)
