@@ -1,4 +1,5 @@
 company/
 local/
+dynamic-modules/
 emacs-packages/gnupg/
 *.elc

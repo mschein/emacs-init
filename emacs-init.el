@@ -270,9 +270,17 @@
 
 
 ;; My stuff
-(dolist (path '("~/emacs-init/mine" "~/emacs-init/contrib" "~/emacs-init/contrib/groovymode" "~/emacs-init/elpa/http-post-simple-1.0"))
-  (if (file-directory-p path)
-      (add-to-list 'load-path path)))
+(dolist (path '("~/emacs-init/mine"
+                "~/emacs-init/dynamic-modules"
+                "~/emacs-init/contrib"
+                "~/emacs-init/contrib/groovymode"))
+  (when (file-directory-p path)
+    (add-to-list 'load-path path)))
+
+;; Add any dynamic modules
+(dolist (module '(sqlite3-api))
+  (when (load (symbol-name module))
+    (require module)))
 
 ;; Always load these.
 (require 'elisp-lib)
