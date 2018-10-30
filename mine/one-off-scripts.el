@@ -329,7 +329,7 @@ setup(name=package,
     (let ((backup-file-path (buffer-backup-file-path current-file-path)))
       (message "Copy file to backup path: %s" backup-file-path)
       (save-buffer)
-      (ensure-makedirs backup-file-path)
+      (ensure-makedirs (file-name-directory backup-file-path))
       (copy-file current-file-path backup-file-path t)
 
       (message "Commit the changes to git.")

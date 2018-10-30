@@ -1107,10 +1107,10 @@ Example:
   "Create an empty file at the given `path'"
   (barf "" path))
 
-(defun ensure-makedirs (path)
-  (let ((dir (file-name-directory path)))
-    (unless (file-exists-p path)
-      (make-directory dir t))))
+(defun ensure-makedirs (dir)
+  (unless (file-exists-p dir)
+    (message "Creating directory: %s" dir)
+    (make-directory dir t)))
 
 (defun recreate-directory (path)
   (when (file-exists-p path)
