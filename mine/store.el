@@ -54,6 +54,9 @@
                (sqlite3-step stmt)
                (sqlite3-reset stmt)))))
 
+(defun store-set-json (store-name key data)
+  (store-set store-name key (json-encode data)))
+
 (defun store-get (store-name key)
   (let ((result))
     (with-mysqlite3 ((store-get-path store-name) :readonly)
@@ -61,9 +64,12 @@
         (sqlite3-bind-multi stmt key)
         (let ((res (sqlite3-step stmt)))
           (if (= sqlite-row res)
-              (setf result (sqlite3-fetch stmt))
+              (setf result (first (sqlite3-fetch stmt)))
             (error "Unable to retrieve `%s`: %s" key res)))))
     result))
+
+(defun store-get-json (store-name key)
+  (json-read-from-string (store-get store-name key)))
 
 (defun store-delete (store-name key)
   (with-mysqlite3 ((store-get-path store-name))

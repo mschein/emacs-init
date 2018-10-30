@@ -13,23 +13,38 @@
 (require 'elisp-lib)
 
 (defconst bitbucket-api-version "1.0" "The version of the bitbucket api we expect.")
+(defconst bitbucket-password-key "bitbucket-pass")
+
 
 (defun bitbucket-create (server-url &optional user)
   (let ((bb `((:url . ,(path-join server-url "rest/api" bitbucket-api-version)))))
     (when user
-      (append! bb (cons :user user)))
+      (append-cons! bb (cons :user user)))
     bb))
-
-(defun bitbucket-get-password ()
-  (read-passwd "Bitbucket password: "))
-
-(defun bitbucket-get-auth (bb)
-  (when-let (user (cdr (assoc :user bb)))
-                 (concat user ":" (bitbucket-get-password))))
 
 (defun bitbucket-request-common (bb path &rest args)
   (apply #'web-request (path-join (assoc1 :url bb) path)
          :throw t args))
+
+(defun bitbucket-make-auth (bb password)
+  (concat (assoc1 :user bb) ":" password))
+
+(defun bitbucket-verify-password (bb password)
+  (bitbucket-request-common bb "projects"
+                            :auth (bitbucket-make-auth bb password)))
+
+(defun bitbucket-get-password (bb)
+  ;; Cache this, so it's not insanely annoying.
+  (if (password-in-cache-p bitbucket-password-key)
+      (password-read-from-cache bitbucket-password-key)
+    (progn
+      (let ((pass (password-read "Bitbucket password: ")))
+        (bitbucket-verify-password bb pass)
+        (password-cache-add bitbucket-password-key pass)
+        pass))))
+
+(defun bitbucket-get-auth (bb)
+  (bitbucket-make-auth bb (bitbucket-get-password bb)))
 
 (defun bitbucket-request (bb path &rest args)
   (apply #'bitbucket-request-common bb path
@@ -93,7 +108,7 @@
                  (toRef . ,(bitbucket-ref-dict "master" project repo)))))
 
     (when reviewers
-      (append! json `(reviewers . ,(vector (mapcar (fn (reviewer) `((user . ((name . ,reviewer))))) reviewers)))))
+      (append-cons! json `(reviewers . ,(vector (mapcar (fn (reviewer) `((user . ((name . ,reviewer))))) reviewers)))))
 
     (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests")
                        :op "POST"

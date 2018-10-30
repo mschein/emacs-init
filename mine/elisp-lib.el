@@ -617,8 +617,8 @@ Example:
                                       (setf in-quote nil)))
               ((equal c ?\\) (progn
                                (incf i)
-                               (append! out-str (aref str i))))
-              (t (append! out-str c)))
+                               (append-atom! out-str (aref str i))))
+              (t (append-atom! out-str c)))
           (cond
             ((member c '(?\" ?\' ?\`))
              ;; record the quote character
@@ -626,7 +626,7 @@ Example:
                (setf quote-char c)
                (setf in-quote t)))
             ;; pass it on like normal.
-            (t (append! out-str c)))))
+            (t (append-atom! out-str c)))))
       (incf i))
     (concatenate 'string out-str)))
 
@@ -976,7 +976,16 @@ Example:
 (defmacro append! (l &rest values)
   "NOTE! This only works with a symbol, not a complex type."
   (assert (symbolp l))
-  `(setf ,l (append ,l ,@(mapcar (fn (a) `(to-list ,a)) values))))
+  `(setf ,l (append ,l ,@values)))
+
+(defmacro append-atom! (l &rest values)
+  "NOTE! This only works with a symbol, not a complex type."
+  (assert (symbolp l))
+  `(setf ,l (append ,l ,@(mapcar (fn (a) `(list ,a)) values))))
+
+(defmacro append-cons! (l &rest conses)
+  "NOTE! This only works with a symbol, not a complex type."
+  `(append-atom! ,l ,@conses))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Time utils
@@ -1498,14 +1507,14 @@ Example:
       (append! args (list "-f" file-mode)))
 
     (when new-session
-      (append! args "-s"))
+      (append-atom! args "-s"))
 
-    (append! args (format "//%s%s%s%s"
-                          (if domain (format "%s;" domain) "")
-                          (if auth (format "%s@" auth) "")
-                          host
-                          (if remote-path (format "/%s" remote-path) "")))
-    (append! args local-path)
+    (append-atom! args (format "//%s%s%s%s"
+                               (if domain (format "%s;" domain) "")
+                               (if auth (format "%s@" auth) "")
+                               host
+                               (if remote-path (format "/%s" remote-path) "")))
+    (append-atom! args local-path)
 
     (do-cmd "mount_smbfs" args)))
 
@@ -1673,7 +1682,7 @@ end run
 (defun git-init-repo (path &optional bare)
   (let ((args (list path)))
     (when bare
-      (append! args "--bare"))
+      (append-atom! args "--bare"))
     (apply #'run "git" "init" args)))
 
 (cl-defun git-commit-changes (path &key (message "Save current files."))
