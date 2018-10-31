@@ -44,7 +44,8 @@
         pass))))
 
 (defun bitbucket-get-auth (bb)
-  (bitbucket-make-auth bb (bitbucket-get-password bb)))
+  (when (assoc :user bb)
+      (bitbucket-make-auth bb (bitbucket-get-password bb))))
 
 (defun bitbucket-request (bb path &rest args)
   (apply #'bitbucket-request-common bb path
