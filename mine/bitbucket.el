@@ -48,9 +48,9 @@
       (bitbucket-make-auth bb (bitbucket-get-password bb))))
 
 (defun bitbucket-request (bb path &rest args)
-  (apply #'bitbucket-request-common bb path
-         :auth (bitbucket-get-auth bb)
-         args))
+  (assoc1 :json (apply #'bitbucket-request-common bb path
+                       :auth (bitbucket-get-auth bb)
+                       args)))
 
 (defun bitbucket-inject-param (new-param in-args)
   (let* ((copied-args (copy-list in-args))

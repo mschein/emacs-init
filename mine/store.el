@@ -36,7 +36,7 @@
 
   (file-exists-p (store-get-path store-name)))
 
-(defun store-delete-store (store-name)
+(defun store-remove-store (store-name)
   (ensure-makedirs store--directory)
   (delete-file (store-get-path store-name)))
 
@@ -44,7 +44,8 @@
   (with-mysqlite3 ((store-get-path store-name))
     (with-mysqlite3-stmt db "INSERT INTO kv VALUES (?, ?)"
       (sqlite3-bind-multi stmt key value)
-      (sqlite3-step stmt))))
+      (sqlite3-step stmt)))
+  key)
 
 (defun store-add-key-values (store-name kvs)
   (with-mysqlite3 ((store-get-path store-name))
