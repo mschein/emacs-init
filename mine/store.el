@@ -87,12 +87,20 @@
     (nreverse output)))
 
 (defun store-list (store-name)
-  (store--select-statement store-name "SELECT * from kv;"))
+  (mapcar (| cons (first %) (second %))
+          (store--select-statement store-name "SELECT * from kv;")))
+
+(defun store-list-json (store-name)
+  (mapcar (| cons (car %) (json-read-from-string (cdr %)))
+          (store-list store-name)))
 
 (defun store-list-keys (store-name)
-  (store--select-statement store-name "SELECT key from kv;"))
+  (mapcar #'first (store--select-statement store-name "SELECT key from kv;")))
 
 (defun store-list-values (store-name)
-  (store--select-statement store-name "SELECT value from kv;"))
+  (mapcar #'first (store--select-statement store-name "SELECT value from kv;")))
+
+(defun store-list-values-json (store-name)
+  (mapcar #'json-read-from-string (store-list-values store-name)))
 
 (provide 'store)
