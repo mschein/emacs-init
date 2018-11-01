@@ -279,7 +279,7 @@
 
 ;; Add any dynamic modules
 (dolist (module '(sqlite3-api))
-  (when (load (symbol-name module))
+  (when (load (symbol-name module) t)
     (require module)))
 
 ;; Always load these.
