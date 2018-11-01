@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t -*-
 ;; Mike's emacs file.
 
 ;;
@@ -14,6 +15,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lisp functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Wrap in try catch
+;; This must be the first form.
+(setq lexical-binding t)
+
 (require 'cl-lib)
 (require 'subr-x)
 (require 'json)
@@ -22,8 +27,6 @@
 ;; (require 'dash)
 (require 'ht)
 
-;; Wrap in try catch
-(setf lexical-binding t)
 
 (setf directory-sep "/")
 
