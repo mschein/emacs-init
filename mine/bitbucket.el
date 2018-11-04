@@ -19,7 +19,7 @@
 (defun bitbucket-create (server-url &optional user)
   (let ((bb `((:url . ,(path-join server-url "rest/api" bitbucket-api-version)))))
     (when user
-      (append-cons! bb (cons :user user)))
+      (append-cons! bb :user user))
     bb))
 
 (defun bitbucket-request-common (bb path &rest args)
@@ -109,7 +109,7 @@
                  (toRef . ,(bitbucket-ref-dict "master" project repo)))))
 
     (when reviewers
-      (append-cons! json `(reviewers . ,(vector (mapcar (fn (reviewer) `((user . ((name . ,reviewer))))) reviewers)))))
+      (append-atom! json `(reviewers . ,(vector (mapcar (fn (reviewer) `((user . ((name . ,reviewer))))) reviewers)))))
 
     (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests")
                        :op "POST"

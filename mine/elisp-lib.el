@@ -986,9 +986,9 @@ Example:
   (assert (symbolp l))
   `(setf ,l (append ,l ,@(mapcar (fn (a) `(list ,a)) values))))
 
-(defmacro append-cons! (l &rest conses)
+(defmacro append-cons! (l key value)
   "NOTE! This only works with a symbol, not a complex type."
-  `(append-atom! ,l ,@conses))
+  `(append-atom! ,l (cons ,key ,value)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Time utils
