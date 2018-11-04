@@ -278,6 +278,23 @@
     (add-to-list 'load-path path)))
 
 ;; Add any dynamic modules
+;;
+;; To create the sqlite3-api module:
+;; https://github.com/pekingduck/emacs-sqlite3-api
+;;
+;; git clone https://github.com/pekingduck/emacs-sqlite3-api.git
+;; cd emacs-sqlite3-api
+;; make HOMEBREW=1
+;;
+;; Also, don't forget that emacs MUST be compiled with
+;; the --with-modules flag.  To re-compile do:
+;; brew info emacs
+;; brew cp /usr/local/Cellar/emacs/<version>/.brew/emacs.rb ~/
+;; brew unlink emacs
+;; brew install ~/emacs.rb --with-modules <other args>
+;;
+;; When properly compiled, the module-file-suffix variable will be set.
+;;
 (dolist (module '(sqlite3-api))
   (when (load (symbol-name module) t)
     (require module)))
