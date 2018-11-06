@@ -1605,6 +1605,25 @@ end run
       (osx-firefox-open-new-window url)
     (run "open" url)))
 
+(defun osx-open (&rest cmd)
+  "OSX's open command can be used for many things, including
+   connecting to servers and vnc, etc."
+
+  (apply #'run "open" cmd))
+
+(defun osx-open-vnc (ip)
+  "Open a VNC using OSX's internal VNC.  `ip' can be a hostname
+   or an ip address.
+
+   Note, this may require the vnc app to already be open?
+   I'm not completely clear on that.
+   "
+  (osx-open (format "vnc://%s" ip)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Environment Commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun dumpenv ()
   "Dump the current environment into an alist."
   (mapcar (lambda (var)
@@ -1635,6 +1654,7 @@ end run
     (mapc (fn ((name . old-value))
               (setenv name old-value))
           old-env-values)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Git commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
