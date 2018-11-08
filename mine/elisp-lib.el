@@ -905,16 +905,21 @@ Example:
     `(let* ((,old-buffer (current-buffer))
             (,new-buffer (generate-new-buffer ,name-prefix)))
      (switch-to-buffer ,new-buffer)
-     (ignore-errors
-       ,@body)
-     (switch-to-buffer ,old-buffer))))
+     (unwind-protect
+         (progn
+           ,@body)
+       (switch-to-buffer ,old-buffer)))))
 
 (defmacro with-overwrite-buffer (name &rest body)
   (declare (indent defun))
-  `(progn
-     (switch-to-buffer ,name)
-     (clear-buffer (current-buffer))
-     ,@body))
+  (with-gensyms (old-buffer)
+    `(let ((,old-buffer (current-buffer)))
+       (unwind-protect
+           (progn
+             (switch-to-buffer ,name)
+             (clear-buffer (current-buffer))
+             ,@body)
+         (switch-to-buffer ,old-buffer)))))
 
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
