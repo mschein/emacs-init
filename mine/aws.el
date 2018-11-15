@@ -370,7 +370,7 @@
        (aws-traverse '(0 taskDefinitionArn)
                      (aws-ecs-describe-tasks cluster (aref (aws-ecs-list-tasks cluster service-name) 0)))))))
 
-(defun aws-get-service-image-name (service-name)
+(defun aws-get-service-ecr-image-name (service-name)
   (aws-traverse '(containerDefinitions 0 image)
                 (aws-get-task-definition-for-service service-name)))
 

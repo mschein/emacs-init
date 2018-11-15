@@ -122,4 +122,13 @@
   (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests"
                                    (format "%s" id))))
 
+(defun bitbucket-fetch-pull-request-activites (bb project repo id)
+  (bitbucket-request-all bb (path-join "projects" project "repos" repo "pull-requests" (format "%s" id) "activities")))
+
+(defun bitbucket-fetch-pull-request-comments (bb project repo id)
+  (cl-loop for activity across (bitbucket-fetch-pull-request-activites bb project repo id)
+           for comment = (cdr (assoc 'comment activity))
+           if (and comment (> (length comment) 0))
+           collect comment))
+
 (provide 'bitbucket)
