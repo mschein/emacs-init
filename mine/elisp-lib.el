@@ -64,8 +64,8 @@
 
    Returns the value (The cdr of the element).
    Values can be nil and it will still work.
-   `key`: The key to lookup
-   `alist`: The associated list to check.
+   `key': The key to lookup
+   `alist': The associated list to check.
   "
 
   (if-let (answer (rassoc value list))
@@ -87,6 +87,36 @@
            unless (ht-contains? h k)
            collect (cons k v)
            do (ht-set h k t)))
+
+(defun assoc1-traverse (steps data)
+  "Traverse a series of alists and arrays as returned by aws and
+   emacs's json parser.
+
+   The caller can specify an integer for the array/list index,
+   a string/symbol for an alist, and a function for anything else needed.
+
+
+   Example: (aws-traverse '(Reservations 0 Instances 0) (aws-ec2-describe-instances instance-ids))"
+
+  (cl-loop for step in steps
+           with data = data do
+     (etypecase step
+       (integer (setf data (elt data step)))
+       (symbol (setf data (assoc1 step data)))
+       (string (setf data (assoc1 step data)))
+       (function (setf data (funcall step data))))
+     finally return data))
+
+(defun assoc1-to-assoc (mappings data)
+  "Translate an alist or json blob into a new alist.
+
+  `mappings' should be an alist that contains:
+             ((<name> . (steps to pass to `assoc1-traverse')
+
+  `data': The structure to remap."
+  (cl-loop for (name . steps) in mappings
+           for value = (assoc1-traverse steps data)
+           collect (cons name value)))
 
 (defun identity (arg)
   arg)

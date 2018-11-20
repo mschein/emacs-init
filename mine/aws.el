@@ -115,19 +115,8 @@
 ;; Need to make this take do-cmd's arguments?
 (defvar -aws-return-json nil "Control what the -aws function returns")
 
-(defun aws-traverse (steps data)
-  "Traverse a series of alists and arrays as returned by aws and
-   emacs's json parser.
-
-   Example: (aws-traverse '(Reservations 0 Instances 0) (aws-ec2-describe-instances instance-ids))"
-
-  (cl-loop for step in steps
-           with data = data do
-     (etypecase step
-       (integer (setf data (aref data step)))
-       (symbol (setf data (assoc1 step data)))
-       (string (setf data (assoc1 step data))))
-     finally return data))
+;; TODO(mscheinh): get rid of this shim.
+(defalias 'aws-traverse 'assoc1-traverse)
 
 (defun* -aws (&rest args)
   (let ((resp (do-cmd (cons "aws" args) :stdout 'string :stderr 'string :throw t)))
@@ -417,6 +406,9 @@
   (let ((cluster (second (string-split "/" cluster))))
     (assert cluster)
     cluster))
+
+(defun aws-list-account-aliases ()
+  (aws-iam "list-account-aliases"))
 
 (provide 'aws)
 

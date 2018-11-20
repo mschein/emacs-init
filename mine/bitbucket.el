@@ -131,4 +131,9 @@
            if (and comment (> (length comment) 0))
            collect comment))
 
+(defun bitbucket-inbox (bb &optional role)
+  (bitbucket-request-all bb "inbox/pull-requests"
+                         :params (when role
+                                   `((role . ,role)))))
+
 (provide 'bitbucket)
