@@ -131,9 +131,11 @@
            if (and comment (> (length comment) 0))
            collect comment))
 
-(defun bitbucket-inbox (bb &optional role)
+(cl-defun bitbucket-inbox (bb &key role limit start)
   (bitbucket-request-all bb "inbox/pull-requests"
-                         :params (when role
-                                   `((role . ,role)))))
+                         :params (remove-if (| not (cdr %))
+                                            `((role . ,role)
+                                              (limit . ,limit)
+                                              (start . ,start)))))
 
 (provide 'bitbucket)

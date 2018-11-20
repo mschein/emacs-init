@@ -102,9 +102,11 @@
            with data = data do
      (etypecase step
        (integer (setf data (elt data step)))
+       ;; Be aware that the ordering here is important
+       ;; since functions are a subset of symbols.
+       (function (setf data (funcall step data)))
        (symbol (setf data (assoc1 step data)))
-       (string (setf data (assoc1 step data)))
-       (function (setf data (funcall step data))))
+       (string (setf data (assoc1 step data))))
      finally return data))
 
 (defun assoc1-to-assoc (mappings data)
@@ -533,10 +535,12 @@ Example:
       res)))
 
 (defun all-true (list)
+  "Is this entire sequence true values?"
   ;; Note, since or is a macro, we can't do 'or
   (reduce (| and %1 %2) list))
 
 (defun any-true (list)
+  "Are any members of this list true?"
   ;; Note, since or is a macro, we can't do 'or
   (reduce (| or %1 %2) list))
 
