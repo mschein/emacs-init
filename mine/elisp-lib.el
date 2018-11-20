@@ -299,11 +299,19 @@ of the test."
 (defun last-car (list)
   (car (last list)))
 
-(defun take (n list)
-  (butlast list (- (length list) n)))
+(defun take (n seq)
+  "Take `n' from the start of `seq'.  Note that this
+  is not implemented efficiently, so only use when n is small."
+  (cl-loop for x below (min n (length seq))
+           collect (elt seq x)))
 
-(defun drop (n list)
-  (last list (- (length list) n)))
+(defun drop (n seq)
+  "Drop the first `n' elements from `seq'.
+
+  Note that this is not efficient, don't use
+  it for large sequences."
+  (cl-loop for x from n below (length seq)
+           collect (elt seq x)))
 
 (defmacro |->> (&rest forms)
   `(| ->> % ,@forms))
