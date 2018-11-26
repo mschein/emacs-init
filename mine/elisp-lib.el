@@ -958,7 +958,14 @@ Example:
              (switch-to-buffer ,name)
              (clear-buffer (current-buffer))
              ,@body)
-         (switch-to-buffer ,old-buffer)))))
+         (beginning-of-buffer)))))
+
+(defmacro with-overwrite-buffer-pp (name &rest body)
+  (declare (indent defun))
+  `(with-overwrite-buffer ,name
+     (insert (pp-to-string
+              ,@body))))
+
 
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
