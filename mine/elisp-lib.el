@@ -936,6 +936,12 @@ Example:
     (cd dir)
     (funcall handle-fn name)))
 
+;; TODO(mike): Does it make sense to have these as macros if
+;; I just switch to the new buffer?
+;;
+;; Is there a smarter way to do this?  The with- macro sort
+;; of implies you'll do stuff after the macro is finished.
+;;
 (defmacro with-new-buffer (name-prefix &rest body)
   (declare (indent defun))
   (let ((old-buffer (gensym))
@@ -966,6 +972,12 @@ Example:
      (insert (pp-to-string
               ,@body))))
 
+(defmacro with-shell-buffer (dir name &rest body)
+  (declare (indent defun))
+  `(progn
+     (switch-to-buffer (shell-open-dir ,dir))
+     (rename-buffer ,name)
+     ,@body))
 
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
