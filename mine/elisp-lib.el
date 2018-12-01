@@ -1558,6 +1558,18 @@ Example:
 (defun umount-dmg (path)
   (run "hdiutil" "detach" path))
 
+(cl-defun make-smb-url (&key user host path)
+  (assert host)
+
+  (let ((url "smb://"))
+    (when user
+      (setf url (concat url user "@")))
+    (when host
+      (setf url (concat url host "/")))
+    (when path
+      (setf url (concat url path)))
+    url))
+
 (cl-defun mount-smbfs (host remote-path local-path
                             &key user password domain dir-mode file-mode options new-session)
   "Run the osx mount_smbfs command."
@@ -1589,6 +1601,23 @@ Example:
     (append-atom! args local-path)
 
     (do-cmd "mount_smbfs" args)))
+
+(defun list-mount-points ()
+  "Return an alist of each mounted file/directory (see the return value of mount)."
+  (cl-loop for line in (string->list (run-to-str "mount"))
+           for split_line = (string-find "\\(.+?\\) on \\(.+?\\) (\\([^)]+\\))" line)
+           do (assert (and split_line (= 3 (length split_line))))
+           collect (map 'list #'cons '(:location :mount-point :flags) split_line)))
+
+(defun umount-folder (folder)
+    (interactive (list (completing-read "folder: " (mapcar (| assoc1 :mount-point %) (list-mount-points)))))
+    (run "umount" folder))
+
+(defun show-mount-points ()
+  "Dump mount point information into a buffer."
+  (interactive)
+  (with-overwrite-buffer-pp "+mount-points+"
+    (list-mount-points)))
 
 (defun osx-screen-lock ()
   "Lock the screen immediately"
