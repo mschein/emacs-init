@@ -552,6 +552,8 @@ that uses 'font-lock-warning-face'."
 (defalias 'tf 'toggle-frame-fullscreen)
 (defalias 'fow 'find-file-other-window)
 
+(defalias 'shv 'open-shell-dir-venv)
+
 ;; More keyboard aliases
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)

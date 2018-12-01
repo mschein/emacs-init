@@ -1772,6 +1772,17 @@ end run
 (defun git-remote-add-origin (origin)
   (run "git" "remote" "add" "origin" origin))
 
+(defun git-remote-list ()
+  (string->list (run-to-str "git" "remote")))
+
+(defun git-remote-remove (name)
+  (run "git" "remote" "remove" name))
+
+(defun git-remote-remove-all ()
+  (dolist (remote-name (git-remote-list))
+    (message "Removing remote %s" remote-name)
+    (git-remote-remove remote-name)))
+
 (defun git-push-origin-master ()
   (run "git" "push" "-u" "origin" "master"))
 
@@ -1827,7 +1838,7 @@ end run
 (defcustom git-repo-remote-dir nil
   "A variable pointing to a 'local' directory for storing git repos.")
 
-(cl-defun git-repo-init-remote (dir)
+(defun git-init-setup-remote-repo-dir (dir)
   ;; I could try prompting for the password and automounting
   (assert (file-exists-p git-repo-remote-dir))
 
@@ -1848,8 +1859,14 @@ end run
             (git-init-repo ".")
             (run "git" "add" ".")
             (git-commit-changes "." :message "Initial repo commit.")
+            (git-remote-remove-all)
             (git-remote-add-origin remote-repo-dir)
             (git-push-origin-master)))))))
+
+(defun git-init-remote-repo ()
+  "Create a master git repo in the `git-repo-remote-dir' directory."
+  (interactive)
+  (git-init-setup-remote-repo-dir (git-project-root)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands

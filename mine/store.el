@@ -1,6 +1,10 @@
 ;;;
 ;;; Code for a local store.
 ;;;
+;;; The idea is this should be a generic way to have emacs databases.
+;;; It provides a basic key value store and support for sqlite
+;;; schemas.
+;;;
 
 (require 'cl-lib)
 (require 'elisp-lib)
