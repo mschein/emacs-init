@@ -708,8 +708,6 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\C-cb" 'org-iswitchb)
 (global-set-key "\C-c o" 'org-open-at-point-global)
 
-
-
 ;; Add support for wiki exporting. !!! NOTE !!!
 ;; This touches experimental stuff, so it could easily break on upgrade.
 (require 'org-mw)

@@ -605,6 +605,11 @@ Example:
 (defun string-right-trim-regex (regex str)
   (replace-regexp-in-string (format "%s$" regex) "" str))
 
+;; (defun string-strip-non-ascii (s)
+;;   (concat (cl-loop for c across s
+;;                    if (aref printable-chars c)
+;;                    collect c)))
+
 (defmacro if-string (obj &rest forms)
   "Execute the true form if the string is length > 0"
   (declare (indent 2))
@@ -957,14 +962,17 @@ Example:
 
 (defmacro with-overwrite-buffer (name &rest body)
   (declare (indent defun))
-  (with-gensyms (old-buffer)
-    `(let ((,old-buffer (current-buffer)))
+  (with-gensyms (old-buffer buffer-name)
+    `(let ((,old-buffer (current-buffer))
+           (,buffer-name ,name))
        (unwind-protect
            (progn
-             (switch-to-buffer ,name)
+             (switch-to-buffer ,buffer-name)
              (clear-buffer (current-buffer))
              ,@body)
-         (beginning-of-buffer)))))
+         (progn
+           (switch-to-buffer ,buffer-name)
+           (beginning-of-buffer))))))
 
 (defmacro with-overwrite-buffer-pp (name &rest body)
   (declare (indent defun))
