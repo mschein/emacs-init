@@ -16,6 +16,7 @@
 ;; Edebug:
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Edebug.html#Edebug
 ;; To turn on edebug: C-M-x C-u (function definition)
+;; also see: lispy-mode
 ;;
 ;; Orgmode notes
 ;; to get Emacs documentation:
