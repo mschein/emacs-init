@@ -13,6 +13,10 @@
 ;;
 ;; find Jedi
 ;;
+;; Edebug:
+;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Edebug.html#Edebug
+;; To turn on edebug: C-M-x C-u (function definition)
+;;
 ;; Orgmode notes
 ;; to get Emacs documentation:
 ;; M-x info (lots of stuff here)
