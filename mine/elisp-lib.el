@@ -20,6 +20,7 @@
 (require 'subr-x)
 (require 'json)
 (require 's)
+(require 'f)
 (require 'uuidgen)
 ;; (require 'dash)
 (require 'ht)
@@ -578,11 +579,11 @@ Example:
 (defun string-split (sep-regex str)
   (split-string str sep-regex))
 
-(defun string-nil-or-empty (s)
+(defun string-nil-or-empty-p (s)
   (= 0 (length s)))
 
 (defun string-has-val (s)
-  (not (string-nil-or-empty s)))
+  (not (string-nil-or-empty-p s)))
 
 (defun string-ends-with (suffix str)
   (string-match (concat (regexp-quote suffix) "$") str))
@@ -593,7 +594,7 @@ Example:
 (defun string-or (&rest args)
   ;; Loop through the args, return the first not nil or empty
   ;; string
-  (dolist (str args) (if-not (string-nil-or-empty str) (return str))))
+  (dolist (str args) (if-not (string-nil-or-empty-p str) (return str))))
 
 (defun string-trim-chars (str front-group back-group)
   "Remove leading and trailing characters from a string."
@@ -1320,7 +1321,7 @@ Example:
          (printf "arg-str: |%s|\n" arg-str)
          (goto-char pos)
          (insertf "(interactive%s)"
-                  (if (string-nil-or-empty arg-str)
+                  (if (string-nil-or-empty-p arg-str)
                       ""
                     (format " \"%s\""
                             (string-join
@@ -1850,8 +1851,9 @@ end run
   ;; I could try prompting for the password and automounting
   (assert (file-exists-p git-repo-remote-dir))
 
-  (let ((repo-name (basename dir)))
-    (assert repo-name)
+  (let ((repo-name (last-car (f-split (expand-file-name dir)))))
+    (assert (not (string-nil-or-empty-p repo-name)))
+
     (message "Add repo %s to our remote repository." repo-name)
     (let ((remote-repo-dir (path-join git-repo-remote-dir (concat repo-name ".git"))))
       (message "Init remote repo: %s" remote-repo-dir)
@@ -1874,7 +1876,12 @@ end run
 (defun git-init-remote-repo ()
   "Create a master git repo in the `git-repo-remote-dir' directory."
   (interactive)
-  (git-init-setup-remote-repo-dir (git-project-root)))
+  (git-init-setup-remote-repo-dir
+   (if (git-in-working-tree)
+       (git-project-root)
+     (if (y-or-n-p (format "Is %s the base of the repo?" default-directory))
+         default-directory
+       (error "Please run this command from the root of the repo!")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
