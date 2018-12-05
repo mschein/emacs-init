@@ -215,6 +215,23 @@ of the test."
       `(let ((,name ,test))
          (if ,name ,@forms)))))
 
+(unless (fboundp 'if-let)
+  (defmacro if-let (test-binding &rest forms)
+    "Provides an if macro that binds a value a la let.
+
+     Example:
+      (if-let (res (fetch-string))
+        (convert-to-something res)
+        (error \"failed to fetch string\"))
+     Here res is the name, and (fetch-string) is the
+     test clause.  If fetch-string returns nil, the
+     error case is executed, otherwise the success
+     case is executed.  res is bount to the result
+     of the test."
+    (destructuring-bind (name test) test-binding
+      `(let ((,name ,test))
+         (if ,name ,@forms)))))
+
 (unless (fboundp 'if-let*)
   (defmacro if-let* (test-bindings &rest forms)
     "Provides an if-let macro that only works if all lets are true"
