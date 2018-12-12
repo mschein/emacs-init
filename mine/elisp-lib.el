@@ -2465,7 +2465,6 @@ python debugging session."
                 (fn fn)
                 (timeout-sec timeout-sec))
     (fn (&rest args)
-        (message "Memoize: ht keys: %s timeout-sec: %s" (ht-keys ht) timeout-sec)
         (cl-labels ((lookup ()
                     (if-let (entry (ht-get ht args))
                         ;; Delete the current value if there is a timeout.
@@ -2478,7 +2477,7 @@ python debugging session."
                               (ht-remove ht args)
                               (lookup))
                           (progn
-                              (message "Time remaining: %s" (time-to-seconds (time-subtract (current-time) (cdr entry))))
+                              (message "Memoize: Success.")
                               (car entry)))
                       (progn
                         (let ((res (apply fn args)))
