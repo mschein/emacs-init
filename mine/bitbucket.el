@@ -125,25 +125,25 @@
 (defun bitbucket-fetch-pull-request-activites (bb project repo id)
   (bitbucket-request-all bb (path-join "projects" project "repos" repo "pull-requests" (format "%s" id) "activities")))
 
-(defun bitbucket-diff (bb project repo id)
-  (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests" (format "%s" id) "diff")))
-
 (defun bitbucket-fetch-pull-request-comments (bb project repo id)
   (cl-loop for activity across (bitbucket-fetch-pull-request-activites bb project repo id)
            for comment = (cdr (assoc 'comment activity))
            if (and comment (> (length comment) 0))
            collect comment))
 
-(cl-defun bitbucket-inbox (bb &optional role)
-  (bitbucket-request-all bb "inbox/pull-requests"
-                         :params (remove-if (| not (cdr %))
-                                            `((role . ,role)))))
+(defun bitbucket-fetch-pull-request-diff (bb project repo id)
+  (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests" (format "%s" id) "diff")))
 
-(defun bitbucket-diff-score (bb project repo id)
-    (cl-loop for file across (assoc1 'diffs (bitbucket-diff bb project repo id))
+(defun bitbucket-fetch-pull-request-diff-score (bb project repo id)
+    (cl-loop for file across (assoc1 'diffs (bitbucket-fetch-pull-request-diff bb project repo id))
              for hunks = (assoc1 'hunks file)
              sum (cl-loop for hunk across hunks
                           sum (+ (assoc1 'sourceSpan hunk)
                                  (assoc1 'destinationSpan hunk)))))
+
+(cl-defun bitbucket-inbox (bb &optional role)
+  (bitbucket-request-all bb "inbox/pull-requests"
+                         :params (remove-if (| not (cdr %))
+                                            `((role . ,role)))))
 
 (provide 'bitbucket)
