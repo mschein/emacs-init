@@ -1245,6 +1245,42 @@ Example:
   (directory-last-dirname \"/a/b/c.txt\") -> \"b\""
   (-> path directory-file-name split-path last-car))
 
+(cl-defun list-directory-entries (dir &key full ignore match nosort files-only dirs-only)
+  "Return only the files in `dir' with some options.
+
+   There are lots of Emacs functions which do similar things,
+   I'm trying to make this the most useful.
+
+   There is `directory-files', `list-directory',
+   `directory-files-recursively', `file-name-all-completions' with "".
+
+   The options are:
+     `full': Return the full path name for each entry.
+     `ignore': An emacs regex of files to ignore.
+     `match': An emacs regex of files to keep.  Like `directory-files' match.
+     `nosort': Don't sort the file names.  Like `directory-files' sort."
+
+   (let ((args (list dir)))
+     (when full
+       (append-atom! args t))
+     (when match
+       (append-atom! args match))
+     (when nosort
+       (append-atom! args t))
+     (remove-if (fn (path)
+                  (let* ((name (basename path))
+                        (full-path (expand-file-name (path-join dir name))))
+                    (message "is-file %s (isdir %s): %s" (path-join dir name)
+                             (file-directory-p full-path)
+                             (and files-only (file-directory-p full-path)))
+                    (message "is-dir: %s" (and dirs-only (not (file-directory-p (path-join dir name)))))
+                    (or (string= "." name)
+                        (string= ".." name)
+                        (and files-only (file-directory-p full-path))
+                        (and dirs-only (not (file-directory-p full-path)))
+                        (and ignore
+                             (string-match ignore name)))))
+                (apply #'directory-files args))))
 
 
 (defun current-last-dirname ()
