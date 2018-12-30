@@ -1245,7 +1245,7 @@ Example:
   (directory-last-dirname \"/a/b/c.txt\") -> \"b\""
   (-> path directory-file-name split-path last-car))
 
-(cl-defun list-directory-entries (dir &key full ignore match nosort files-only dirs-only)
+(cl-defun list-directory-entries (dir &key full ignore match nosort files-only dirs-only filter)
   "Return only the files in `dir' with some options.
 
    There are lots of Emacs functions which do similar things,
@@ -1270,14 +1270,11 @@ Example:
      (remove-if (fn (path)
                   (let* ((name (basename path))
                         (full-path (expand-file-name (path-join dir name))))
-                    (message "is-file %s (isdir %s): %s" (path-join dir name)
-                             (file-directory-p full-path)
-                             (and files-only (file-directory-p full-path)))
-                    (message "is-dir: %s" (and dirs-only (not (file-directory-p (path-join dir name)))))
                     (or (string= "." name)
                         (string= ".." name)
                         (and files-only (file-directory-p full-path))
                         (and dirs-only (not (file-directory-p full-path)))
+                        (and filter (not (funcall filter name)))
                         (and ignore
                              (string-match ignore name)))))
                 (apply #'directory-files args))))
