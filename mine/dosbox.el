@@ -74,13 +74,15 @@
 
   (let* ((data (assoc1 name dosbox-game-table))
          (exec (path-join (assoc1 :dir data) (assoc1 :exec data)))
-         (config-file (cdr (assoc :config-file data))))
+         (config-file (assoc-get :config-file data))
+         (full-screen (assoc-get :full-screen data)))
 
     (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
+    (message "Use ctrl+F10 for full screen.")
     (with-tempdir (:root-dir "/tmp")
       ;; Deal with any custom config that's not in a file.
       (let ((file-name "config.ini"))
-        (when-let (adjustments (cdr (assoc :config data)))
+        (when-let (adjustments (assoc-get :config data))
           (barf (dosbox-ini-write adjustments) file-name)
           (setf config-file file-name)))
 
@@ -88,13 +90,16 @@
         (when (string-has-val config-file)
           (append-atom! extra-args "-conf" config-file))
 
-        (dosbox-run exec "-conf" "config.ini")
+        (when full-screen
+          (append-atom! extra-args "-fullscreen"))
+
+        (apply #'dosbox-run exec extra-args)
 
         ;; Keep the config file around long enough to start it.
         ;; This is gross, and I should find a better mechanism.
         (sleep-for 5)))))
 
-(defun dosbox-open-global-config ()
+(defun dosbox-open-config ()
   (interactive)
   (find-file dosbox-global-config))
 

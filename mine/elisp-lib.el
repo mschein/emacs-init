@@ -73,6 +73,12 @@
       (cdr answer)
     (error "Value \'%s\' not found" value)))
 
+(defun assoc-get (key alist &optional default)
+  "Return value of `key' exists in `alist' otherwise nil"
+  (if-let (value (assoc key alist))
+      (cdr value)
+    default))
+
 (defun assoc-keys (alist)
   "Return all of the keys in an alist.  That is the `car' values."
   (mapcar #'car alist))
@@ -765,6 +771,15 @@ Example:
 ;;
 ;; I may also want to add an 'environment' input to the function.
 ;; for stuff like ecr access.
+;;
+;; Ponder how to do async.
+;;  Issues:
+;;   - start-process vs call-proc command differences.
+;;   - should I just make a new command?
+;;
+;;  It seems like you get a handle back, that you can use
+;;  to see what happened (it also creates a communication buffer.)
+;;
 ;;
 (cl-defun do-cmd (cmd &key input stdout stderr throw ssh)
   ;; Add an async function
