@@ -6,6 +6,15 @@
 
 (defvar dosbox-game-table '() "alist of game name -> location mappings")
 
+;; Feature ideas:
+;;
+;; - Add a link to the web page
+;; - Add a link to the manual (open it as an option.)
+;;   - local file or webpage.
+;; - Add the ability (with a prefix arg) to just
+;;   mount the dir, without running the exec.
+;;
+
 (defconst dosbox-ini-section-template
   "
 #
@@ -42,14 +51,15 @@
       (:exec . ,(if (= 1 (length filtered-execs))
                     (first filtered-execs)
                   ""))
-      (:execs . ,execs)
-      (:config-file . "")
-      (:config . nil))))
+      (:execs . ,execs))))
 
-(defun dosbox--list-games ()
+(defun dosbox-list-games ()
   (cl-loop for game-dir-name in (list-directory-entries dosbox-games :dirs-only t)
            collect (cons (downcase game-dir-name)
                          (dosbox-build-metadata (path-join dosbox-games game-dir-name)))))
+
+(defun dosbox-sort-games (games)
+  (sort* (copy-list games) #'string< :key #'car))
 
 ;; This isn't the right way to do this:
 (defun dosbox-init-games (game-table)
@@ -78,7 +88,7 @@
          (full-screen (assoc-get :full-screen data)))
 
     (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
-    (message "Use ctrl+F10 for full screen.")
+    (message "Use alt (no fn) enter for full screen.")
     (with-tempdir (:root-dir "/tmp")
       ;; Deal with any custom config that's not in a file.
       (let ((file-name "config.ini"))
