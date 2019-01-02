@@ -916,7 +916,11 @@ that uses 'font-lock-warning-face'."
 ;; Turn on flymake with pylink et al.
 
 ;; Move flymake errors to the mini-buffer
-(when (< emacs-major-version 26)
+(if (>= emacs-major-version 26)
+    (eval-after-load 'flymake
+      (progn
+        (require 'flymake-diagnostic-at-point)
+        (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
   (require 'flymake-cursor))
 
 ;; Run the pycheck.sh script to make flymake work
@@ -1084,7 +1088,7 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
    (quote
-    (ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-lsp company-shell use-package lsp-css lsp-html lsp-java lsp-javascript-flow lsp-mode lsp-python lsp-ui hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-lsp company-shell use-package lsp-css lsp-html lsp-java lsp-javascript-flow lsp-mode lsp-python lsp-ui hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue s seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

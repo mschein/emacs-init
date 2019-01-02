@@ -46,7 +46,7 @@
    So (assoc1 '(a b c) '((a . ((b . ((c . 1))))))) -> 1
 
    `keys': The key or a list of keys to lookup.
-   `alist': The associated list to check.
+   `list': The associated list to check.
   "
   (let ((keys (to-list keys)))
     (cl-flet ((as (key al)
@@ -66,7 +66,7 @@
    Returns the value (The cdr of the element).
    Values can be nil and it will still work.
    `key': The key to lookup
-   `alist': The associated list to check.
+   `list': The associated list to check.
   "
 
   (if-let (answer (rassoc value list))
