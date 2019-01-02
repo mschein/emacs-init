@@ -888,16 +888,16 @@ that uses 'font-lock-warning-face'."
 (require 'autopair)
 
 ;; Don't add autopair in certain modes
-(add-hook 'sldb-mode-hook #'(lambda ()
-                              (setq autopair-dont-activate t)
-                              (autopair-mode -1)))
-(add-hook 'term-mode-hook #'(lambda ()
-                              (setq autopair-dont-activate t)
-                              (autopair-mode -1)))
-
+(dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
+  (add-hook mode #'(lambda ()
+                     (setq autopair-dont-activate t)
+                     (autopair-mode -1))))
+;;
 ;; enable autopair in all buffers
+;; TODO(mls): I may want to move this into mode hooks, to improve
+;; performance.
+;;
 (autopair-global-mode)
-
 
 ;;
 ;; Python Mode stuff.
@@ -923,10 +923,6 @@ that uses 'font-lock-warning-face'."
         (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
   (require 'flymake-cursor))
 
-;; Run the pycheck.sh script to make flymake work
-;; with python files.
-(add-hook 'find-file-hook 'flymake-find-file-hook)
-
 (defmacro define-flymake-checker (func cmd &rest args)
   "Define a flymake checker function.
    It will be named `func', and will execute cmd + the rest of the args."
@@ -940,37 +936,43 @@ that uses 'font-lock-warning-face'."
                                                (file-name-directory buffer-file-name))))
          (list ,cmd (list ,@args ,local-file))))))
 
-(define-flymake-checker flymake-flake8-checker "flake8")
-(define-flymake-checker flymake-flake83-checker "flake83")
+;; (define-flymake-checker flymake-flake8-checker "flake8")
+;; (define-flymake-checker flymake-flake83-checker "flake83")
 
-(defun setup-python-mode-common (interpreter checker)
-  (setq py-python-command interpreter)
-  (setq python-shell-interpreter interpreter)
-  (update-flymake-mask "\\.py\\'" checker)
-  (when (eql 'python-mode major-mode)
-    (update-flymake-mask "." checker)))
+(when (< emacs-major-version 26)
+  ;;
+  ;; This is my old (25 and below) flymake setup code for Python.
+  ;; for 26, python.el does what we need out of the box.
+  ;;
+  (defun setup-python-mode-common (interpreter checker)
+    (setq py-python-command interpreter)
+    (setq python-shell-interpreter interpreter)
+    (update-flymake-mask "\\.py\\'" checker)
+    (when (eql 'python-mode major-mode)
+      (update-flymake-mask "." checker)))
 
-(defun setup-python3-mode ()
-  (interactive)
-  (setup-python-mode-common "python3" #'flymake-flake83-checker)
-  (message "Set python3 mode"))
+  (defun setup-python3-mode ()
+    (interactive)
+    (setup-python-mode-common "python3" #'flymake-flake83-checker)
+    (message "Set python3 mode"))
 
-(defun setup-python2-mode ()
-  (interactive)
-  (setup-python-mode-common "python" #'flymake-flake8-checker)
-  (message "Set python2 mode"))
+  (defun setup-python2-mode ()
+    (interactive)
+    (setup-python-mode-common "python" #'flymake-flake8-checker)
+    (message "Set python2 mode"))
 
-(when (load "flymake" t)
-  ;; Do I need this, if I call this during the mode hook?
-  (setup-python3-mode))
 
-;; If we're in python mode, make sure flymake comes on.
-(add-hook 'python-mode-hook #'(lambda ()
-                                ;; enable flymake-python for files with no '.py' extension
-                                (make-local-variable 'flymake-allowed-file-name-masks)
-                                (if (guess-python-version-3)
-                                    (setup-python3-mode)
-                                  (setup-python2-mode))))
+  (when (load "flymake" t)
+    ;; Do I need this, if I call this during the mode hook?
+    (setup-python3-mode))
+
+  If we're in python mode, make sure flymake comes on.
+  (add-hook 'python-mode-hook #'(lambda ()
+                                  ;; enable flymake-python for files with no '.py' extension
+                                  (make-local-variable 'flymake-allowed-file-name-masks)
+                                  (if (guess-python-version-3)
+                                      (setup-python3-mode)
+                                    (setup-python2-mode)))))
 
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
@@ -1024,22 +1026,24 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; TODO: I should make a function to simplify these declarations.
 ;;
-(define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
-(define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
 
-(when (load "flymake" t)
-  (add-to-list 'flymake-allowed-file-name-masks
-               '("\\.jsx\\'" flymake-eslint-checker))
-  (add-to-list 'flymake-allowed-file-name-masks
-               '("\\.js\\'" flymake-js-checker)))
+(when (< emacs-major-version 26)
+  (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
+  (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
+
+  (when (load "flymake" t)
+    (add-to-list 'flymake-allowed-file-name-masks
+                 '("\\.jsx\\'" flymake-eslint-checker))
+    (add-to-list 'flymake-allowed-file-name-masks
+                 '("\\.js\\'" flymake-js-checker)))
 
 
-;;
-;; Turn off flymake for xml/html since I can't get it to work
-;;
-(setf flymake-allowed-file-name-masks (remove-if
-                                       (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
-                                       flymake-allowed-file-name-masks))
+  ;;
+  ;; Turn off flymake for xml/html since I can't get it to work
+  ;;
+  (setf flymake-allowed-file-name-masks (remove-if
+                                         (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
+                                         flymake-allowed-file-name-masks)))
 
 (add-hook 'html-mode-hook
           (lambda ()
