@@ -916,7 +916,8 @@ that uses 'font-lock-warning-face'."
 ;; Turn on flymake with pylink et al.
 
 ;; Move flymake errors to the mini-buffer
-(require 'flymake-cursor)
+(when (< emacs-major-version 26)
+  (require 'flymake-cursor))
 
 ;; Run the pycheck.sh script to make flymake work
 ;; with python files.
