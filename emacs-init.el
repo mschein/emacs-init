@@ -920,6 +920,7 @@ that uses 'font-lock-warning-face'."
     (eval-after-load 'flymake
       (progn
         (require 'flymake-diagnostic-at-point)
+        (setq flymake-diagnostic-at-point-timer-delay 0.3)
         (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
   (require 'flymake-cursor))
 

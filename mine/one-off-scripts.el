@@ -362,4 +362,8 @@ setup(name=package,
   (interactive)
   (find-file "/sudo::/etc/hosts"))
 
+(defun flymake-diagnostic-at-point ()
+  (interactive)
+  (message "%s" (flymake-diagnostic-at-point-get-diagnostic-text)))
+
 (provide 'one-off-scripts)

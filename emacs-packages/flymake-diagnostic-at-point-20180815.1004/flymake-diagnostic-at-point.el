@@ -64,7 +64,8 @@
 
 (defun flymake-diagnostic-at-point-get-diagnostic-text ()
   "Get the flymake diagnostic text for the thing at point."
-  (flymake--diag-text (get-char-property (point) 'flymake-diagnostic)))
+  (mapconcat #'flymake-diagnostic-text
+             (flymake-diagnostics (line-beginning-position) (line-end-position)) "\n"))
 
 (defun flymake-diagnostic-at-point-display-popup (text)
   "Display the flymake diagnostic TEXT inside a popup."
@@ -79,10 +80,10 @@
 
 The diagnostic text will be rendered using the function defined
 in `flymake-diagnostic-at-point-display-diagnostic-function.'"
-  (when (and flymake-mode
-             (get-char-property (point) 'flymake-diagnostic))
+  (when flymake-mode
     (let ((text (flymake-diagnostic-at-point-get-diagnostic-text)))
-      (funcall flymake-diagnostic-at-point-display-diagnostic-function text))))
+      (when (and text (< 0 (length text)))
+        (funcall flymake-diagnostic-at-point-display-diagnostic-function text)))))
 
 ;;;###autoload
 (defun flymake-diagnostic-at-point-set-timer ()
