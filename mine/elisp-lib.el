@@ -562,7 +562,7 @@ Example:
 
 (defun remove-if-not-regex (regex list &optional replace)
   (let ((res (remove-if-not (| string-match regex %) list)))
-    (if (string-has-val replace)
+    (if (string-has-value-p replace)
         (mapcar (| replace-regexp-in-string regex replace %) res)
       res)))
 
@@ -605,7 +605,7 @@ Example:
 (defun string-nil-or-empty-p (s)
   (= 0 (length s)))
 
-(defun string-has-val (s)
+(defun string-has-value-p (s)
   (not (string-nil-or-empty-p s)))
 
 (defun string-ends-with (suffix str)
@@ -637,7 +637,7 @@ Example:
 (defmacro if-string (obj &rest forms)
   "Execute the true form if the string is length > 0"
   (declare (indent 2))
-  `(if (string-has-val ,obj)
+  `(if (string-has-value-p ,obj)
        ,@forms))
 
 (defun replace-regex-region (regex replacement begin end)
@@ -2103,10 +2103,10 @@ python debugging session."
   (let ((res (do-cmd (list python-bin "--version") :stdout 'string :stderr 'string)))
     (string-trim
      (cond
-      ((string-has-val (assoc1 :stderr res))
+      ((string-has-value-p (assoc1 :stderr res))
        (assoc1 :stderr res))
-      ((string-has-val (assoc1 :stdout res))
-                       (assoc1 :stdout res))))))
+      ((string-has-value-p (assoc1 :stdout res))
+       (assoc1 :stdout res))))))
 
 (defun find-venv-python-version (root-dir)
   (mapcar #'string-to-number
