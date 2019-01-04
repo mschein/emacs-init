@@ -347,7 +347,7 @@ setup(name=package,
          (current-file-path (buffer-file-name))
          (backup-file-path (buffer-backup-file-path current-file-path)))
     (unless (file-exists-p backup-file-path)
-      (error "File %s is not in backup repository at %s.  Giving up."
+      (error "File %s is not in backup repository at %s.  Giving up"
              current-file-path backup-file-path))
 
     (switch-to-buffer (shell-open-dir buffer-backup-storage-dir))
