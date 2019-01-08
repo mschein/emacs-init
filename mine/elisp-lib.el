@@ -1694,10 +1694,18 @@ Example:
     (list-mount-points)))
 
 (defun osx-screen-lock ()
-  "Lock the screen immediately"
+  "Lock the screen immediately."
   (interactive)
-  (run "/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession"
-       "-suspend"))
+
+  (let ((frameworks-screen-saver '("/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
+        (core-services-screen-saver '("/System/Library/CoreServices/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
+        (cgsession-saver '("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession" "-suspend")))
+
+    (cl-loop for cmd-list in (list frameworks-screen-saver core-services-screen-saver cgsession-saver)
+             when (file-exists-p (first cmd-list)) do
+               (destructuring-bind (cmd &rest args) cmd-list
+                 (apply #'run cmd args)
+                 (return)))))
 
 (defun osx-screen-lock-later (mins)
   "Lock the screen after `mins' minutes."
