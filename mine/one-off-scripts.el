@@ -336,7 +336,7 @@ setup(name=package,
 
       ;; Commit the changes.
       (git-commit-changes buffer-backup-storage-dir
-                          :message (if (string-has-val-p message)
+                          :message (if (string-has-value-p message)
                                        message
                                      (format "Backup the %s file" buf-name))))))
 

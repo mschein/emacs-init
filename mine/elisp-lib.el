@@ -2165,6 +2165,8 @@ python debugging session."
 
 (defun activate-virtualenv-emacs (location)
   (let ((vars (find-venv-variables location)))
+    (when (not (assoc-get "VIRTUAL_ENV" vars))
+      (error "Virtualenv not found in %s" location))
     (dolist (var venv-required-vars)
       (setenv var (assoc1 var vars))
       (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))))

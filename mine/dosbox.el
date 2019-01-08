@@ -97,7 +97,7 @@
           (setf config-file file-name)))
 
       (let ((extra-args '()))
-        (when (string-has-val-p config-file)
+        (when (string-has-value-p config-file)
           (append-atom! extra-args "-conf" config-file))
 
         (when full-screen
