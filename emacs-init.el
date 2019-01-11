@@ -1137,3 +1137,4 @@ that uses 'font-lock-warning-face'."
 
 
 ;; (quickproject:make-project "~/src/me/cheddar" :depends-on '(#:iterate #:let-plus #:alexandria #:closer-mop #:anaphora #:rutilsx)
+(put 'list-timers 'disabled nil)

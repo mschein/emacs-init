@@ -1708,9 +1708,31 @@ Example:
                  (return)))))
 
 (defun osx-screen-lock-later (mins)
-  "Lock the screen after `mins' minutes."
+  "Lock the screen after `MINS' minutes."
   (interactive "nmins: ")
   (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
+
+;; Add a thread here, so I can kill and restart the thread.
+(let ((screen-lock-enabled t))
+  (defun osx-screen-lock-regulated ()
+    (when screen-lock-enabled
+      (osx-screen-lock)))
+
+  ;; (defun osx-screen-lock-repeat (min)
+  ;;   )
+
+
+  (defun osx-screen-lock-enabled ()
+    (message "Screen lock currently enabled")
+    (setf screen-lock-enabled t))
+
+  (defun osx-screen-lock-disabled ()
+    (message "Screen lock currently disabled")
+    (setf screen-lock-enabled nil))
+
+  (defun osx-screen-lock-renable-later (min)
+    (osx-screen-lock-disabled)
+    (run-at-time (format "%s" min) nil #'osx-screen-lock-enabled)))
 
 (defun osx-sleep-now ()
   "Put the system to sleep immediately."
