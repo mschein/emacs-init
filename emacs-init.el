@@ -975,7 +975,7 @@ that uses 'font-lock-warning-face'."
     ;; Do I need this, if I call this during the mode hook?
     (setup-python3-mode))
 
-  If we're in python mode, make sure flymake comes on.
+  ;; If we're in python mode, make sure flymake comes on.
   (add-hook 'python-mode-hook #'(lambda ()
                                   ;; enable flymake-python for files with no '.py' extension
                                   (make-local-variable 'flymake-allowed-file-name-masks)
