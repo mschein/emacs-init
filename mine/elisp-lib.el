@@ -1922,7 +1922,8 @@ end run
 
 (defun git-init-setup-remote-repo-dir (dir)
   ;; I could try prompting for the password and automounting
-  (assert (file-exists-p git-repo-remote-dir))
+  (assert (file-exists-p git-repo-remote-dir) t
+          (format "Don't forget to mount %s" git-repo-remote-dir))
 
   (let ((repo-name (last-car (f-split (expand-file-name dir)))))
     (assert (not (string-nil-or-empty-p repo-name)))
