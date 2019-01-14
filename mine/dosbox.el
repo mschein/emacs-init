@@ -62,7 +62,7 @@
               ,(when app
                  (cons :app app))
               ,(when configs
-                 (cons :config (first configs)))
+                 (cons :config-file (first configs)))
               (:exec . ,(if (= 1 (length filtered-execs))
                             (first filtered-execs)
                           ""))
@@ -122,7 +122,7 @@
           (append-atom! extra-args "-fullscreen"))
 
         (if app
-            (run app)
+            (run "open" app)
           (apply #'dosbox-run exec extra-args))
 
         ;; Keep the config file around long enough to start it.
