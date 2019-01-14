@@ -1275,25 +1275,17 @@ Example:
      `match': An emacs regex of files to keep.  Like `directory-files' match.
      `nosort': Don't sort the file names.  Like `directory-files' sort."
 
-   (let ((args (list dir)))
-     (when full
-       (append-atom! args t))
-     (when match
-       (append-atom! args match))
-     (when nosort
-       (append-atom! args t))
-     (remove-if (fn (path)
-                  (let* ((name (basename path))
-                        (full-path (expand-file-name (path-join dir name))))
-                    (or (string= "." name)
-                        (string= ".." name)
-                        (and files-only (file-directory-p full-path))
-                        (and dirs-only (not (file-directory-p full-path)))
-                        (and filter (not (funcall filter name)))
-                        (and ignore
-                             (string-match ignore name)))))
-                (apply #'directory-files args))))
-
+  (remove-if (fn (path)
+               (let* ((name (basename path))
+                      (full-path (expand-file-name (path-join dir name))))
+                 (or (string= "." name)
+                     (string= ".." name)
+                     (and files-only (file-directory-p full-path))
+                     (and dirs-only (not (file-directory-p full-path)))
+                     (and filter (not (funcall filter name)))
+                     (and ignore
+                          (string-match ignore name)))))
+             (directory-files dir full match nosort)))
 
 (defun current-last-dirname ()
   (directory-last-dirname default-directory))

@@ -37,26 +37,42 @@
                           (cl-loop for (key . value) in values
                                    concat (format "%s=%s\n" key (if value value ""))))))
 
+(defun dosbox-find-configs (dir)
+  (directory-files-recursively dir "^dosbox.conf$"))
 
+(defun dosbox-find-app (dir)
+  (first
+   (list-directory-entries dir
+                           :dirs-only t
+                           :full t
+                           :match "\\.app$")))
 
 (defun dosbox-find-exec-names (dir)
   (mapcar #'basename
-          (directory-files-recursively dir "\.\\(exe\\|com\\)$")))
+          (directory-files-recursively dir "\\.\\(exe\\|com\\)$")))
 
 (defun dosbox-build-metadata (dir)
   (let* ((execs (dosbox-find-exec-names dir))
+         (configs (dosbox-find-configs dir))
+         (app (dosbox-find-app dir))
          (filtered-execs (remove-if (| member (downcase %) '("setup.exe" "install.exe"))
                                     execs)))
-    `((:dir . ,dir)
-      (:exec . ,(if (= 1 (length filtered-execs))
-                    (first filtered-execs)
-                  ""))
-      (:execs . ,execs))))
+    (filter #'identity
+            `((:dir . ,dir)
+              ,(when app
+                 (cons :app app))
+              ,(when configs
+                 (cons :config (first configs)))
+              (:exec . ,(if (= 1 (length filtered-execs))
+                            (first filtered-execs)
+                          ""))
+              (:execs . ,execs)))))
 
-(defun dosbox-list-games ()
+(cl-defun dosbox-list-games (&key skip-list)
   (cl-loop for game-dir-name in (list-directory-entries dosbox-games :dirs-only t)
-           collect (cons (downcase game-dir-name)
-                         (dosbox-build-metadata (path-join dosbox-games game-dir-name)))))
+           unless (member game-dir-name skip-list)
+             collect (cons (downcase game-dir-name)
+                           (dosbox-build-metadata (path-join dosbox-games game-dir-name)))))
 
 (defun dosbox-sort-games (games)
   (sort* (copy-list games) #'string< :key #'car))
@@ -85,10 +101,12 @@
   (let* ((data (assoc1 name dosbox-game-table))
          (exec (path-join (assoc1 :dir data) (assoc1 :exec data)))
          (config-file (assoc-get :config-file data))
-         (full-screen (assoc-get :full-screen data)))
+         (full-screen (assoc-get :full-screen data))
+         (app (assoc-get :app data)))
 
     (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
     (message "Use alt (no fn) enter for full screen.")
+
     (with-tempdir (:root-dir "/tmp")
       ;; Deal with any custom config that's not in a file.
       (let ((file-name "config.ini"))
@@ -103,7 +121,9 @@
         (when full-screen
           (append-atom! extra-args "-fullscreen"))
 
-        (apply #'dosbox-run exec extra-args)
+        (if app
+            (run app)
+          (apply #'dosbox-run exec extra-args))
 
         ;; Keep the config file around long enough to start it.
         ;; This is gross, and I should find a better mechanism.
