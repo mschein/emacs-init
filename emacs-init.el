@@ -690,20 +690,6 @@ that uses 'font-lock-warning-face'."
 
 (require 'org)
 
-;; Setup a place to store notes.
-(setq org-default-notes-file  "~/doc/todo.org")
-
-;; Do I still want this.
-;;
-;; A directory for non-default orgmode files.
-(add-to-list 'load-path "~/emacs-init/contrib/org-mode/lisp")
-(add-to-list 'load-path "~/emacs-init/contrib/org-mode/contrib/lisp")
-(add-to-list 'load-path "~/emacs-init/contrib/org-mode/EXPERIMENTAL")
-
-;; Install the custom org mode.
-(require 'org-install)
-(add-to-list 'auto-mode-alist '("\\.org\\'" . org-mode))
-
 ;; recommended key bindings from the manual.
 ;;C-c C-o  opens saved links
 (global-set-key "\C-cl" 'org-store-link)
@@ -712,10 +698,6 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\C-ca" 'org-agenda)
 (global-set-key "\C-cb" 'org-iswitchb)
 (global-set-key "\C-c o" 'org-open-at-point-global)
-
-;; Add support for wiki exporting. !!! NOTE !!!
-;; This touches experimental stuff, so it could easily break on upgrade.
-(require 'org-mw)
 
 (setq org-todo-keywords
       '((sequence "TODO(t!)"
