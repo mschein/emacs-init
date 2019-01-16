@@ -1169,6 +1169,9 @@ Example:
   ;; instead of listing it out explicitly
   (format-time-string "%A, %B %e, %Y %r" time))
 
+(defun time-current-minus-days (days)
+  (days-to-time (- (time-to-number-of-days (current-time)) days)))
+
 (defun time-split (time elm)
   (let ((time-map '((:year . 5)
                     (:mon-num . 4)
