@@ -888,6 +888,11 @@ Example:
    Example:   (run \"hdiutil\" \"attach\" path)"
   (do-cmd cmd-parts :throw t))
 
+(defun run-bg (&rest cmd-parts)
+  "Run a command a `run' would, but do it in the background.
+Don't expect any output."
+  (run "bash" "-c" (concat (cmd-to-shell-string cmd-parts) " &")))
+
 (defun run-to-str (&rest cmd-parts)
   "Run a command using `do-cmd' and return the result as a string.
 
@@ -1342,6 +1347,29 @@ Example:
      inode-number
      device-number)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Process Utils
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun list-all-processes ()
+  "Return a list of alists for all running processes.  Each line
+from ps auxwww becomes an alist with an entry for each field
+supplied by the command."
+  (let* ((lines (mapcar (fn (line)
+                          (split-string line "[ \t]+" t))
+                        (string->list (run-to-str "ps" "auxwww"))))
+         (labels (mapcar (| intern (downcase %)) (first lines)))
+         (processes (rest lines)))
+    (mapcar (fn (proc-info)
+              (mapcar* #'cons labels proc-info))
+            processes)))
+
+(defun process-is-running-regex-p (proc-name-regex)
+  "Check all running processes agaist `PROC-NAME-REGEX'."
+  (cl-loop for proc-info in (list-all-processes)
+           if (string-match proc-name-regex (assoc1 'command proc-info))
+           return t))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer Utils.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1689,23 +1717,19 @@ Example:
     (list-mount-points)))
 
 (defun osx-screen-lock ()
-  "Lock the screen immediately."
-  (interactive)
+    "Lock the screen immediately."
+    (interactive)
+    (let ((frameworks-screen-saver '("/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
+          (core-services-screen-saver '("/System/Library/CoreServices/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
+          (cgsession-saver '("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession" "-suspend")))
 
-  (let ((frameworks-screen-saver '("/System/Library/Frameworks/ScreenSaver.framework/Resources/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
-        (core-services-screen-saver '("/System/Library/CoreServices/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
-        (cgsession-saver '("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession" "-suspend")))
-
-    (cl-loop for cmd-list in (list frameworks-screen-saver core-services-screen-saver cgsession-saver)
-             when (file-exists-p (first cmd-list)) do
-               (destructuring-bind (cmd &rest args) cmd-list
-                 (apply #'run cmd args)
-                 (return)))))
-
-(defun osx-screen-lock-later (mins)
-  "Lock the screen after `MINS' minutes."
-  (interactive "nmins: ")
-  (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
+      (if (not (process-is-running-regex-p "ScreenSaverEngine$"))
+          (cl-loop for cmd-list in (list frameworks-screen-saver core-services-screen-saver cgsession-saver)
+                   when (file-exists-p (first cmd-list)) do
+                   (destructuring-bind (cmd &rest args) cmd-list
+                     (apply #'run-bg cmd args)
+                     (return)))
+        (message "Don't start the screen saver, it's already running."))))
 
 ;; Add a thread here, so I can kill and restart the thread.
 (let ((screen-lock-enabled t))
@@ -1728,6 +1752,11 @@ Example:
   (defun osx-screen-lock-renable-later (min)
     (osx-screen-lock-disabled)
     (run-at-time (format "%s" min) nil #'osx-screen-lock-enabled)))
+
+(defun osx-screen-lock-later (mins)
+  "Lock the screen after `MINS' minutes."
+  (interactive "nmins: ")
+  (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
 
 (defun osx-sleep-now ()
   "Put the system to sleep immediately."
