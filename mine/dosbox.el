@@ -49,7 +49,7 @@
 
 (defun dosbox-find-exec-names (dir)
   (mapcar #'basename
-          (directory-files-recursively dir "\\.\\(exe\\|com\\)$")))
+          (directory-files-recursively dir "\\.\\(exe\\|com\\|bat\\)$")))
 
 (defun dosbox-build-metadata (dir)
   (let* ((execs (dosbox-find-exec-names dir))
