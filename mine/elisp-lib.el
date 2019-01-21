@@ -731,6 +731,8 @@ Example:
    "
   (intern (funcall cb (symbol-name sym))))
 
+(defun string-to-keyword (str)
+  (intern (concat ":" str)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs utils
@@ -2360,7 +2362,8 @@ python debugging session."
   ;; for more details
   (if-let (result (string-find "\\([^:]+\\)[ \t]*:[ \t]*\\(.+\\)$"
                                (string-trim-right header)))
-      (apply #'cons result)
+      (cons (string-to-keyword (downcase (first result)))
+            (second result))
     (error "Unable to parse http header: %s" header)))
 
 (defun coalesce-alist (alist)
@@ -2392,13 +2395,36 @@ python debugging session."
      (cons :resp-line resp-line)
      (cons :headers (coalesce-alist headers)))))
 
+(defun parse-html-string (str &rest parse-args)
+  (with-temp-buffer
+    (insert str)
+    (apply #'libxml-parse-html-region (point-min) (point-max)
+           parse-args)))
+
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
     (concat auth ":" (read-passwd (format "Password(%s):" auth)))))
 
+(defun content-type-html-p (header)
+  (not (not (search "text/html" (downcase header)))))
+
+(defconst web-request-shell-script-template "#!/bin/bash -xe
+
+ATTACHMENT=request-attachment.json
+echo '%s' > ${ATTACHMENT}
+
+# Command
+%s
+
+rm -f ${ATTACHMENT}
+
+")
+
+(defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
+
 (cl-defun web-request (url
-                       &key (op "GET") params auth body json file timeout insecure throw)
+                       &key (op "GET") params auth body json file timeout insecure throw preserve)
   "Make a web request with curl.
 
    Params:
@@ -2417,6 +2443,9 @@ python debugging session."
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
 
+   Dynamic Global Variables
+   `+preserve-request+': Instead of making the request, dump everything to a script to run for
+                         testing.
    Returns:
    An alist with the following information:
    `:resp': The unparse response text from the server.
@@ -2426,6 +2455,7 @@ python debugging session."
                list.
    `:stderr': Anything curl returns on stderr.
    `:json': An alist representing any JSON returned by the server.
+   `:html': The parsed version of an html page.
    "
 
   ;; Check the args
@@ -2440,7 +2470,7 @@ python debugging session."
     ;; TODO: "-f" may not be the best option, as sometimes server
     ;; response bodies are useful, and this won't return them if
     ;; there is a failure.
-    (let* ((cmd (list "curl" "-f" "--verbose" "--silent"))
+    (let* ((cmd (list "curl" "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (input-file (when auth
                          (let ((input-file-path "input-file"))
@@ -2472,7 +2502,17 @@ python debugging session."
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
 
-        (message "Web-request running %s" cmd)
+        (if +preserve-request+
+            (progn
+              (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
+                (message "Preserve request here: %s" output-file)
+
+                (barf (format web-request-shell-script-template
+                              (slurp json-file)
+                              (string-join cmd " "))
+                      output-file)
+                (chmod output-file #o700)))
+          (message "Web-request running %s" cmd))
 
         ;;
         ;; When passwords are used, we must use stdin to send
@@ -2485,20 +2525,28 @@ python debugging session."
                              :input input-file
                              :stdout 'string :stderr 'string :throw throw))
                (output (assoc1 :stdout resp))
-               (resp-json (ignore-errors
-                            (json-read-from-string (assoc1 :stdout resp))))
                ;; Split out the '< content-type: application/json' headers
                ;; from curl, and turn them into an alist.
-               (resp-block (parse-http-header-block (assoc1 :stderr resp))))
-
-          (let ((http-code (if (equal (assoc1 :code resp) 0)
-                               (string-to-number (second (assoc1 :resp-line resp-block)))
-                             -1))
-                (headers (assoc1 :headers resp-block)))
+               (resp-block (parse-http-header-block (assoc1 :stderr resp)))
+               (http-code (if (equal (assoc1 :code resp) 0)
+                              (string-to-number (second (assoc1 :resp-line resp-block)))
+                            -1))
+               (headers (assoc1 :headers resp-block))
+               ;; I decided to always try to parse json, if only
+               ;; because sometimes I deal with improperly implemented
+               ;; web services.
+               (resp-json (ignore-errors
+                            (json-read-from-string (assoc1 :stdout resp))))
+               (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
+                            (ignore-errors
+                             (parse-html-string output)))))
 
             (message "Web-request. code: %s http: %s\n headers: %s"
                      (assoc1 :code resp) http-code headers)
 
+            ;; If the alist gets so large it's annoying in ielm,
+            ;; I could make separate functions for accessing
+            ;; json or parsed html.
             `((:resp . ,output)
               (:code . ,(assoc1 :code resp))
               (:url . ,url)
@@ -2508,7 +2556,8 @@ python debugging session."
               (:headers . ,headers)
               (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
                             (assoc1 :stderr resp)))
-              (:json . ,resp-json))))))))
+              (:json . ,resp-json)
+              (:html . ,resp-html)))))))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
@@ -2613,5 +2662,17 @@ python debugging session."
 ;;     (org-table-begin)
 ;;     )
 ;;   )
+
+(defun search-http-repo (url match-fn)
+  ;; Find all of the links in the page.
+  (cl-loop for a-tag in (dom-by-tag (assoc1 :html (web-request url :throw t)) 'a)
+           with href = nil
+           do (setf href (assoc1 'href (dom-attributes a-tag)))
+           when (funcall match-fn href)
+           collect href))
+
+
+
+
 
 (provide 'elisp-lib)
