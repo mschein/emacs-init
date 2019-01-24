@@ -1022,10 +1022,27 @@ Don't expect any output."
 
 (defmacro with-shell-buffer (dir name &rest body)
   (declare (indent defun))
-  `(progn
-     (switch-to-buffer (shell-open-dir ,dir))
-     (rename-buffer ,name)
-     ,@body))
+  (with-gensyms (buffer buffer-name)
+    `(progn
+       (let ((,buffer-name ,name))
+         (if-let (,buffer (get-buffer ,buffer-name))
+             (switch-to-buffer ,buffer)
+           (progn
+             (switch-to-buffer (shell-open-dir ,dir))
+             (rename-buffer ,buffer-name)
+           ,@body))))))
+
+(defmacro with-venv-buffer (dir name &rest body)
+  (declare (indent defun))
+  (with-gensyms (buffer buffer-name)
+    `(progn
+       (let ((,buffer-name ,name))
+         (if-let (,buffer (get-buffer ,buffer-name))
+             (switch-to-buffer ,buffer)
+           (progn
+             (switch-to-buffer (open-shell-dir-venv ,dir))
+             (rename-buffer ,buffer-name)
+             ,@body))))))
 
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
