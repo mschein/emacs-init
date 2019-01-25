@@ -1030,7 +1030,7 @@ Don't expect any output."
            (progn
              (switch-to-buffer (shell-open-dir ,dir))
              (rename-buffer ,buffer-name)
-           ,@body))))))
+             ,@body))))))
 
 (defmacro with-venv-buffer (dir name &rest body)
   (declare (indent defun))
@@ -2215,7 +2215,10 @@ python debugging session."
     (goto-char (point-max))
     (insertf "source %s" activate-link)
     (comint-send-input nil t)
-    (comint-clear-buffer)))
+    (comint-clear-buffer)
+
+    ;; We want to be sure to return the buffer we created.
+    (current-buffer)))
 
 (defun yank-venv-link (&optional dir)
   (interactive)
