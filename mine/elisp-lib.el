@@ -901,6 +901,10 @@ Don't expect any output."
    It will throw an error if the command fails."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t)))
 
+;; TODO(mls): maybe just make this a do-cmd option.
+(defun run-to-json (&rest cmd-parts)
+  (json-read-from-string (apply #'run-to-str cmd-parts)))
+
 (defun run-to-str-ssh (host &rest cmd-parts)
   "Run a command with ssh on the remote host."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t :ssh host)))
@@ -1566,6 +1570,17 @@ supplied by the command."
   (unless (cl-search check comint-password-prompt-regexp)
     (setf comint-password-prompt-regexp
           (concat comint-password-prompt-regexp check))))
+
+(defun read-user-password (prompt cache-key verify-password-fn)
+  "Read and cache a password from the user."
+  (if (password-in-cache-p cache-key)
+      (password-read-from-cache cache-key)
+    (progn
+      (let ((password (cl-loop for password = (password-read prompt)
+                               when (funcall verify-password-fn password)
+                               return password)))
+        (password-cache-add cache-key password)
+        password))))
 
 (defun title-caps-to-underbar (begin end)
   (interactive "r")
