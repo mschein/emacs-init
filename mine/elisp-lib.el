@@ -1571,7 +1571,7 @@ supplied by the command."
     (setf comint-password-prompt-regexp
           (concat comint-password-prompt-regexp check))))
 
-(defun read-user-password (prompt cache-key verify-password-fn)
+(cl-defun read-user-password (prompt cache-key &optional (verify-password-fn #'identity))
   "Read and cache a password from the user."
   (if (password-in-cache-p cache-key)
       (password-read-from-cache cache-key)
@@ -2436,6 +2436,8 @@ python debugging session."
     (apply #'libxml-parse-html-region (point-min) (point-max)
            parse-args)))
 
+(defun )
+
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
@@ -2505,7 +2507,7 @@ rm -f ${ATTACHMENT}
     ;; TODO: "-f" may not be the best option, as sometimes server
     ;; response bodies are useful, and this won't return them if
     ;; there is a failure.
-    (let* ((cmd (list "curl" "--verbose" "--silent"))
+    (let* ((cmd (list "curl" "-f" "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (input-file (when auth
                          (let ((input-file-path "input-file"))
@@ -2593,6 +2595,9 @@ rm -f ${ATTACHMENT}
                             (assoc1 :stderr resp)))
               (:json . ,resp-json)
               (:html . ,resp-html)))))))
+
+(defun web-request-is-success (&rest args)
+  (equal 0 (assoc1 :code (apply #'web-request args))))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))

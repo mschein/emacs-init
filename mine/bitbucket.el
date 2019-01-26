@@ -1,7 +1,6 @@
 ;;;
 ;;; Code for communicating with a bitbucket server.
 ;;;
-;;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Imports
@@ -30,18 +29,14 @@
   (concat (assoc1 :user bb) ":" password))
 
 (defun bitbucket-verify-password (bb password)
-  (bitbucket-request-common bb "projects"
-                            :auth (bitbucket-make-auth bb password)))
+  (condition-case nil
+      (bitbucket-request-common bb "projects"
+                                :auth (bitbucket-make-auth bb password))
+    (error 'nil)))
 
 (defun bitbucket-get-password (bb)
-  ;; Cache this, so it's not insanely annoying.
-  (if (password-in-cache-p bitbucket-password-key)
-      (password-read-from-cache bitbucket-password-key)
-    (progn
-      (let ((pass (password-read "Bitbucket password: ")))
-        (bitbucket-verify-password bb pass)
-        (password-cache-add bitbucket-password-key pass)
-        pass))))
+  (read-user-password "Bitbucket password: " bitbucket-password-key
+                      #'bitbucket-verify-password))
 
 (defun bitbucket-get-auth (bb)
   (when (assoc :user bb)
@@ -140,6 +135,10 @@
              sum (cl-loop for hunk across hunks
                           sum (+ (assoc1 'sourceSpan hunk)
                                  (assoc1 'destinationSpan hunk)))))
+
+(defun bitbucket-fetch-commits (bb project repo)
+  ;; should i process the return values at all?
+  (bitbucket-request bb (path-join "projects" project "repos" repo "commits")))
 
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"
