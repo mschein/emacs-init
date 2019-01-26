@@ -2436,8 +2436,6 @@ python debugging session."
     (apply #'libxml-parse-html-region (point-min) (point-max)
            parse-args)))
 
-(defun )
-
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
