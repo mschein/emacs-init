@@ -36,7 +36,7 @@
 
 (defun bitbucket-get-password (bb)
   (read-user-password "Bitbucket password: " bitbucket-password-key
-                      #'bitbucket-verify-password))
+                      (lambda (password) (bitbucket-verify-password bb password))))
 
 (defun bitbucket-get-auth (bb)
   (when (assoc :user bb)
