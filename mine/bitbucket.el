@@ -138,7 +138,7 @@
 
 (defun bitbucket-fetch-commits (bb project repo)
   ;; should i process the return values at all?
-  (bitbucket-request bb (path-join "projects" project "repos" repo "commits")))
+  (assoc1 'values (bitbucket-request bb (path-join "projects" project "repos" repo "commits"))))
 
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"

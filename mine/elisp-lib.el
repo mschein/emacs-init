@@ -127,6 +127,12 @@
            for value = (assoc1-traverse steps data)
            collect (cons name value)))
 
+(defun assoc1-filter (keys-to-keep alist)
+  "Translate an alist into a smaller alist
+   that only has keys in `KEYS-TO-KEEP'."
+  (cl-loop for key in keys-to-keep
+           collect (cons key (assoc1 key alist))))
+
 (defun identity (arg)
   arg)
 
