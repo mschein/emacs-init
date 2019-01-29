@@ -109,10 +109,18 @@
            with data = data do
      (etypecase step
        (integer (setf data (elt data step)))
+       ;;
        ;; Be aware that the ordering here is important
        ;; since functions are a subset of symbols.
-       (function (setf data (funcall step data)))
+       ;;
+       ;; Originally, I had functions match first,
+       ;; but that leads to problems if something like
+       ;; 'message is in your data.  I think it's
+       ;; easier if you use weird function names
+       ;; as an intermediary.
+       ;;
        (symbol (setf data (assoc1 step data)))
+       (function (setf data (funcall step data)))
        (string (setf data (assoc1 step data))))
      finally return data))
 
