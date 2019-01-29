@@ -102,7 +102,6 @@
    The caller can specify an integer for the array/list index,
    a string/symbol for an alist, and a function for anything else needed.
 
-
    Example: (aws-traverse '(Reservations 0 Instances 0) (aws-ec2-describe-instances instance-ids))"
 
   (cl-loop for step in steps

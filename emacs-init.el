@@ -1108,11 +1108,17 @@ that uses 'font-lock-warning-face'."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
 
-;; This must be done at the end so the rest of the environment is setup.
-(let ((local-dir "~/emacs-init/local"))
-  (if (file-directory-p local-dir)
-      (dolist (file-path (directory-files local-dir 'full ".el$"))
-	(load file-path))))
+;;
+;; I used to load all files in the directory in ls order,
+;; but I think it's better to just load a "local.el" file
+;; and have it control how things are loaded.
+;;
+(let* ((local-only-dir "~/emacs-init/local")
+       (local-only-code (path-join local-only-dir "local.el")))
+  (when (file-directory-p local-only-dir)
+    (add-to-list 'load-path local-only-dir))
+  (when (file-exists-p local-only-code)
+    (load local-only-code)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  JSON Parsing stuff  ;;;;;;;;;;;;;;;;;;;;
 (require 'json)

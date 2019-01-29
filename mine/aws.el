@@ -255,6 +255,12 @@
     (data-to-buffer (apply #'aws-ec2-describe-instances args)
                     "+instance-data-for-%s-+" (string-join (mapcar #'pp-to-string args) "-"))))
 
+(cl-defun aws-terminate-instances (instance-ids &key do-it)
+  (aws-ec2 "terminate-instances" "--instance-ids" (string-join (to-list instance-ids) ",")
+           (if do-it
+               "--no-dry-run"
+             "--dry-run")))
+
 (defun aws-get-instance-ips (instance-id)
   (aws-traverse
    '(Reservations 0 Instances 0 PrivateIpAddress)

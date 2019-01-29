@@ -64,9 +64,21 @@
 (defun jenkins-list-jobs (jsi)
   (jenkins-request jsi "" :params '(("tree" . "jobs[name,color]"))))
 
+(defun jenkins-fetch-nodes-info (jsi)
+  (jenkins-request jsi "computer"))
+
 (defun jenkins-list-nodes (jsi)
-  (jenkins-request jsi "computer")
-  )
+  ;; just list the worker nodes for now.
+
+  (cl-loop for node across (assoc1 'computer (jenkins-request jsi "computer"))
+           when (equal (assoc1 '_class node) "hudson.slaves.SlaveComputer")
+             collect (cons (assoc1 'displayName node) node)))
+
+
+(defun jenkins-total-vs-busy-nodes (jsi)
+  (assoc1-to-assoc '((:busy . (busyExecutors))
+                     (:total . (totalExecutors)))
+                   (jenkins-fetch-nodes-info jsi)))
 
 (defun jenkins-fetch-job (jsi job-path)
   (jenkins-request jsi (path-join "job" job-path)))
