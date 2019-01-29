@@ -102,24 +102,17 @@
    The caller can specify an integer for the array/list index,
    a string/symbol for an alist, and a function for anything else needed.
 
-   Example: (aws-traverse '(Reservations 0 Instances 0) (aws-ec2-describe-instances instance-ids))"
+   Example: (aws-traverse '(Reservations 0 Instances (fn) 0) (aws-ec2-describe-instances instance-ids))"
 
   (cl-loop for step in steps
            with data = data do
      (etypecase step
        (integer (setf data (elt data step)))
-       ;;
-       ;; Be aware that the ordering here is important
-       ;; since functions are a subset of symbols.
-       ;;
-       ;; Originally, I had functions match first,
-       ;; but that leads to problems if something like
-       ;; 'message is in your data.  I think it's
-       ;; easier if you use weird function names
-       ;; as an intermediary.
-       ;;
        (symbol (setf data (assoc1 step data)))
-       (function (setf data (funcall step data)))
+       ;; Originally I used "function" here, but
+       ;; it doesn't play well with "symbol", so now
+       ;; just use a list to indicate a function call.
+       (listp (setf data (funcall (car step) data)))
        (string (setf data (assoc1 step data))))
      finally return data))
 
