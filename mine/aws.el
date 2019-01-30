@@ -157,6 +157,14 @@
     (assoc1 'imageIds
             (apply #'aws-ecr "list-images" args))))
 
+(defun aws-ecr-describe-images (repository registry-id)
+  (let ((-aws-return-json t))
+    (aws-ecr "describe-images"
+             "--repository-name" repository
+             "--registry-id" registry-id
+             "--query" "sort_by(imageDetails,& imagePushedAt)[*]"
+             "--no-paginate")))
+
 (defun aws-ecr-describe-repositories (&rest args)
   "Return an array/alist of repository information as returned by aws ecr
    describe-repositories."

@@ -329,6 +329,7 @@ of the test."
 (defun last-car (list)
   (car (last list)))
 
+;; TODO(mls): Why not use subseq?
 (defun take (n seq)
   "Take `n' from the start of `seq'.  Note that this
   is not implemented efficiently, so only use when n is small."

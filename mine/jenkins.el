@@ -26,6 +26,10 @@
       (append-cons! jenkins-server-info :user user))
     jenkins-server-info))
 
+
+(defun jenkins-get-url (jsi)
+  (assoc1 :url jsi))
+
 ;; TODO(mls): share this better with bitbucket.
 (defun jenkins-make-auth (jsi password)
   (concat (assoc1 :user jsi) ":" password))
