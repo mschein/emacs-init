@@ -27,9 +27,12 @@
     (sqlite3-exec db (format "CREATE TABLE %s (key TEXT PRIMARY KEY, value TEXT);"
                              kv--table-name))))
 
+(defconst kv-upsert-string "INSERT INTO kv(key, value) VALUES (?, ?)
+                            ON CONFLICT (key) DO UPDATE SET value=excluded.value")
+
 (defun kv-set (store-name key value)
   (with-store store-name
-    (with-mysqlite3-stmt db "INSERT INTO kv VALUES (?, ?)"
+    (with-mysqlite3-stmt db kv-upsert-string
       (sqlite3-bind-multi stmt key value)
       (unless (= sqlite-done (sqlite3-step stmt))
         (error "Store %s unable to set %s" store-name key))))
@@ -37,7 +40,7 @@
 
 (defun kv-add-key-values (store-name kvs)
   (with-store store-name
-    (with-mysqlite3-stmt db "INSERT INTO kv VALUES (?, ?)"
+    (with-mysqlite3-stmt db kv-upsert-string
       (cl-loop for (k . v) in kvs do
                (assert (stringp k))
                (sqlite3-bind-multi stmt k v)
