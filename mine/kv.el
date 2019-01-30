@@ -57,8 +57,14 @@
             (error "Unable to retrieve `%s`: %s" key res)))))
     result))
 
+(defun kv-check (store-name key)
+  (ignore-errors (kv-get store-name key)))
+
 (defun kv-get-json (store-name key)
   (json-read-from-string (kv-get store-name key)))
+
+(defun kv-check-json (store-name key)
+  (ignore-errors (kv-get-json store-name key)))
 
 (defun kv-delete (store-name key)
   (with-store store-name
