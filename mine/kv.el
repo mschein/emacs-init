@@ -31,7 +31,8 @@
   (with-store store-name
     (with-mysqlite3-stmt db "INSERT INTO kv VALUES (?, ?)"
       (sqlite3-bind-multi stmt key value)
-      (sqlite3-step stmt)))
+      (unless (= sqlite-done (sqlite3-step stmt))
+        (error "Store %s unable to set %s" store-name key))))
   key)
 
 (defun kv-add-key-values (store-name kvs)
@@ -40,7 +41,8 @@
       (cl-loop for (k . v) in kvs do
                (assert (stringp k))
                (sqlite3-bind-multi stmt k v)
-               (sqlite3-step stmt)
+               (unless (= sqlite-done (sqlite3-step stmt))
+                 (error "Store %s unable to set %s" store-name k))
                (sqlite3-reset stmt)))))
 
 (defun kv-set-json (store-name key data)
@@ -67,6 +69,7 @@
   (ignore-errors (kv-get-json store-name key)))
 
 (defun kv-delete (store-name key)
+  ;; TODO(mls): add error checking.
   (with-store store-name
       (with-mysqlite3-stmt db "DELETE FROM kv WHERE key = ?;"
         (sqlite3-bind-multi stmt key)
