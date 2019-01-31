@@ -34,16 +34,15 @@
        (when db
          (sqlite3-close db)))))
 
-(defmacro with-mysqlite3-txn (open-args &rest body)
+(defmacro with-mysqlite3-txn (db &rest body)
   (declare (indent defun))
 
-  `(with-mysqlite3 ,open-args
-     (unwind-protect
+  `(unwind-protect
          (progn
-           (sqlite3-exec db "BEGIN")
+           (sqlite3-exec ,db "BEGIN")
            ,@body
-           (sqlite3-exec db "COMMIT"))
-       (sqlite3-exec db "ROLLBACK"))))
+           (sqlite3-exec ,db "COMMIT"))
+       (sqlite3-exec ,db "ROLLBACK")))
 
 ;; We need this, because we need to free stmts
 (defmacro with-mysqlite3-stmt (db sql-text &rest body)
