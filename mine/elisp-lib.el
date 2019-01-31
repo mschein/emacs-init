@@ -116,7 +116,8 @@
        (string (setf data (assoc1 step data))))
      finally return data))
 
-(defun assoc1-to-assoc (mappings data)
+;; As I used this more, it can become more DSL like...
+(cl-defun assoc1-to-assoc (mappings data &key (throw t))
   "Translate an alist or json blob into a new alist.
 
   `mappings' should be an alist that contains:
@@ -124,7 +125,11 @@
 
   `data': The structure to remap."
   (cl-loop for (name . steps) in mappings
-           for value = (assoc1-traverse steps data)
+           for value = (cl-flet ((translate-fn ()
+                                   (assoc1-traverse steps data)))
+                         (if throw
+                             (translate-fn)
+                           (ignore-errors (translate-fn))))
            collect (cons name value)))
 
 (defun assoc1-filter (keys-to-keep alist)
@@ -1154,7 +1159,7 @@ Don't expect any output."
   (-> (current-time) time-to-seconds (* 1000)))
 
 (defun msec->time (msec)
-  (seconds-to-time (/ usec 1000)))
+  (seconds-to-time (/ msec 1000)))
 
 (defun msec->date (usec)
   (interactive "dusec: ")
