@@ -46,18 +46,22 @@
   (when-let (user (assoc-get :user jsi))
     (jenkins-make-auth jsi (jenkins-get-password jsi))))
 
-(cl-defun jenkins-request (jsi path &key params)
+(cl-defun jenkins-request-core (jsi url &key params)
+  (web-request url
+               :throw t
+               :auth (jenkins-get-auth jsi #'jenkins-get-password)
+               :params params))
+
+(cl-defun jenkins-request-core-json (jsi url &key params)
   (append-cons! params "pretty" "true")
 
-  (assoc1 :json (web-request
-                 (path-join (assoc1 :url jsi) path "api" "json")
-                 :throw t
-                 :auth (jenkins-get-auth jsi #'jenkins-get-password)
-                 :params params)))
+  (assoc1 :json (jenkins-request-core jsi (path-join url "api" "json") :params params)))
+
+(cl-defun jenkins-request (jsi path &rest args)
+  (apply #'jenkins-request-core-json jsi (path-join (jenkins-get-url jsi) path) args))
 
 (defun jenkins-core-info (jsi)
   (jenkins-request jsi ""))
-
 
 (defun jenkins-fetch-queue (jsi)
   (jenkins-request jsi "queue"))

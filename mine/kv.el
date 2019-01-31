@@ -51,6 +51,9 @@
 (defun kv-set-json (store-name key data)
   (kv-set store-name key (json-encode data)))
 
+(defun kv-set-pp (store-name key data)
+  (kv-set store-name key (pp-to-string data)))
+
 (defun kv-get (store-name key)
   (let ((result))
     (with-store store-name
@@ -70,6 +73,12 @@
 
 (defun kv-check-json (store-name key)
   (ignore-errors (kv-get-json store-name key)))
+
+(defun kv-get-pp (store-name key)
+  (read (kv-get store-name key)))
+
+(defun kv-check-pp (store-name key)
+  (ignore-errors (kv-get-pp store-name key)))
 
 (defun kv-delete (store-name key)
   ;; TODO(mls): add error checking.

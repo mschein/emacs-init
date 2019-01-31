@@ -2469,6 +2469,7 @@ rm -f ${ATTACHMENT}
 ")
 
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
+(defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
 (cl-defun web-request (url
                        &key (op "GET") params auth body json file timeout insecure throw preserve)
@@ -2493,6 +2494,8 @@ rm -f ${ATTACHMENT}
    Dynamic Global Variables
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
                          testing.
+   `+cache-request+': Use the url cache to save lookup time.
+
    Returns:
    An alist with the following information:
    `:resp': The unparse response text from the server.
@@ -2510,6 +2513,11 @@ rm -f ${ATTACHMENT}
   (assert (not (and body json)))
   (if timeout
       (assert (integerp timeout)))
+
+  ;; I need to move the web-request stuff its own module
+  (when +webrequest-cache-urls+
+    (require 'url-cache)
+    (url-cache-init))
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
@@ -2568,9 +2576,15 @@ rm -f ${ATTACHMENT}
         ;;
         ;; TODO(mls): better error handling.
         ;; it would be good to handle the error code + headers
-        (let* ((resp (do-cmd cmd
-                             :input input-file
-                             :stdout 'string :stderr 'string :throw throw))
+        (let* ((webrequest-fn (lambda ()
+                                (do-cmd cmd
+                                        :input input-file
+                                        :stdout 'string :stderr 'string :throw throw)))
+               (resp (if +webrequest-cache-urls+
+                         (url-cache-or-fetch final-url webrequest-fn :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
+                                                                                  nil
+                                                                                +webrequest-cache-urls+))
+                       (funcall webrequest-fn)))
                (output (assoc1 :stdout resp))
                ;; Split out the '< content-type: application/json' headers
                ;; from curl, and turn them into an alist.
@@ -2597,6 +2611,7 @@ rm -f ${ATTACHMENT}
             `((:resp . ,output)
               (:code . ,(assoc1 :code resp))
               (:url . ,url)
+              (:final-url . ,final-url)
               (:params . ,params)
               (:op . ,op)
               (:http-code . ,http-code)
