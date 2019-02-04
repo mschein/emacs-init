@@ -16,7 +16,8 @@
 
 
 (defun bitbucket-create (server-url &optional user)
-  (let ((bb `((:url . ,(path-join server-url "rest/api" bitbucket-api-version)))))
+  (let ((bb `((:server-root . ,server-url)
+              (:url . ,(path-join server-url "rest/api" bitbucket-api-version)))))
     (when user
       (append-cons! bb :user user))
     bb))
@@ -139,6 +140,12 @@
 (defun bitbucket-fetch-commits (bb project repo)
   ;; should i process the return values at all?
   (assoc1 'values (bitbucket-request bb (path-join "projects" project "repos" repo "commits"))))
+
+(defun bitbucket-commit-url (bb project repo sha)
+  (path-join (assoc1 :server-root bb) "projects" project "repos" repo "commits" sha))
+
+(defun bitbucket-fetch-commit (bb project repo sha)
+  (bitbucket-request bb (path-join "projects" project "repos" repo "commits" sha)))
 
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"

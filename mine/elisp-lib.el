@@ -2354,7 +2354,6 @@ python debugging session."
 ;; Other Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defun find-in-jira-at-point-internal (url ticket-valid-fn)
   "This is meant to be wrapped by another function.
 
@@ -2735,9 +2734,5 @@ rm -f ${ATTACHMENT}
            do (setf href (assoc1 'href (dom-attributes a-tag)))
            when (funcall match-fn href)
            collect href))
-
-
-
-
 
 (provide 'elisp-lib)
