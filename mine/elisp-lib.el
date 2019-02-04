@@ -2515,8 +2515,8 @@ rm -f ${ATTACHMENT}
 
   ;; I need to move the web-request stuff its own module
   (when +webrequest-cache-urls+
-    (require 'url-cache)
-    (url-cache-init))
+    (require 'm-url-cache)
+    (m-url-cache-init))
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
@@ -2580,9 +2580,9 @@ rm -f ${ATTACHMENT}
                                         :input input-file
                                         :stdout 'string :stderr 'string :throw throw)))
                (resp (if +webrequest-cache-urls+
-                         (url-cache-or-fetch final-url webrequest-fn :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
-                                                                                  nil
-                                                                                +webrequest-cache-urls+))
+                         (m-url-cache-or-fetch final-url webrequest-fn :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
+                                                                                    nil
+                                                                                  +webrequest-cache-urls+))
                        (funcall webrequest-fn)))
                (output (assoc1 :stdout resp))
                ;; Split out the '< content-type: application/json' headers
