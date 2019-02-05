@@ -1,4 +1,5 @@
 (require 'elisp-lib)
+(require 'm-url-cache)
 
 (defconst aws-subcommands
   '("acm"
@@ -114,6 +115,9 @@
 
 ;; Need to make this take do-cmd's arguments?
 (defvar -aws-return-json nil "Control what the -aws function returns")
+
+;; We could hide this behind a dynamic variable
+(m-url-cache-init)
 
 ;; TODO(mscheinh): get rid of this shim.
 (defalias 'aws-traverse 'assoc1-traverse)
@@ -302,10 +306,28 @@
   (data-to-buffer (aref (aws-rds-snapshots-sorted db-id) 0)
                   "+latest-rds-snapshot-%s-+" db-id))
 
+(defun aws-current-access-key-id ()
+  (getenv "AWS_ACCESS_KEY_ID"))
+
 (defun aws-ecs-list-clusters ()
   "Return a list of ecs clusters in the current account."
-  (let ((-aws-return-json t))
-    (assoc1 'clusterArns (aws-ecs "list-clusters"))))
+  (let ((-aws-return-json t)
+        (aws-access-key (aws-current-access-key-id)))
+
+    (assert aws-access-key)
+
+    (let* ((clusters (m-url-cache-or-fetch
+                      (format "awsenv:%s" aws-access-key)
+                      (lambda () (assoc1 'clusterArns
+                                         (aws-ecs "list-clusters")))
+                      :ttl-sec (* 60 60 24 7)))
+           ;; put any "default" clusters
+           (default-index (search-substring "default" clusters)))
+
+      ;; Put default and bitbucket up front.
+      (when default-index
+        (array-swap 0 default-index clusters))
+      clusters)))
 
 (defun aws-ecs-list-services (cluster)
   "This the service arns in a given `cluster'"
@@ -358,14 +380,6 @@
   (let ((-aws-return-json t))
     (mapcar (| aws-task->ip cluster %) (aws-ecs-list-tasks cluster service))))
 
-(defun aws-find-service-cluster (service-name)
-  (cl-loop for cluster across (aws-ecs-list-clusters) do
-           (progn
-             (message "Check cluster %s for service %s" cluster service-name)
-             (when (with-demoted-errors "Check cluster for task: %S"
-                     (aws-ecs-list-tasks cluster service-name))
-               (return cluster)))))
-
 (defun aws-get-task-definition-for-service (service-name)
   (let ((-aws-return-json t))
     (let ((cluster (aws-find-service-cluster service-name)))
@@ -387,23 +401,49 @@
     ;; 3. search in the bitbucket cluster.
     ;; 4. then try all of them.
     ;;
-    (let* ((clusters (aws-ecs-list-clusters))
-           (default-index (search-substring "default" clusters))
-           (bitbucket-index (search-substring "bitbucket-backend" clusters)))
-
-      ;; Put default and bitbucket up front.
-      (when default-index
-          (array-swap 0 default-index clusters))
-      (when bitbucket-index
-        (array-swap 1 bitbucket-index clusters))
 
       ;; clusters should be ready now
-      (cl-loop for cluster across clusters do
+      (cl-loop for cluster across (aws-ecs-list-clusters) do
          (progn
            (message "Check cluster %s for service %s" cluster service-name)
            (when-let (ips (with-demoted-errors "Check cluster for task: %S"
                             (aws-ecs-get-ips-in-cluster service-name cluster)))
-             (return ips)))))))
+             (return ips))))))
+
+(defun aws-find-service-cluster (service-name)
+  (cl-loop for cluster across (aws-ecs-list-clusters) do
+           (progn
+             (message "Check cluster %s for service %s" cluster service-name)
+             (when (with-demoted-errors "Check cluster for task: %S"
+                     (aws-ecs-list-tasks cluster service-name))
+               (return cluster)))))
+
+(cl-defun aws-ecs-service-pattern-in-env-p (service-pattern)
+  (let ((aws-access-key (aws-current-access-key-id)))
+    (assert aws-access-key)
+
+    (cl-loop for cluster across (aws-ecs-list-clusters) do
+             (cl-loop for service across (m-url-cache-or-fetch (format "env-cluster-services:%s-%s"  aws-access-key cluster)
+                                                               (lambda () (aws-ecs-list-services cluster))
+                                                               ;; cache for 5 min?
+                                                               :ttl-sec (* 60 60 5))
+                      when (string-match-p service-pattern service) do
+                        (return-from aws-ecs-service-pattern-in-env-p cluster)))))
+
+(cl-defun aws-ecs-collect-services (service-pattern)
+  (let ((aws-access-key (aws-current-access-key-id)))
+    (assert aws-access-key)
+
+    (cl-loop for cluster across (aws-ecs-list-clusters) append
+             (cl-loop for service across (m-url-cache-or-fetch (format "env-cluster-services:%s-%s"  aws-access-key cluster)
+                                                               (lambda () (aws-ecs-list-services cluster))
+                                                               ;; cache for 5 min?
+                                                               :ttl-sec (* 60 60 5))
+                      when (string-match-p service-pattern service)
+                        collect (cons service cluster)))))
+
+(cl-defun aws-ecs-service-in-env-p (service-name)
+  (aws-ecs-service-pattern-in-env-p (format "service/%s$" service-name)))
 
 (defun aws-ec2-lookup-instance-info (tag-value)
   (aws-traverse '(Reservations 0 Instances 0)
