@@ -915,23 +915,24 @@ that uses 'font-lock-warning-face'."
         (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
   (require 'flymake-cursor))
 
-(defmacro define-flymake-checker (func cmd &rest args)
-  "Define a flymake checker function.
-   It will be named `func', and will execute cmd + the rest of the args."
-
-  (let ((temp-file (gensym))
-        (local-file (gensym)))
-    `(defun ,func ()
-       (let* ((,temp-file (flymake-init-create-temp-buffer-copy
-                           #'flymake-create-temp-inplace))
-              (,local-file (file-relative-name ,temp-file
-                                               (file-name-directory buffer-file-name))))
-         (list ,cmd (list ,@args ,local-file))))))
-
-;; (define-flymake-checker flymake-flake8-checker "flake8")
-;; (define-flymake-checker flymake-flake83-checker "flake83")
 
 (when (< emacs-major-version 26)
+  (defmacro define-flymake-checker (func cmd &rest args)
+    "Define a flymake checker function.
+   It will be named `func', and will execute cmd + the rest of the args."
+
+    (let ((temp-file (gensym))
+          (local-file (gensym)))
+      `(defun ,func ()
+         (let* ((,temp-file (flymake-init-create-temp-buffer-copy
+                             #'flymake-create-temp-inplace))
+                (,local-file (file-relative-name ,temp-file
+                                                 (file-name-directory buffer-file-name))))
+           (list ,cmd (list ,@args ,local-file))))))
+
+  (define-flymake-checker flymake-flake8-checker "flake8")
+  (define-flymake-checker flymake-flake83-checker "flake83")
+
   ;;
   ;; This is my old (25 and below) flymake setup code for Python.
   ;; for 26, python.el does what we need out of the box.

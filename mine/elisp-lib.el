@@ -791,6 +791,8 @@ Example:
 ;;   - start-process vs call-proc command differences.
 ;;   - should I just make a new command?
 ;;
+;;  if I use start-process I should, set (process-connection-type nil)
+;;
 ;;  It seems like you get a handle back, that you can use
 ;;  to see what happened (it also creates a communication buffer.)
 ;;
