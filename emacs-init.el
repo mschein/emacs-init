@@ -230,6 +230,11 @@
 ;; yank:
 ;; M-y will browse previous entries.
 ;;
+;;
+;; Fix OSX Sierra Mini buffer issue:
+;; -> System Preferences... → Dock → Prefer tabs when opening documents and select "Manually"
+;; ;; -> This didn't actually work, but maybe it's related.
+;;
 (require 'cl)
 (require 'find-lisp)
 (require 'midnight)
@@ -907,7 +912,6 @@ that uses 'font-lock-warning-face'."
 
 ;; Move flymake errors to the mini-buffer
 (if (>= emacs-major-version 26)
-    (require 'posframe)
     (eval-after-load 'flymake
       (progn
         (require 'flymake-diagnostic-at-point)
