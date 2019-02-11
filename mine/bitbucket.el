@@ -72,7 +72,7 @@
   (bitbucket-request bb "application-properties"))
 
 (defun bitbucket-version (bb)
-  (assoc1 '(:json version) (bitbucket-application-properties)))
+  (assoc1 'version (bitbucket-application-properties bb)))
 
 (defun bitbucket-list-projects (bb)
   (bitbucket-request-all bb "projects"))
