@@ -1432,6 +1432,40 @@ supplied by the command."
         (string-join (butlast split-name 1) ".")
       (car split-name))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Network Utils
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; Don't overlap with what's in `net-utils'
+;;
+;; netstat
+;; also use lsof
+;;
+
+(defun osx-list-open-files ()
+  "Find out which files, sockets etc are open.
+Returns a list of alists."
+  (cl-loop for line in (string->list (run-to-str "lsof" "-Pnln" "+M" "-i" "-cmd"))
+           for lineno from 1
+           when (> lineno 1)
+              ;; This is like zip
+              collect (mapcar* #'cons
+                               '(:command :pid :user :fd :type :device :size/off :node :name :action)
+                               (split-string line))))
+(defun osx-ports-in-use ()
+  (cl-flet ((name-to-port (file)
+              (when-let (action (assoc-get :action file))
+                (when (equal "(LISTEN)" action)
+                  (when-let (port (car (string-find "^\\*:\\([0-9]+\\)$" (assoc1 :name file))))
+                    (string-to-number port))))))
+
+    (cl-loop for file in (osx-list-open-files)
+             when (name-to-port file)
+               collect (cons (name-to-port file) file))))
+
+(defun osx-port-in-use (port)
+  (assoc-get port (osx-ports-in-use)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Programming Utils
