@@ -1453,7 +1453,7 @@ Returns a list of alists."
               collect (mapcar* #'cons
                                '(:command :pid :user :fd :type :device :size/off :node :name :action)
                                (split-string line))))
-(defun osx-ports-in-use ()
+(defun osx-list-ports-in-use ()
   (cl-flet ((name-to-port (file)
               (when-let (action (assoc-get :action file))
                 (when (equal "(LISTEN)" action)
@@ -1465,7 +1465,37 @@ Returns a list of alists."
                collect (cons (name-to-port file) file))))
 
 (defun osx-port-in-use (port)
-  (assoc-get port (osx-ports-in-use)))
+  (assoc-get port (osx-list-ports-in-use)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Google Search
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun google-search-terms (term-string)
+  (let ((google-cookie-jar "~/.google-cookies.jar")
+        (google-url "https://www.google.com/")
+        (user-agent "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0)"))
+
+    ;; (web-request google-url
+    ;;              :user-agent user-agent
+    ;;              :cookie-jar google-cookie-jar)
+    ;; (sleep-for 2)
+    (let ((resp (web-request (path-join google-url "search") :params `((q . ,term-string)
+                                                           (hl . "en")
+                                                           (btnG . "Google Search"))
+                 :user-agent user-agent
+                 :cookie-jar google-cookie-jar
+                 :throw t)))
+
+      ;; Need to work on parsing the results.
+      ;; use something like xpath/beautifulsoup, or something to deal
+      ;; with the sexps.
+      (assoc1 :html resp)
+      )))
+
+(defun google-search-at-point ())
+(defun google-search-region ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Programming Utils
@@ -2422,15 +2452,15 @@ python debugging session."
   (interactive "r")
   (replace-regex-region "[\n ]+" " " begin end))
 
-;; Note that at some point we might need to support single arguments
-;; (as in no equal)
 (defun url-encode-params (params)
-  "Doc encode an alist into url parameters."
+  "Doc encode an alist into url parameters.  Nil implies a single param."
   (string-join
    (loop for (k . v) in params
-         collect (string-join (list
+         collect (string-join (cons
                                (url-hexify-string (format "%s" k))
-                               (url-hexify-string (format "%s" v)))
+                               (when v
+                                 (cons (url-hexify-string (format "%s" v))
+                                       nil)))
                                "="))
    "&"))
 
@@ -2507,7 +2537,7 @@ rm -f ${ATTACHMENT}
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
 (cl-defun web-request (url
-                       &key (op "GET") params auth body json file timeout insecure throw preserve)
+                       &key (op "GET") params auth body json file timeout insecure  user-agent cookie-jar throw)
   "Make a web request with curl.
 
    Params:
@@ -2515,7 +2545,7 @@ rm -f ${ATTACHMENT}
 
    Optional Params:
    `op': Which http operation to perform, (defaults to GET).
-   `params': An alist of url parameters.
+   `params': An alist of url parameters.  A nil value means only send the key
    `auth': Auth can be, a user name with no colon, which will trigger a prompt for
            a password, or a full curl auth string like \"user:password\".
    `body': A string that will be sent as a data body to the server.
@@ -2523,6 +2553,8 @@ rm -f ${ATTACHMENT}
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
+   `user-agent': Set the user agent string.
+   `cookie-jar': A place to send and receive cookies.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
 
@@ -2584,6 +2616,8 @@ rm -f ${ATTACHMENT}
                                  (setf cmd (append cmd (funcall value-fn))))))
         (append-option op (| (list (upcase (format "-X%s" op)))))
         (append-option input-file (| '("-K" "-")))
+        (append-option user-agent (| `("-A" ,user-agent)))
+        (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
         (append-option body (| `("--data-raw" ,body)))
         (append-option json (| `("-H" "Content-Type:application/json"
