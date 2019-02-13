@@ -2537,14 +2537,14 @@ rm -f ${ATTACHMENT}
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
 (cl-defun web-request (url
-                       &key (op "GET") params auth body json file timeout insecure  user-agent cookie-jar throw)
+                       &key (method "GET") params auth body json file timeout insecure  user-agent cookie-jar throw)
   "Make a web request with curl.
 
    Params:
    `url': The url to fetch
 
    Optional Params:
-   `op': Which http operation to perform, (defaults to GET).
+   `method': Which http operation/method to perform, (defaults to GET).
    `params': An alist of url parameters.  A nil value means only send the key
    `auth': Auth can be, a user name with no colon, which will trigger a prompt for
            a password, or a full curl auth string like \"user:password\".
@@ -2614,7 +2614,7 @@ rm -f ${ATTACHMENT}
       (cl-flet ((append-option (arg value-fn)
                                (when arg
                                  (setf cmd (append cmd (funcall value-fn))))))
-        (append-option op (| (list (upcase (format "-X%s" op)))))
+        (append-option method (| (list (upcase (format "-X%s" method)))))
         (append-option input-file (| '("-K" "-")))
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
@@ -2682,7 +2682,7 @@ rm -f ${ATTACHMENT}
               (:url . ,url)
               (:final-url . ,final-url)
               (:params . ,params)
-              (:op . ,op)
+              (:method . ,method)
               (:http-code . ,http-code)
               (:headers . ,headers)
               (:stderr . ,(when (not (equal (assoc1 :code resp) 0))

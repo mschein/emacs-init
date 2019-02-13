@@ -108,7 +108,7 @@
       (append-atom! json `(reviewers . ,(vector (mapcar (fn (reviewer) `((user . ((name . ,reviewer))))) reviewers)))))
 
     (bitbucket-request bb (path-join "projects" project "repos" repo "pull-requests")
-                       :op "POST"
+                       :method "POST"
                        :json json)))
 
 (defun bitbucket-fetch-pull-requests (bb project repo)
