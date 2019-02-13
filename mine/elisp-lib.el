@@ -1369,6 +1369,7 @@ Example:
            collect (cons key l)))
 
 (defun get-file-info (path)
+  "Return the file system information for a given path."
   (list-to-alist
    (file-attributes path)
    '(type
