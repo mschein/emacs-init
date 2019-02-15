@@ -2485,6 +2485,14 @@ python debugging session."
             (second result))
     (error "Unable to parse http header: %s" header)))
 
+(defun parse-http-status-line (line)
+  (if-let (result (string-find "^HTTP/\\([0-9.]+\\) \\([0-9]+\\) \\(.+\\)$" line))
+      (destructuring-bind (version code message) result
+        `((:http-version . ,version)
+          (:status-code . ,code)
+          (:message . ,message)))
+    (error "Unable to parse http status line: %s" line)))
+
 (defun coalesce-alist (alist)
   (let ((output))
     (dolist (entry alist)
@@ -2502,21 +2510,20 @@ python debugging session."
   ;;
   ;; With that i can get rid of -f and also get :form to work.
   ;;
-  (let ((seen-first-line nil)
-        (resp-line)
+  (let ((status-line)
         (headers))
     (dolist (line (remove-if #'string-empty-p
                              (mapcar (| string-left-trim-regex "< *" %)
                                      (remove-if-not (| string-starts-with "<" %)
                                                     (string->list curl-header-block "\r*\n+")))))
-      (if seen-first-line
+      (if status-line
           (push (parse-http-header line) headers)
-        (progn
-          (setf resp-line (string-split " +" line))
-          (setf seen-first-line t))))
-    (list
-     (cons :resp-line resp-line)
-     (cons :headers (coalesce-alist headers)))))
+        (let ((status (parse-http-status-line line)))
+          (unless (equal "100" (assoc1 :status-code status))
+            ;; it's a continue, so skip it.
+            (setf status-line status)))))
+    `((:status-line . ,status-line)
+      (:headers . ,(coalesce-alist headers)))))
 
 (defun parse-html-string (str &rest parse-args)
   (with-temp-buffer
@@ -2669,7 +2676,6 @@ rm -f ${ATTACHMENT}
                       output-file)
                 (chmod output-file #o700)))
           (message "Web-request running %s" cmd))
-        (debug)
 
         ;;
         ;; When passwords are used, we must use stdin to send
@@ -2691,8 +2697,9 @@ rm -f ${ATTACHMENT}
                ;; Split out the '< content-type: application/json' headers
                ;; from curl, and turn them into an alist.
                (resp-block (parse-http-header-block (assoc1 :stderr resp)))
+               (status-line (assoc1 :status-line resp-block))
                (http-code (if (equal (assoc1 :code resp) 0)
-                              (string-to-number (second (assoc1 :resp-line resp-block)))
+                              (string-to-number (assoc1 :status-code status-line))
                             -1))
                (headers (assoc1 :headers resp-block))
                ;; I decided to always try to parse json, if only
@@ -2702,26 +2709,27 @@ rm -f ${ATTACHMENT}
                             (json-read-from-string (assoc1 :stdout resp))))
                (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
                             (ignore-errors
-                             (parse-html-string output)))))
+                              (parse-html-string output)))))
 
-            (message "Web-request. code: %s http: %s\n headers: %s"
-                     (assoc1 :code resp) http-code headers)
+          (message "Web-request. code: %s http: %s\n headers: %s"
+                   (assoc1 :code resp) http-code headers)
 
             ;; If the alist gets so large it's annoying in ielm,
             ;; I could make separate functions for accessing
-            ;; json or parsed html.
-            `((:resp . ,output)
-              (:code . ,(assoc1 :code resp))
-              (:url . ,url)
-              (:final-url . ,final-url)
-              (:params . ,params)
-              (:method . ,method)
-              (:http-code . ,http-code)
-              (:headers . ,headers)
-              (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
-                            (assoc1 :stderr resp)))
-              (:json . ,resp-json)
-              (:html . ,resp-html)))))))
+          ;; json or parsed html.
+          `((:resp . ,output)
+            (:code . ,(assoc1 :code resp))
+            (:url . ,url)
+            (:final-url . ,final-url)
+            (:params . ,params)
+            (:method . ,method)
+            (:http-code . ,http-code)
+            (:status-line . ,status-line)
+            (:headers . ,headers)
+            (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
+                          (assoc1 :stderr resp)))
+            (:json . ,resp-json)
+            (:html . ,resp-html)))))))
 
 (defun web-request-is-success (&rest args)
   (equal 0 (assoc1 :code (apply #'web-request args))))
