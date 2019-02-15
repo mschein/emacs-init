@@ -124,7 +124,7 @@
 
 (defun* -aws (&rest args)
   (let ((resp (do-cmd (cons "aws" args) :stdout 'string :stderr 'string :throw t)))
-    (when (equal (assoc1 :code resp) 0)
+    (when (do-cmd-was-true resp)
       (let ((json-result (ignore-errors
                            (json-read-from-string (assoc1 :stdout resp)))))
         (if -aws-return-json

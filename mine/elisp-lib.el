@@ -2708,9 +2708,12 @@ rm -f ${ATTACHMENT}
                            ;; from curl, and turn them into an alist.
                            (resp-block (parse-http-header-block (assoc1 :stderr resp)))
                            (status-line (assoc1 :status-line resp-block))
-                           (http-code (if (equal (assoc1 :code resp) 0)
+                           (curl-code (assoc1 :code resp))
+                           (http-code (if (= curl-code 0)
                                           (string-to-number (assoc1 :status-code status-line))
                                         -1))
+                           (http-error-type (http-classify-status-code http-code))
+
                            (headers (assoc1 :headers resp-block))
                            ;; I decided to always try to parse json, if only
                            ;; because sometimes I deal with improperly implemented
@@ -2722,33 +2725,33 @@ rm -f ${ATTACHMENT}
                                           (parse-html-string output)))))
 
                       (message "Web-request. curl code: %s http code: %s, status-line: %s"
-                               (assoc1 :code resp) http-code status-line)
+                               curl-code http-code status-line)
 
                       ;; Check to see if we're supposed to throw an error
                       (when throw
-                        (let ((error-type (http-classify-status-code http-code)))
-                          (unless (eq error-type :success)
+                          (unless (eq http-error-type :success)
                             (let ((error-message
                                    (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
                                            http-code (assoc1 :message status-line)
                                            (string-truncate output *webrequest-http-error-msg-len*))))
                             (message error-message)
-                            (error error-message)))))
+                            (error error-message))))
 
                       ;; If the alist gets so large it's annoying in ielm,
                       ;; I could make separate functions for accessing
                       ;; json or parsed html.
-                      `((:resp . ,output)
-                        (:code . ,(assoc1 :code resp))
-                        (:url . ,url)
-                        (:final-url . ,final-url)
-                        (:params . ,params)
-                        (:method . ,method)
-                        (:http-code . ,http-code)
+                      `((:http-code . ,http-code)
+                        (:http-status . ,http-error-type)
                         (:status-line . ,status-line)
                         (:headers . ,headers)
-                        (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
+                        (:final-url . ,final-url)
+                        (:method . ,method)
+                        (:url . ,url)
+                        (:params . ,params)
+                        (:curl-code . ,curl-code)
+                        (:stderr . ,(when curl-code
                                       (assoc1 :stderr resp)))
+                        (:resp . ,output)
                         (:json . ,resp-json)
                         (:html . ,resp-html)))))
 
@@ -2760,9 +2763,12 @@ rm -f ${ATTACHMENT}
                                                +webrequest-cache-urls+))
             (webrequest-fn)))))))
 
+;; TODO(mls): make this consistent with do-cmd-was-true
+(defun web-request-success-p (resp)
+  (eq :success (assoc1 :http-status resp)))
 
-(defun web-request-is-success (&rest args)
-  (equal 0 (assoc1 :code (apply #'web-request args))))
+(defun web-request-for-status (&rest args)
+  (web-request-success-p (apply #'web-request args)))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
