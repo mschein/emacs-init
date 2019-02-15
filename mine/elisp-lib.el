@@ -664,6 +664,10 @@ Example:
     (while (re-search-forward regex end t)
       (replace-match replacement))))
 
+(defun string-truncate (str max-len)
+  (concat (cl-loop for s across str
+                   for i below max-len
+                   collect s)))
 
 ;; TODO(scheinholtz): Do more with this?
 (defalias 'string-replace 'replace-regexp-in-string)
@@ -2541,6 +2545,15 @@ python debugging session."
       auth
     (concat auth ":" (read-passwd (format "Password(%s):" auth)))))
 
+(defconst *webrequest-http-error-msg-len* 256)
+
+(defun http-classify-status-code (code)
+  (cond
+   ((< code 0) :unknown-error)
+   ((<= 400 code 499) :client-error)
+   ((<= 500 code 599) :server-error)
+   (t :success)))
+
 (defun content-type-html-p (header)
   (not (not (search "text/html" (downcase header)))))
 
@@ -2616,10 +2629,7 @@ rm -f ${ATTACHMENT}
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
   (with-tempdir (:root-dir "/tmp")
-    ;; TODO: "-f" may not be the best option, as sometimes server
-    ;; response bodies are useful, and this won't return them if
-    ;; there is a failure.
-    (let* ((cmd (list "curl" "-f" "--verbose" "--silent"))
+    (let* ((cmd (list "curl" "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (input-file (when auth
                          (let ((input-file-path "input-file"))
@@ -2687,54 +2697,69 @@ rm -f ${ATTACHMENT}
         ;; them without them being recorded.  So create a tempdir
         ;; where we can dump things like this.
         ;;
-        ;; TODO(mls): better error handling.
-        ;; it would be good to handle the error code + headers
-        (let* ((webrequest-fn (lambda ()
-                                (do-cmd cmd
-                                        :input input-file
-                                        :stdout 'string :stderr 'string :throw throw)))
-               (resp (if +webrequest-cache-urls+
-                         (m-url-cache-or-fetch final-url webrequest-fn :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
-                                                                                    nil
-                                                                                  +webrequest-cache-urls+))
-                       (funcall webrequest-fn)))
-               (output (assoc1 :stdout resp))
-               ;; Split out the '< content-type: application/json' headers
-               ;; from curl, and turn them into an alist.
-               (resp-block (parse-http-header-block (assoc1 :stderr resp)))
-               (status-line (assoc1 :status-line resp-block))
-               (http-code (if (equal (assoc1 :code resp) 0)
-                              (string-to-number (assoc1 :status-code status-line))
-                            -1))
-               (headers (assoc1 :headers resp-block))
-               ;; I decided to always try to parse json, if only
-               ;; because sometimes I deal with improperly implemented
-               ;; web services.
-               (resp-json (ignore-errors
-                            (json-read-from-string (assoc1 :stdout resp))))
-               (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
-                            (ignore-errors
-                              (parse-html-string output)))))
+        ;; Should I put this function in its own scope?
+        ;;
+        (cl-flet ((webrequest-fn ()
+                    (let* ((resp (do-cmd cmd
+                                         :input input-file
+                                         :stdout 'string :stderr 'string :throw throw))
+                           (output (assoc1 :stdout resp))
+                           ;; Split out the '< content-type: application/json' headers
+                           ;; from curl, and turn them into an alist.
+                           (resp-block (parse-http-header-block (assoc1 :stderr resp)))
+                           (status-line (assoc1 :status-line resp-block))
+                           (http-code (if (equal (assoc1 :code resp) 0)
+                                          (string-to-number (assoc1 :status-code status-line))
+                                        -1))
+                           (headers (assoc1 :headers resp-block))
+                           ;; I decided to always try to parse json, if only
+                           ;; because sometimes I deal with improperly implemented
+                           ;; web services.
+                           (resp-json (ignore-errors
+                                        (json-read-from-string (assoc1 :stdout resp))))
+                           (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
+                                        (ignore-errors
+                                          (parse-html-string output)))))
 
-          (message "Web-request. code: %s http: %s\n headers: %s"
-                   (assoc1 :code resp) http-code headers)
+                      (message "Web-request. curl code: %s http code: %s, status-line: %s"
+                               (assoc1 :code resp) http-code status-line)
 
-            ;; If the alist gets so large it's annoying in ielm,
-            ;; I could make separate functions for accessing
-          ;; json or parsed html.
-          `((:resp . ,output)
-            (:code . ,(assoc1 :code resp))
-            (:url . ,url)
-            (:final-url . ,final-url)
-            (:params . ,params)
-            (:method . ,method)
-            (:http-code . ,http-code)
-            (:status-line . ,status-line)
-            (:headers . ,headers)
-            (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
-                          (assoc1 :stderr resp)))
-            (:json . ,resp-json)
-            (:html . ,resp-html)))))))
+                      ;; Check to see if we're supposed to throw an error
+                      (when throw
+                        (let ((error-type (http-classify-status-code http-code)))
+                          (unless (eq error-type :success)
+                            (let ((error-message
+                                   (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
+                                           http-code (assoc1 :message status-line)
+                                           (string-truncate output *webrequest-http-error-msg-len*))))
+                            (message error-message)
+                            (error error-message)))))
+
+                      ;; If the alist gets so large it's annoying in ielm,
+                      ;; I could make separate functions for accessing
+                      ;; json or parsed html.
+                      `((:resp . ,output)
+                        (:code . ,(assoc1 :code resp))
+                        (:url . ,url)
+                        (:final-url . ,final-url)
+                        (:params . ,params)
+                        (:method . ,method)
+                        (:http-code . ,http-code)
+                        (:status-line . ,status-line)
+                        (:headers . ,headers)
+                        (:stderr . ,(when (not (equal (assoc1 :code resp) 0))
+                                      (assoc1 :stderr resp)))
+                        (:json . ,resp-json)
+                        (:html . ,resp-html)))))
+
+          ;; Actually make the web request, caching the output if needed.
+          (if +webrequest-cache-urls+
+              (m-url-cache-or-fetch final-url #'webrequest-fn
+                                    :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
+                                                 nil
+                                               +webrequest-cache-urls+))
+            (webrequest-fn)))))))
+
 
 (defun web-request-is-success (&rest args)
   (equal 0 (assoc1 :code (apply #'web-request args))))
