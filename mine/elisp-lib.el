@@ -2485,12 +2485,17 @@ python debugging session."
             (second result))
     (error "Unable to parse http header: %s" header)))
 
+;;
+;; HTTP/1.0 100 Continue
+;; HTTP/1.1 200 OK
+;; HTTP/1.1 401
+;;
 (defun parse-http-status-line (line)
-  (if-let (result (string-find "^HTTP/\\([0-9.]+\\) \\([0-9]+\\) \\(.+\\)$" line))
+  (if-let (result (string-find "^HTTP/\\([0-9.]+\\) \\([0-9]+\\)\\(.*\\)$" line))
       (destructuring-bind (version code message) result
         `((:http-version . ,version)
           (:status-code . ,code)
-          (:message . ,message)))
+          (:message . ,(string-trim message))))
     (error "Unable to parse http status line: %s" line)))
 
 (defun coalesce-alist (alist)
