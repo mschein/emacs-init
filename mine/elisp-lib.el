@@ -30,6 +30,12 @@
 
 (defalias 'filter #'remove-if-not)
 
+(defun sum (elms)
+  "Sum a sequence"
+  (if (vectorp elms)
+      (cl-loop for elm across elms sum elm)
+    (cl-loop for elm in elms sum elm)))
+
 (defmacro with-gensyms (syms &rest body)
   (declare (indent defun))
   `(let ,(mapcar (| list % '(gensym)) syms)
@@ -2492,6 +2498,10 @@ python debugging session."
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
 
+  ;; TODO(mls): make this handle multiple HTTP/1.X <code> <comment> lines
+  ;;
+  ;; With that i can get rid of -f and also get :form to work.
+  ;;
   (let ((seen-first-line nil)
         (resp-line)
         (headers))
@@ -2538,7 +2548,7 @@ rm -f ${ATTACHMENT}
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json file timeout insecure  user-agent cookie-jar throw)
+                       &key (method "GET") params auth body json form file timeout insecure user-agent cookie-jar throw)
   "Make a web request with curl.
 
    Params:
@@ -2549,8 +2559,9 @@ rm -f ${ATTACHMENT}
    `params': An alist of url parameters.  A nil value means only send the key
    `auth': Auth can be, a user name with no colon, which will trigger a prompt for
            a password, or a full curl auth string like \"user:password\".
-   `body': A string that will be sent as a data body to the server.
+   `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
+   `form': An alist (like params) that will be sent as a form body.
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
@@ -2578,7 +2589,10 @@ rm -f ${ATTACHMENT}
 
   ;; Check the args
   (assert url)
-  (assert (not (and body json)))
+  (let ((bjf (mapcar (fn (elm) (if elm 1 0))
+                     (list body json form))))
+    (assert (<= (sum bjf) 1) nil
+            (format "You must only chose one of :body, :json, or :form: %s" bjf)))
   (if timeout
       (assert (integerp timeout)))
 
@@ -2615,11 +2629,28 @@ rm -f ${ATTACHMENT}
       (cl-flet ((append-option (arg value-fn)
                                (when arg
                                  (setf cmd (append cmd (funcall value-fn))))))
+
+        ;; TODO(mls): do I need append option, now that I have append!?
+        ;; I guess the check for validity is nice.
         (append-option method (| (list (upcase (format "-X%s" method)))))
         (append-option input-file (| '("-K" "-")))
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
+        (when form
+          (cl-loop for (name .  value) in form
+                   for i from 0
+                   do
+            (let ((filename (format "form-file-%s" i)))
+              ;; Write the value out to a file, just so we don't
+              ;; overwhelm the arg list.
+              (cond
+               ((atom value) (barf value filename))
+               ((equal :file (first value))
+                (setf filename (second value)))
+               (t (error "Invalid form value: %s" value)))
+
+              (append! cmd (list "-F" (format "%s=@%s" name filename))))))
         (append-option body (| `("--data-raw" ,body)))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
@@ -2638,6 +2669,7 @@ rm -f ${ATTACHMENT}
                       output-file)
                 (chmod output-file #o700)))
           (message "Web-request running %s" cmd))
+        (debug)
 
         ;;
         ;; When passwords are used, we must use stdin to send
