@@ -72,7 +72,8 @@
     (barf (format store--bare-store-elisp-file store-name store-name)
           (path-join metadata-dir (format "%s.el" store-name)))
     (barf (format "-- Initial database creation for store %s" store-name)
-          (path-join migration-dir (format "000_%s.sql" store-name)))))
+          (path-join migration-dir (format "000_%s.sql" store-name)))
+    metadata-dir))
 
 
 (defun store--get-metadata-version (store-name)
