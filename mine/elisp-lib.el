@@ -806,6 +806,8 @@ Example:
 ;;  It seems like you get a handle back, that you can use
 ;;  to see what happened (it also creates a communication buffer.)
 ;;
+;; TODO(mls): is it useful to have an :input-string flag,
+;;            to save having to create the file first?
 ;;
 (cl-defun do-cmd (cmd &key input stdout stderr throw ssh)
   ;; Add an async function
@@ -821,7 +823,7 @@ Example:
    1. cmd: a list with the program to run and its arguments.
            The arguments won't be interpreted by the shell.
 
-   2. input: The file to hand to the input process.  nil is the same as dev
+   2. input: The file to hand to the input process.  nil is the same as /dev/null
 
    3. stdout: What to do with the stdout from the subprocess.
              'current-buffer: Dump into the current buffer.
@@ -834,7 +836,6 @@ Example:
    4. stderr: The same as stdout with one additional option.
               NOTE: this is on by default to make error messages better.
               'stdout: combine stdout and stderr.
-
    5. throw: Raise an error on failure instead of returning the alist.
 
   output: (list

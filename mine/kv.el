@@ -20,12 +20,9 @@
 ;;
 
 (defun kv-create (store-name)
-  (store-create-store store-name)
-
-  ;; XXX Turn this into the schema
-  (with-store store-name
-    (sqlite3-exec db (format "CREATE TABLE %s (key TEXT PRIMARY KEY, value TEXT);"
-                             kv--table-name))))
+  (store-create-store store-name
+                      :schema (format "CREATE TABLE %s (key TEXT PRIMARY KEY, value TEXT);"
+                                      kv--table-name)))
 
 (defconst kv-upsert-string "INSERT INTO kv(key, value) VALUES (?, ?)
                             ON CONFLICT (key) DO UPDATE SET value=excluded.value")
