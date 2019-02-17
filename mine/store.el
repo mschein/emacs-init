@@ -55,6 +55,13 @@
 ;;;
 ;;; Code for database access to the %s store.
 ;;;
+(require 'store)
+(require 'mysqlite3)
+
+;; Use this to access the database
+(defconst %s-store \"%s\" \"Constant to use with `with-store' to access the database.\")
+
+;; Database functions
 
 (provide '%s)
 ")
@@ -69,7 +76,9 @@
     (ensure-makedirs metadata-dir)
     (ensure-makedirs migration-dir)
 
-    (barf (format store--bare-store-elisp-file store-name store-name)
+    ;; Is there a nicer way to do this format string.  Like passing it an alist?
+    (barf (format store--bare-store-elisp-file
+                  store-name store-name store-name store-name)
           (path-join metadata-dir (format "%s.el" store-name)))
     (barf (format "-- Initial database creation for store %s" store-name)
           (path-join migration-dir (format "000_%s.sql" store-name)))
@@ -140,13 +149,16 @@
                       (message "Apply migration %s" (assoc1 :name entry))
                       ;; Can this be one transaction somehow?
                       (do-cmd (list "sqlite3" (store-get-path store-name))
-                              :input (assoc1 :name entry))
-                      (store--set-metadata-version store-name (assoc1 :version entry))))))))
+                              :input (assoc1 :name entry)
+                              :throw t)
+                      (store--set-metadata-version store-name (assoc1 :version entry))))))
+      ;; Load the db function
+    (load (path-join metadata-dir store-name))))
 
 (defun store--load-metadata (store-name)
   "Load store that uses a migration directory for its schema."
   (cl-loop for metadata-root in store--metadata-directories
-           when (file-exists-p (path-join metadata-dir store-name)) do
+           when (file-exists-p (path-join metadata-root store-name)) do
              (progn
                (store--load-metadata-dir metadata-root store-name)
                (return))))
