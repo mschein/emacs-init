@@ -59,9 +59,12 @@
 (provide '%s)
 ")
 
-(defun store-create-metadata-dir (metadata-root store-name)
+(defun store-create-metadata-dir (metadata-type store-name)
   "Create a basic metadata directory."
-  (let* ((metadata-dir (path-join metadata-root store-name))
+  (let* ((metadata-root (ecase metadata-type
+                          ('required (first store--metadata-directories))
+                          ('local (second store--metadata-directories))))
+         (metadata-dir (path-join metadata-root store-name))
          (migration-dir (path-join metadata-dir "migrations")))
     (ensure-makedirs metadata-dir)
     (ensure-makedirs migration-dir)
