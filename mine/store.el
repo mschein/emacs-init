@@ -144,7 +144,7 @@
       (pushd migration-dir
         (cl-loop for entry in (mapcar #'store--parse-migration-file-name
                                       (list-directory-entries migration-dir))
-                 when (>= (assoc1 :version entry) current-version)
+                 when (> (assoc1 :version entry) current-version)
                  do (progn
                       (message "Apply migration %s" (assoc1 :name entry))
                       ;; Can this be one transaction somehow?
@@ -163,7 +163,7 @@
                (store--load-metadata-dir metadata-root store-name)
                (return))))
 
-(cl-defun store-create-store (store-name &key schema use-migration-dir)
+(cl-defun store-create-store (store-name &key schema use-metadata)
   "Setup a store for future use.  Should be run before referencing any store."
   (ensure-makedirs store--directory)
 
@@ -174,14 +174,16 @@
      (dolist (entry (to-list schema))
        (with-store store-name
          (sqlite3-exec db entry))))
-   (use-migration-dir
+   (use-metadata
      (store--load-metadata store-name))))
 
 (defun store-exists-p (store-name)
   "Does the store name exist already?"
   (ensure-makedirs store--directory)
 
-  (file-exists-p (store-get-path store-name)))
+  (let ((path (store-get-path store-name)))
+  (and (file-exists-p path)
+       (file-has-size path))))
 
 (defun store-remove-store (store-name)
   "Delete a store specified by `store-name'.  This is an unrecoverable delete, so beware."

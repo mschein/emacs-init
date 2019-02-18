@@ -1396,6 +1396,9 @@ Example:
      inode-number
      device-number)))
 
+(defun file-has-size (path)
+  (> (assoc1 'size (get-file-info path) ) 0))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
