@@ -16,7 +16,8 @@
         (error "Store %s unable to save function %s" em-store function-name)))))
 
 (defun emacs-metrics--record-function-call ()
-  (emacs-metrics-save-function-call (symbol-name this-command)))
+  (when this-command
+    (emacs-metrics-save-function-call (symbol-name this-command))))
 
 (defun emacs-metrics-start ()
   (add-hook 'post-command-hook #'emacs-metrics--record-function-call))

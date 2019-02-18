@@ -152,7 +152,7 @@
                               :input (assoc1 :name entry)
                               :throw t)
                       (store--set-metadata-version store-name (assoc1 :version entry))))))
-      ;; Load the db function
+    ;; Load the db function
     (load (path-join metadata-dir store-name))))
 
 (defun store--load-metadata (store-name)
