@@ -2886,4 +2886,11 @@ rm -f ${ATTACHMENT}
            when (funcall match-fn href)
            collect href))
 
+(defmacro time-this-code (&rest body)
+  `(let ((time (current-time)))
+     (unwind-protect
+         (progn
+           ,@body)
+       (message "%.06f" (float-time (time-since time))))))
+
 (provide 'elisp-lib)

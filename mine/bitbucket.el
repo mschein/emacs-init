@@ -2,6 +2,8 @@
 ;;; Code for communicating with a bitbucket server.
 ;;;
 
+;; See: https://docs.atlassian.com/bitbucket-server/rest/6.0.0/bitbucket-rest.html?utm_source=%2Fstatic%2Frest%2Fbitbucket-server%2Flatest%2Fbitbucket-rest.html&utm_medium=301#idp151
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Imports
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -86,6 +88,25 @@
 (defun bitbucket-list-repo-names (bb project)
   (mapcar (| assoc1 'name %) (bitbucket-list-repos bb project)))
 
+;; This doesn't seem to work correctly
+;;
+;; (bitbucket-query-repos bb-info-auth :repo "deployment-manager" :project "OE")
+;; returns an empty set, even on the server rest api.
+;;
+;;
+(cl-defun bitbucket-query-repos (bb &key repo project permission visibility)
+  (when permission
+    (assert (member permission '(REPO_READ REPO_WRITE REPO_ADMIN))))
+
+  (when visibility
+    (assert (member visibility '(public private))))
+
+  (bitbucket-request-all bb "repos" :params (filter #'cdr
+                                                    `(("name" . ,repo)
+                                                      ("projectname" . ,project)
+                                                      ("permission" . ,permission)
+                                                      ("visibility" . ,visibility)))))
+
 (defun bitbucket-repo-data-get-clone-url (bb-repo-data type)
   (cl-loop for clone-info across (assoc1 '(links clone) bb-repo-data)
            if (equal type (assoc1 'name clone-info))
@@ -151,5 +172,7 @@
   (bitbucket-request-all bb "inbox/pull-requests"
                          :params (remove-if (| not (cdr %))
                                             `((role . ,role)))))
+
+
 
 (provide 'bitbucket)
