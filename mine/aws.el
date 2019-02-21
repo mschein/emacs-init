@@ -445,16 +445,21 @@
 (cl-defun aws-ecs-service-in-env-p (service-name)
   (aws-ecs-service-pattern-in-env-p (format "service/%s$" service-name)))
 
+;; TODO(mls): make this return a list.
 (defun aws-ec2-lookup-instance-info (tag-value)
-  (aws-traverse '(Reservations 0 Instances 0)
-                (aws-ec2-describe-instances :filters `((tag-value . ,tag-value)))))
+  ;;(aws-traverse '(Reservations 0 Instances 0)
+  (cl-loop for instances across (assoc1 'Reservations
+                                        (aws-ec2-describe-instances :filters `((tag-value . ,tag-value))))
+           ;; Convert to a list.
+           append (mapcar #'identity (assoc1 'Instances instances))))
 
-(defun aws-ec2-lookup-instance (tag-value)
-  (assoc1 'InstanceId
+
+(defun aws-ec2-lookup-instances (tag-value)
+  (mapcar (| assoc1 'InstanceId %)
           (aws-ec2-lookup-instance-info tag-value)))
 
-(defun aws-ec2-lookup-ip (tag-value)
-  (aws-get-instance-ips (aws-ec2-lookup-instance tag-value)))
+(defun aws-ec2-lookup-ips (tag-value)
+  (mapcar #'aws-get-instance-ips (aws-ec2-lookup-instances tag-value)))
 
 (defun aws-cluster-short-name (cluster)
   (let ((cluster (second (string-split "/" cluster))))
