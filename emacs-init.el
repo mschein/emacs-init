@@ -920,56 +920,64 @@ that uses 'font-lock-warning-face'."
   (require 'flymake-cursor))
 
 
-(when (< emacs-major-version 26)
-  (defmacro define-flymake-checker (func cmd &rest args)
-    "Define a flymake checker function.
+(if (< emacs-major-version 26)
+    (progn
+      (defmacro define-flymake-checker (func cmd &rest args)
+        "Define a flymake checker function.
    It will be named `func', and will execute cmd + the rest of the args."
 
-    (let ((temp-file (gensym))
-          (local-file (gensym)))
-      `(defun ,func ()
-         (let* ((,temp-file (flymake-init-create-temp-buffer-copy
-                             #'flymake-create-temp-inplace))
-                (,local-file (file-relative-name ,temp-file
-                                                 (file-name-directory buffer-file-name))))
-           (list ,cmd (list ,@args ,local-file))))))
+        (let ((temp-file (gensym))
+              (local-file (gensym)))
+          `(defun ,func ()
+             (let* ((,temp-file (flymake-init-create-temp-buffer-copy
+                                 #'flymake-create-temp-inplace))
+                    (,local-file (file-relative-name ,temp-file
+                                                     (file-name-directory buffer-file-name))))
+               (list ,cmd (list ,@args ,local-file))))))
 
-  (define-flymake-checker flymake-flake8-checker "flake8")
-  (define-flymake-checker flymake-flake83-checker "flake83")
+      (define-flymake-checker flymake-flake8-checker "flake8")
+      (define-flymake-checker flymake-flake83-checker "flake83")
 
-  ;;
-  ;; This is my old (25 and below) flymake setup code for Python.
-  ;; for 26, python.el does what we need out of the box.
-  ;;
-  (defun setup-python-mode-common (interpreter checker)
-    (setq py-python-command interpreter)
-    (setq python-shell-interpreter interpreter)
-    (update-flymake-mask "\\.py\\'" checker)
-    (when (eql 'python-mode major-mode)
-      (update-flymake-mask "." checker)))
+      ;;
+      ;; This is my old (25 and below) flymake setup code for Python.
+      ;; for 26, python.el does what we need out of the box.
+      ;;
+      (defun setup-python-mode-common (interpreter checker)
+        (setq py-python-command interpreter)
+        (setq python-shell-interpreter interpreter)
+        (update-flymake-mask "\\.py\\'" checker)
+        (when (eql 'python-mode major-mode)
+          (update-flymake-mask "." checker)))
 
-  (defun setup-python3-mode ()
-    (interactive)
-    (setup-python-mode-common "python3" #'flymake-flake83-checker)
-    (message "Set python3 mode"))
+      (defun setup-python3-mode ()
+        (interactive)
+        (setup-python-mode-common "python3" #'flymake-flake83-checker)
+        (message "Set python3 mode"))
 
-  (defun setup-python2-mode ()
-    (interactive)
-    (setup-python-mode-common "python" #'flymake-flake8-checker)
-    (message "Set python2 mode"))
+      (defun setup-python2-mode ()
+        (interactive)
+        (setup-python-mode-common "python" #'flymake-flake8-checker)
+        (message "Set python2 mode"))
 
 
-  (when (load "flymake" t)
-    ;; Do I need this, if I call this during the mode hook?
-    (setup-python3-mode))
+      (when (load "flymake" t)
+        ;; Do I need this, if I call this during the mode hook?
+        (setup-python3-mode))
 
-  ;; If we're in python mode, make sure flymake comes on.
-  (add-hook 'python-mode-hook #'(lambda ()
-                                  ;; enable flymake-python for files with no '.py' extension
-                                  (make-local-variable 'flymake-allowed-file-name-masks)
-                                  (if (guess-python-version-3)
-                                      (setup-python3-mode)
-                                    (setup-python2-mode)))))
+      ;; If we're in python mode, make sure flymake comes on.
+      (add-hook 'python-mode-hook #'(lambda ()
+                                      ;; enable flymake-python for files with no '.py' extension
+                                      (make-local-variable 'flymake-allowed-file-name-masks)
+                                      (if (guess-python-version-3)
+                                          (setup-python3-mode)
+                                        (setup-python2-mode)))))
+  ;; emacs 26 version
+  (progn
+    (add-hook 'python-mode-hook #'(lambda ()
+                                    ;; enable flymake-python for files with no '.py' extension
+                                    (if (guess-python-version-3)
+                                        (setq python-shell-interpreter "python3")
+                                      (setq python-shell-interpreter "python"))))))
 
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
