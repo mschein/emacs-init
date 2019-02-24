@@ -56,9 +56,19 @@
          (sqlite3-finalize stmt)))))
 
 (defun mysqlite3-create-index-str (table-name field &optional unique)
-  (format "CREATE %sINDEX %s_%s_index ON %s (%s)"
+  (format "CREATE %sINDEX %s_%s_index ON %s (%s);"
           (if unique "UNIQUE " "")
           table-name field table-name field))
+
+(defun mysqlite3-create-foreign-key-str (key-name parent-table parent-field)
+  (format "%s INTEGER,\nFOREIGN KEY(%s) REFERENCES %s(%s)"
+          key-name key-name parent-table parent-field))
+
+(defun mysqlite3-create-enum-str (column values)
+  (format "%s CHECK(%s IN (%s))"
+          column column
+          (string-join (mapcar (| concat "'" % "'") values) ", ")))
+
 
 (defun mysqlite3-create-db-schema (path schema)
   (with-mysqlite3 path

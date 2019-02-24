@@ -41,7 +41,23 @@
   `(let ,(mapcar (| list % '(gensym)) syms)
      ,@body))
 
-(defun assoc1 (keys list)
+(defun --assoc1-common (keys list)
+  "Don't call this directly usually.  It's hear to make
+the setter work."
+  (let ((keys (to-list keys))
+        out '())
+    (cl-flet ((as (key al)
+                  (if-let (answer (assoc key al))
+                      (cdr (setf out answer))
+                    (error "Key \'%s\' not found" key))))
+
+      (while keys
+        (let ((res (as (car keys) list)))
+          (setf list res)
+          (setf keys (cdr keys)))))
+    out))
+
+(defun assoc1 (&rest args)
   "Lookup a key (or keys) in an alist and raise an error if its not there.
 
    Returns the value (The cdr of the element).
@@ -54,17 +70,7 @@
    `keys': The key or a list of keys to lookup.
    `list': The associated list to check.
   "
-  (let ((keys (to-list keys)))
-    (cl-flet ((as (key al)
-                  (if-let (answer (assoc key al))
-                      (cdr answer)
-                    (error "Key \'%s\' not found" key))))
-
-      (while keys
-        (let ((res (as (car keys) list)))
-          (setf list res)
-          (setf keys (cdr keys)))))
-    list))
+  (cdr (apply #'--assoc1-common args)))
 
 (defun rassoc1 (value list)
   "Lookup a key in an alist and raise an error if its not there.
@@ -79,11 +85,7 @@
       (cdr answer)
     (error "Value \'%s\' not found" value)))
 
-(defun assoc-get (key alist &optional default)
-  "Return value of `key' exists in `alist' otherwise nil"
-  (if-let (value (assoc key alist))
-      (cdr value)
-    default))
+(defalias 'assoc-get #'alist-get)
 
 (defun assoc-keys (alist)
   "Return all of the keys in an alist.  That is the `car' values."
@@ -143,6 +145,9 @@
    that only has keys in `KEYS-TO-KEEP'."
   (cl-loop for key in keys-to-keep
            collect (cons key (assoc1 key alist))))
+
+;; Make it so you can use assoc1 with setf.
+(gv-define-setter assoc1 (value &rest args) `(setcdr (--assoc1-common ,@args) ,value))
 
 (defun identity (arg)
   arg)
