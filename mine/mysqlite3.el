@@ -61,7 +61,8 @@
           table-name field table-name field))
 
 (defun mysqlite3-create-foreign-key-str (key-name parent-table parent-field)
-  (format "%s INTEGER,\nFOREIGN KEY(%s) REFERENCES %s(%s)"
+  (format "%s INTEGER,
+        FOREIGN KEY(%s) REFERENCES %s(%s)"
           key-name key-name parent-table parent-field))
 
 (defun mysqlite3-create-enum-str (column values)
@@ -69,6 +70,18 @@
           column column
           (string-join (mapcar (| concat "'" % "'") values) ", ")))
 
+(defun mysqlite3-create-join-table-str (tables-referenced)
+  (let ((table-name (string-join tables-referenced "_")))
+    (format "CREATE TABLE %s(
+        %s
+);" table-name
+            (string-join
+             (mapcar (fn (table-name)
+                       (mysqlite3-create-foreign-key-str
+                        (format "%s_id" table-name)
+                        table-name "id"))
+                       tables-referenced)
+             ",\n        "))))
 
 (defun mysqlite3-create-db-schema (path schema)
   (with-mysqlite3 path

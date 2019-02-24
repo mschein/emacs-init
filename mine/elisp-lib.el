@@ -2083,13 +2083,12 @@ end run
     (run "git" "commit" "-a" "-m" message)))
 
 (defun git-rev-parse-is-inside-working-tree ()
-  (run "git" "rev-parse" "--is-inside-work-tree"))
+  (do-cmd-was-true (do-cmd (list "git" "rev-parse" "--is-inside-work-tree"))))
 
 (defun git-in-working-tree (&optional dir)
   "Is the current or provided directory inside a valid git repo?"
   (pushd (or dir default-directory)
-    (ignore-errors
-      (do-cmd-was-true (git-rev-parse-is-inside-working-tree)))))
+    (git-rev-parse-is-inside-working-tree)))
 
 (defun git-clone (clone-url)
   "Clone a git repo into the current directory."
