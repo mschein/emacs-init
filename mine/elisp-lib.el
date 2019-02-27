@@ -2436,6 +2436,38 @@ python debugging session."
       (sort-lines nil import-start import-end))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Docker Commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(cl-defun csv-split-text (text &key (split-regex ",") split-line-fn (has-header-line t) field-names)
+  (cl-flet ((--split-line (line)
+              (cond
+               (split-regex (string-split split-regex line))
+               (split-line-fn (funcall split-line-fn line))
+               (t (error "Must have either a split-regex or a split-line-fn defined")))))
+    (let* ((lines (string->list text))
+           (header-line (when has-header-line
+                          (first lines)))
+           (lines (if has-header-line
+                      (cdr lines)
+                    lines))
+           (field-names (if (and header-line
+                                 (not field-names))
+                            (--split-line header-line)
+                          field-names)))
+      (assert field-names nil "Error: must provide field-names")
+
+      (mapcar (fn (line)
+                (mapcar* #'cons
+                         field-names
+                         (--split-line line)))
+              lines))))
+
+(defun docker-list-processes ()
+  (interactive)
+  (with-overwrite-buffer-pp "+docker-ps+"
+    (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2581,7 +2613,7 @@ rm -f ${ATTACHMENT}
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file timeout insecure user-agent cookie-jar throw)
+                       &key (method "GET") params auth body json form file headers timeout insecure user-agent cookie-jar throw)
   "Make a web request with curl.
 
    Params:
@@ -2595,6 +2627,7 @@ rm -f ${ATTACHMENT}
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
    `form': An alist (like params) that will be sent as a form body.
+   `headers': Override any headers to send on the request.  See *man curl* for rules.
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
@@ -2682,9 +2715,11 @@ rm -f ${ATTACHMENT}
 
               (append! cmd (list "-F" (format "%s=@%s" name filename))))))
         (append-option body (| `("--data-raw" ,body)))
+        (cl-loop for header in headers do
+                 (append-option t (| `("-H" ,header))))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
-        (append-option file (| `("--data-binary" ,file)))
+        (append-option file (| `("--data-binary" ,(concat "@" file))))
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
 
