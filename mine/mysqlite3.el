@@ -36,7 +36,7 @@
 
 (defmacro with-mysqlite3-txn (db &rest body)
   (declare (indent defun))
-
+  ;; TODO(mls): i probably need to fix the ,db bit.
   `(unwind-protect
          (progn
            (sqlite3-exec ,db "BEGIN")

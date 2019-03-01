@@ -469,6 +469,9 @@
 (defun aws-list-account-aliases ()
   (aws-iam "list-account-aliases"))
 
+(defun aws-s3-get-object (bucket key output-file)
+  (aws-s3api "get-object" "--bucket" bucket "--key" key output-file))
+
 (provide 'aws)
 
 
