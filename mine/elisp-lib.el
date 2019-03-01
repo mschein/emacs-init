@@ -85,7 +85,8 @@ the setter work."
       (cdr answer)
     (error "Value \'%s\' not found" value)))
 
-(defalias 'assoc-get #'alist-get)
+(defun assoc-get (key alist &optional default)
+  (alist-get key alist default nil #'equal))
 
 (defun assoc-keys (alist)
   "Return all of the keys in an alist.  That is the `car' values."
@@ -2655,10 +2656,10 @@ rm -f ${ATTACHMENT}
 
   ;; Check the args
   (assert url)
-  (let ((bjf (mapcar (fn (elm) (if elm 1 0))
-                     (list body json form))))
-    (assert (<= (sum bjf) 1) nil
-            (format "You must only chose one of :body, :json, or :form: %s" bjf)))
+  (let ((bjff (mapcar (fn (elm) (if elm 1 0))
+                     (list body json form file))))
+    (assert (<= (sum bjff) 1) nil
+            (format "You must only chose one of :body, :json, :file, or :form: %s" bjff)))
   (if timeout
       (assert (integerp timeout)))
 
