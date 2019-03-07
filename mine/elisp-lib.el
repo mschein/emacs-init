@@ -2348,6 +2348,9 @@ python debugging session."
       (git-project-root)
     default-directory))
 
+(defun setenv-from-alist (alist)
+  (cl-loop for (k . v) in alist do (setenv k v)))
+
 (defvar virtualenv-saved-vars (let ((env (dumpenv)))
                                 (mapcar
                                  (| cons % (cdr (assoc % env)))
@@ -2381,11 +2384,32 @@ python debugging session."
   (with-gensyms (root-dir old-env)
     `(let* ((,root-dir ,project-root)
             (,old-env (dumpenv)))
-       (activate-virtualenv-emacs ,root-dir)
        (unwind-protect
            (progn
+             (activate-virtualenv-emacs ,root-dir)
              ,@body)
          (restore-env-from-alist ,old-env)))))
+
+(defmacro with-env-vars (env-vars-alist &rest body)
+  (declare (indent defun))
+  (with-gensyms (old-env alist)
+    `(let ((,old-env (dumpenv))
+           (,alist ,env-vars-alist))
+       (unwind-protect
+           (progn
+             (setenv-from-alist ,alist)
+             ,@body)
+         (restore-env-from-alist ,old-env)))))
+
+(defun run-eval-python (python-code &rest do-cmd-args)
+  (apply #'do-cmd (list "python" "-c" python-code) do-cmd-args))
+
+(defun run-python-pipe (input python-code)
+  (assoc1 :stdout (run-eval-python python-code :input input :stdout 'string :throw t)))
+
+(defun parse-yaml-file (path)
+  (json-read-from-string (run-python-pipe path "import sys, json, yaml; print(json.dumps(yaml.load(sys.stdin)))")))
+
 
 ;; To use, install: sudo -H pip install python-language-server
 ;; and sudo -H pip3 install python-language-server
