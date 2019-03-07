@@ -37,12 +37,17 @@
 (defmacro with-mysqlite3-txn (db &rest body)
   (declare (indent defun))
   ;; TODO(mls): i probably need to fix the ,db bit.
-  `(unwind-protect
-         (progn
-           (sqlite3-exec ,db "BEGIN")
-           ,@body
-           (sqlite3-exec ,db "COMMIT"))
-       (sqlite3-exec ,db "ROLLBACK")))
+  (with-gensyms (last-value)
+    `(let ((,last-value))
+       (condition-case err
+           (progn
+             (sqlite3-exec ,db "BEGIN")
+             (setq ,last-value (progn ,@body))
+             (sqlite3-exec ,db "COMMIT")
+             ,last-value)
+         (error
+          (sqlite3-exec ,db "ROLLBACK")
+          (signal (car err) (cdr err)))))))
 
 ;; We need this, because we need to free stmts
 (defmacro with-mysqlite3-stmt (db sql-text &rest body)

@@ -168,6 +168,9 @@
 (defun bitbucket-fetch-commit (bb project repo sha)
   (bitbucket-request bb (path-join "projects" project "repos" repo "commits" sha)))
 
+(defun bitbucket-fetch-files (bb project repo)
+  (bitbucket-request-all bb (path-join "projects" project "repos" repo "files")))
+
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"
                          :params (remove-if (| not (cdr %))

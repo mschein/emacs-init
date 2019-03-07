@@ -469,8 +469,15 @@
 (defun aws-list-account-aliases ()
   (aws-iam "list-account-aliases"))
 
-(defun aws-s3-get-object (bucket key output-file)
-  (aws-s3api "get-object" "--bucket" bucket "--key" key output-file))
+(cl-defun aws-s3-get-object (bucket key output-file &key etag)
+  (let ((args (list "aws" "s3api" "get-object" "--bucket" bucket "--key" key)))
+    (when etag
+      (append! args (list "--if-none-match" etag)))
+    (append-atom! args output-file)
+
+    (when-let ((res (do-cmd args :stdout 'string :stderr 'string)))
+      (cons (cons :json (ignore-errors (json-read-from-string (assoc1 :stdout res))))
+            res))))
 
 (provide 'aws)
 

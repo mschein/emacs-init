@@ -61,6 +61,8 @@
 ;; Use this to access the database
 (defconst %s-store \"%s\" \"Constant to use with `with-store' to access the database.\")
 
+;; To start this do: (store-create-store \"%s\" :use-metadata t)
+
 ;; Database functions
 
 (provide '%s)
@@ -78,7 +80,7 @@
 
     ;; Is there a nicer way to do this format string.  Like passing it an alist?
     (barf (format store--bare-store-elisp-file
-                  store-name store-name store-name store-name)
+                  store-name store-name store-name store-name store-name)
           (path-join metadata-dir (format "%s.el" store-name)))
     (barf (format "-- Initial database creation for store %s" store-name)
           (path-join migration-dir (format "000_%s.sql" store-name)))
