@@ -2348,9 +2348,6 @@ python debugging session."
       (git-project-root)
     default-directory))
 
-(defun setenv-from-alist (alist)
-  (cl-loop for (k . v) in alist do (setenv k v)))
-
 (defvar virtualenv-saved-vars (let ((env (dumpenv)))
                                 (mapcar
                                  (| cons % (cdr (assoc % env)))
@@ -2376,30 +2373,37 @@ python debugging session."
 (defun clear-virtualenv-emacs ()
   (mapc (| setenv % (assoc1 % virtualenv-saved-vars)) virtualenv-saved-vars))
 
-(defun restore-env-from-alist (env-alist)
-  (loop for (k . v) in env-alist do (setenv k v)))
+(defun restore-env-from-alist (alist)
+  ;; clear the env first.
+  (setf process-environment '())
+  (loop for (k . v) in alist do (setenv k v)))
+
+(defun setenv-from-alist (alist)
+  (cl-loop for (k . v) in alist do (setenv k v)))
 
 (defmacro with-venv (project-root &rest body)
+  "Run some code within the venv for a given project root directory."
   (declare (indent defun))
   (with-gensyms (root-dir old-env)
     `(let* ((,root-dir ,project-root)
-            (,old-env (dumpenv)))
+            (,old-env (copy-list process-environment)))
        (unwind-protect
            (progn
              (activate-virtualenv-emacs ,root-dir)
              ,@body)
-         (restore-env-from-alist ,old-env)))))
+         (setf process-environment ,old-env)))))
 
 (defmacro with-env-vars (env-vars-alist &rest body)
+  "Run some code with a alist of environment variables set temporarily."
   (declare (indent defun))
   (with-gensyms (old-env alist)
-    `(let ((,old-env (dumpenv))
-           (,alist ,env-vars-alist))
+    `(let ((,alist ,env-vars-alist)
+           (,old-env (copy-list process-environment)))
        (unwind-protect
            (progn
              (setenv-from-alist ,alist)
              ,@body)
-         (restore-env-from-alist ,old-env)))))
+         (setf process-environment ,old-env)))))
 
 (defun run-eval-python (python-code &rest do-cmd-args)
   (apply #'do-cmd (list "python" "-c" python-code) do-cmd-args))
