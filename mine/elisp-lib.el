@@ -2524,9 +2524,30 @@ python debugging session."
   (interactive)
   (insert (format-time-string "%c")))
 
+(defun random-items (n list)
+  "Pick a random sample of `n' items from a `list', using Reservoir Sampling.
+
+See: https://en.wikipedia.org/wiki/Reservoir_sampling
+ "
+  (let ((output (ht)))
+    (cl-loop for item in list
+             for i from 0
+             if (< (ht-size output) n)
+                do (progn
+                     (ht-set! output i item))
+             else
+                do (when (< (random* 1.0) (/ (float n) (float (+ i 1))))
+                     ;; discard a saved item.
+                     (ht-set! output (random n) item)))
+    (ht-values output)))
+
 (defun random-choice (list)
   "Select a random item from the list."
-  (nth (random (length list)) list))
+  (random-items 1 list))
+
+(defun random-words (n)
+  "Return `N' random words from the dictionary"
+  (random-items n (string->list (slurp "/usr/share/dict/web2"))))
 
 (defun remove-newlines (begin end)
   (interactive "r")

@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+;;
 ;; How can I tentatively import this?
 ;; https://github.com/pekingduck/emacs-sqlite3-api
 ;;
@@ -19,6 +21,18 @@
 ;;
 ;; with-txn
 ;;
+;;
+
+;;
+;; should i use a dynamic variable for the db connection
+;; (mysqlite-enable-connection name)
+;; or
+;; (defvar +emacs-metrics-db+ (mysqlite3-open or store-open ))
+;;
+;; Can I generate the basic commands?
+;; - they should work in and out of transactions
+;; - be more careful about transactions and not
+;;
 
 (cl-defun mysqlite3-open (db-path &key readonly)
   (let ((flag (if readonly sqlite-open-readonly sqlite-open-readwrite)))
@@ -26,7 +40,6 @@
 
 (defmacro with-mysqlite3 (open-args &rest body)
   (declare (indent defun))
-
   `(let ((db (mysqlite3-open ,@open-args)))
      (unwind-protect
          (progn
