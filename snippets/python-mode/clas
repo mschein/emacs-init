@@ -1,0 +1,17 @@
+# -*- coding: utf-8 -*-
+# name: handler
+# contributor: Michael Scheinholtz
+# --
+#
+#
+# https://emacs.stackexchange.com/questions/19422/library-for-automatically-inserting-python-docstring-in-google-style
+# to make this better.
+# also can I make one to update function args.
+#
+
+
+class ${1:Name}():
+    """<Class Documentation>"""
+
+    def __init__(self):
+        pass
