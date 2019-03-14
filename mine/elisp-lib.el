@@ -2269,7 +2269,7 @@ python debugging session."
                 input-path)
           (filter (| member (car %) venv-required-vars)
                   (parse-env-lines (run-to-str "bash" input-path)))))
-    (error "Unable to find virtualenv activation file in %s" root-dir)))
+    (debug "Unable to find virtualenv activation file in %s" root-dir)))
 
 (defun find-venv-binary (root-dir binary)
   (let ((bin-path (path-join (assoc1 "VIRTUAL_ENV" (find-venv-variables root-dir))
@@ -2545,9 +2545,13 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
   "Select a random item from the list."
   (random-items 1 list))
 
-(defun random-words (n)
+(defun random-words (n &optional max-word-len)
   "Return `N' random words from the dictionary"
-  (random-items n (string->list (slurp "/usr/share/dict/web2"))))
+  (random-items n
+                (filter (if max-word-len
+                            (lambda (word) (<= (length word) max-word-len))
+                          #'identity)
+                (string->list (slurp "/usr/share/dict/web2")))))
 
 (defun remove-newlines (begin end)
   (interactive "r")
