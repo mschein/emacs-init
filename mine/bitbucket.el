@@ -171,6 +171,38 @@
 (defun bitbucket-fetch-files (bb project repo)
   (bitbucket-request-all bb (path-join "projects" project "repos" repo "files")))
 
+(defun bitbucket-repo-to-project (bb repo)
+  ;;
+  ;; search for a repo across all projects.
+  ;;
+  (let ((+webrequest-cache-urls+ (* 60 60 24 1)))
+    (let ((result
+           (cl-loop for project in (bitbucket-list-project-names bb) do
+                    (condition-case nil
+                        (progn
+                          (message "Checking %s for repo %s" project repo)
+                          (bitbucket-request bb (path-join "projects" project "repos" repo))
+                          (message "Found project: %s" project)
+                          (return project))
+                      (error 'nil)))))
+      (if result
+          result
+        (error "Unable to find a project for repo: %s" repo)))))
+
+(defun bitbucket-repo-to-url-raw (bb repo &optional rest-api)
+  (path-join (assoc1 (if rest-api
+                         :url
+                       :server-root) bb)
+             "projects"
+             (bitbucket-repo-to-project bb repo)
+             "repos"
+             repo))
+
+(defun bitbucket-repo-to-url (bb repo &optional rest-api)
+   (m-url-cache-or-fetch (string-join (list (assoc1 :url bb) repo rest-api) ":")
+                         (lambda () (bitbucket-repo-to-url-raw bb repo))
+                         :ttl-sec (* 60 60 24 5)))
+
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"
                          :params (remove-if (| not (cdr %))

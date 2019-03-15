@@ -733,6 +733,11 @@ Example:
   "Compare s1 and s2 ignoring case"
   (string= (downcase s1) (downcase s2)))
 
+(defun find-longest-string-match (s list)
+  (first (sort
+          (filter (fn (env-key) (string-starts-with env-key s)) list)
+          (fn (e1 e2) (> (length e1) (length e2))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Symbol functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
