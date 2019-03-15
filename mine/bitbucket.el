@@ -208,6 +208,4 @@
                          :params (remove-if (| not (cdr %))
                                             `((role . ,role)))))
 
-
-
 (provide 'bitbucket)
