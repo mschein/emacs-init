@@ -565,6 +565,8 @@ that uses 'font-lock-warning-face'."
 (defalias 'shv 'open-shell-dir-venv)
 
 ;; More keyboard aliases
+(global-set-key "\C-i" 'next-line)
+(global-set-key "\C-n" 'recenter-redisplay)
 (global-set-key "\M-sb" 'multi-isearch-buffers)
 (global-set-key "\M-sB" 'multi-isearch-buffers-regexp)
 
