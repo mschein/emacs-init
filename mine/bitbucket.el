@@ -88,6 +88,18 @@
 (defun bitbucket-list-repo-names (bb project)
   (mapcar (| assoc1 'name %) (bitbucket-list-repos bb project)))
 
+(defun bitbucket-get-project (bb project)
+  (bitbucket-request bb (path-join "projects" project)))
+
+(defun bitbucket-get-repo (bb project repo)
+  (bitbucket-request bb (path-join "projects" project "repos" repo)))
+
+(defun bitbucket-get-repo-git-origin-url (bb project repo)
+  (assoc1-traverse '(0 href)
+                   (filter (fn (link)
+                             (equal (assoc1 'name link) "ssh"))
+                           (assoc1-traverse '(links clone) (bitbucket-get-repo bb project repo)))))
+
 ;; This doesn't seem to work correctly
 ;;
 ;; (bitbucket-query-repos bb-info-auth :repo "deployment-manager" :project "OE")
@@ -207,5 +219,11 @@
   (bitbucket-request-all bb "inbox/pull-requests"
                          :params (remove-if (| not (cdr %))
                                             `((role . ,role)))))
+
+(defun bitbucket-create-repo (bb project repo)
+  (bitbucket-request bb (path-join "projects" project "repos")
+                       :method "POST"
+                       :json `((name . ,repo)
+                               (forkable . "true"))))
 
 (provide 'bitbucket)
