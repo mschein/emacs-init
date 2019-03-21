@@ -85,8 +85,15 @@ the setter work."
       (cdr answer)
     (error "Value \'%s\' not found" value)))
 
+;; Note, this only works in emacs 26
+;; (defun assoc-get (key alist &optional default)
+;;   (alist-get key alist default nil #'equal))
+
+;; Do this by hand until I stop needing emacs 25.
 (defun assoc-get (key alist &optional default)
-  (alist-get key alist default nil #'equal))
+  (if-let (value (assoc key alist))
+      (cdr value)
+    default))
 
 (defun assoc-keys (alist)
   "Return all of the keys in an alist.  That is the `car' values."
