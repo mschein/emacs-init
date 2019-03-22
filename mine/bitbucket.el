@@ -97,7 +97,7 @@
 (defun bitbucket-update-repo (bb project repo options)
   (bitbucket-request bb (path-join "projects" project "repos" repo)
                      :method "POST"
-                     :form options))
+                     :json options))
 
 (defun bitbucket-get-repo-git-origin-url (bb project repo)
   (assoc1-traverse '(0 href)
