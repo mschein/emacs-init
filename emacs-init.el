@@ -1214,8 +1214,8 @@ that uses 'font-lock-warning-face'."
 
 ;;    ))
 
-(define-key ryo-modal-mode-map "s" ctl-x-map)
-(define-key ryo-modal-mode-map "g" help-map)
+;;(define-key ryo-modal-mode-map "s" ctl-x-map)
+;;(define-key ryo-modal-mode-map "g" help-map)
 
 ;; (quickproject:make-project "~/src/me/cheddar" :depends-on '(#:iterate #:let-plus #:alexandria #:closer-mop #:anaphora #:rutilsx)
 (put 'list-timers 'disabled nil)
