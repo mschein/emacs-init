@@ -154,6 +154,14 @@ the setter work."
   (cl-loop for key in keys-to-keep
            collect (cons key (assoc1 key alist))))
 
+(defun assoc-to-yaml (alist)
+  (string-join (mapcar (fn ((key . value))
+                         (if (atom value)
+                             (format "%s: %s" key value)
+                           (assoc-to-yaml value)))
+                       alist)
+               "\n"))
+
 ;; Make it so you can use assoc1 with setf.
 (gv-define-setter assoc1 (value &rest args) `(setcdr (--assoc1-common ,@args) ,value))
 

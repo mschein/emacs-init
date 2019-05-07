@@ -175,6 +175,9 @@
                           sum (+ (assoc1 'sourceSpan hunk)
                                  (assoc1 'destinationSpan hunk)))))
 
+(defun bitbucket-fecth-all-commits (bb project repo)
+  (assoc1 'values (bitbucket-request-all bb (path-join "projects" project "repos" repo "commits"))))
+
 (defun bitbucket-fetch-commits (bb project repo)
   ;; should i process the return values at all?
   (assoc1 'values (bitbucket-request bb (path-join "projects" project "repos" repo "commits"))))

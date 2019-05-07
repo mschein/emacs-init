@@ -1140,82 +1140,83 @@ that uses 'font-lock-warning-face'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  setup ryo mode  ;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; If I use option, that's key code 18.
-;; (use-package ryo-modal
-;;   :commands ryo-modal-mode
+(use-package ryo-modal
+  :commands ryo-modal-mode
 
-;;   ;; Switch capslock in osx to be Escape.
-;;   :bind ([escape] . ryo-modal-mode)
-;;   :config
-;;   (ryo-modal-keys
-;;    ("q" kill-line)
-;;    ("w" kill-region)
-;;    ("e" backward-kill-word)
-;;    ("r" yank)
-;;    ("t" duplicate-line)
+  ;; Switch capslock in osx to be Escape.
+  :bind ([escape] . ryo-modal-mode)
+  :config
+  (ryo-modal-keys
+   ("q" kill-line)
+   ("w" kill-region)
+   ("e" backward-kill-word)
+   ("r" yank)
+   ("t" duplicate-line)
 
-;;    ("a" beginning-of-line)
-;;    ;;   ("s" ctl-x-map)
-;;    ;;Control-X-prefix)
-;;    ("d" "M-x")
-;;    ;;   ("f" "C-c")
+   ("a" beginning-of-line)
+   ;;   ("s" ctl-x-map)
+   ;;Control-X-prefix)
+   ("d" "M-x")
+   ;;   ("f" "C-c")
 
-;;    ("g" save-buffer)
-;;    ("h" find-file)
+   ("g" save-buffer)
+   ("h" find-file)
 
-;;    ;;
-;;    ;; common stuff:
-;;    ;; ctrl x
-;;    ;; ctrl c
-;;    ;; meta x
-;;    ;;
-;;    ;; save
-;;    ;; load
-;;    ;; yank
-;;    ;; kill
-;;    ;; undo
-;;    ;; search forward
-;;    ;; search backward
-;;    ;; search forward regex
-;;    ;; search backwards regex
-;;    ;;
-;;    ;; duplicate line
-;;    ;; kill word
-;;    ;;
-;;    ;;
+   ;;
+   ;; common stuff:
+   ;; ctrl x
+   ;; ctrl c
+   ;; meta x
+   ;;
+   ;; save
+   ;; load
+   ;; yank
+   ;; kill
+   ;; undo
+   ;; search forward
+   ;; search backward
+   ;; search forward regex
+   ;; search backwards regex
+   ;;
+   ;; duplicate line
+   ;; kill word
+   ;;
+   ;;
 
-;;    ;; Navigation
-;;    ("j" left-char)
-;;    ("k" next-line)
-;;    ("l" right-char)
-;;    ("i" previous-line)
+   ;; Navigation
+   ("j" left-char)
+   ("k" next-line)
+   ("l" right-char)
+   ("i" previous-line)
 
-;;    ;; forward word
-;;    ("o" forward-word)
-;;    ("O" scroll-up-command)
-;;    ("u" backward-word)
-;;    ("U" scroll-down-command)
-;;    (";" end-of-line)
-;;    ("x" search-forward)
-;;    ;; backwards word
-;;    ;; previous paragraph
-;;    ;; next paragraph
-;;    ;;
-;;    ;; forward sexp
-;;    ;; backward sexp
-;;    ;; beginning of line
-;;    ;; end of line
-;;    ;; home
-;;    ;; end
-;;    ;; page up
-;;    ;; page down
-;;    ("," ryo-modal-repeat)
+   ;; forward word
+   ("o" forward-word)
+   ("O" scroll-up-command)
+   ("u" backward-word)
+   ("U" scroll-down-command)
+   (";" end-of-line)
+   ("x" search-forward)
+   ;; backwards word
+   ;; previous paragraph
+   ;; next paragraph
+   ;;
+   ;; forward sexp
+   ;; backward sexp
+   ;; beginning of line
+   ;; end of line
+   ;; home
+   ;; end
+   ;; page up
+   ;; page down
+   ("," ryo-modal-repeat)
 
-;;    ("SPC" "C-SPC")
+   ("SPC" "C-SPC")
 
-;;    ))
+   ))
 
-;;(define-key ryo-modal-mode-map "s" ctl-x-map)
-;;(define-key ryo-modal-mode-map "g" help-map)
+(global-set-key (kbd "<C-return>") 'ryo-modal-mode)
+(define-key ryo-modal-mode-map "s" ctl-x-map)
+(define-key ryo-modal-mode-map "g" help-map)
 
 ;; (quickproject:make-project "~/src/me/cheddar" :depends-on '(#:iterate #:let-plus #:alexandria #:closer-mop #:anaphora #:rutilsx)
 (put 'list-timers 'disabled nil)

@@ -369,4 +369,13 @@ setup(name=package,
   ;; docker exec -it 6c113e64bb4e /bin/bash
   ;;
   )
+
+(defun validate-yaml-file (path)
+  "Return nil if the file is fine.  Return the error message if the file is
+   bad."
+  (let ((resp (do-cmd (list "python" "-c" "import yaml, sys; yaml.safe_load(sys.stdin)") :input path)))
+    (when (not (eql 0 (assoc1 :code resp)))
+      (assoc1 :stderr resp))))
+
+
 (provide 'one-off-scripts)
