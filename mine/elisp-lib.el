@@ -1251,19 +1251,16 @@ Don't expect any output."
 (defun time-current-minus-days (days)
   (days-to-time (- (time-to-number-of-days (current-time)) days)))
 
-(defun time-split (time elm)
-  (let ((time-map '((:year . 5)
-                    (:mon-num . 4)
-                    (:day . 3)
-                    (:hour . 2)
-                    (:min . 1)
-                    (:sec . 0))))
-    (if-let (idx (assoc1 elm time-map))
-            (nth idx (decode-time time))
-            (raise (format "invalid time element %s" elm)))))
+(defun time-split (time)
+  (mapcar* #'cons '(:second :minute :hour :day :month :year :dow :dst :utcoff) (decode-time time)))
 
-(defun current-time-split (elm)
-  (time-split (current-time) elm))
+(defun current-time-split ()
+  (time-split (current-time)))
+
+(defun current-day-of-week ()
+  (if-let (rec (rassoc (assoc1 :dow (current-time-split)) week-days))
+      (car rec)
+    (error "Unable to find day of week")))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1887,29 +1884,30 @@ Returns a list of alists."
 ;; Add a thread here, so I can kill and restart the thread.
 (let ((screen-lock-enabled t))
   (defun osx-screen-lock-regulated ()
+    (message "try screen lock.  screen lock enabled: %s" screen-lock-enabled)
     (when screen-lock-enabled
       (osx-screen-lock)))
 
-  ;; (defun osx-screen-lock-repeat (min)
-  ;;   )
-
-
   (defun osx-screen-lock-enabled ()
+    (interactive)
     (message "Screen lock currently enabled")
     (setf screen-lock-enabled t))
 
   (defun osx-screen-lock-disabled ()
+    (interactive)
     (message "Screen lock currently disabled")
     (setf screen-lock-enabled nil))
 
+  (defun osx-screen-lock-status ()
+    screen-lock-enabled)
+
   (defun osx-screen-lock-renable-later (min)
     (osx-screen-lock-disabled)
-    (run-at-time (format "%s" min) nil #'osx-screen-lock-enabled)))
 
-(defun osx-screen-lock-later (mins)
-  "Lock the screen after `MINS' minutes."
-  (interactive "nmins: ")
-  (run-at-time (format "%s min" mins) nil #'osx-screen-lock))
+    (assert (and (integerp min)) (> min 0))
+
+    (run-at-time (format "%smin" min) nil #'osx-screen-lock-enabled)
+    (message "Enable later status: %s" (osx-screen-lock-status))))
 
 (defun osx-sleep-now ()
   "Put the system to sleep immediately."
