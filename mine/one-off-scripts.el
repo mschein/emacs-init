@@ -377,5 +377,13 @@ setup(name=package,
     (when (not (eql 0 (assoc1 :code resp)))
       (assoc1 :stderr resp))))
 
+(defun combinations (first &rest rest)
+  "Args is a list of lists essentially"
+  (if (not rest)
+      first
+    (mapcan (lambda (elm)
+              (mapcar (lambda (x) (cons elm (to-list x)))
+                      (apply #'combinations rest)))
+            first)))
 
 (provide 'one-off-scripts)
