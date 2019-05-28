@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 (require 'elisp-lib)
 (require 'm-url-cache)
 

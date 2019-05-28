@@ -40,8 +40,20 @@
      :throw t)
     output-file))
 
+;; ffprobe
 
-
+;; On the second sylable every time we sing a relation, Laura now goes down a note.
+;; she doesn't hold it steady.
+;;
+(cl-defun ffmpeg-to-mp3 (input-file)
+  (do-cmd
+   ;;(list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" )
+   ;; ffmpeg -i sample.avi -q:a 0 -map a sample.mp3
+   ))
+;;
+;; -filters
+;; -codecs
+;;
 
 
 

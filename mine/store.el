@@ -69,7 +69,11 @@
 ")
 
 (defun store-create-metadata-dir (metadata-type store-name)
-  "Create a basic metadata directory."
+  "Create a basic metadata directory.
+
+  `metadata-type': either 'required or 'local
+  `store-name': what the directory will be called.
+"
   (let* ((metadata-root (ecase metadata-type
                           (required (first store--metadata-directories))
                           (local (second store--metadata-directories))))

@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t -*-
+
 ;;;
 ;;; Code for communicating with a bitbucket server.
 ;;;

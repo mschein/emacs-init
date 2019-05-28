@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t -*-
 (require 'elisp-lib)
 
 (defconst dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")

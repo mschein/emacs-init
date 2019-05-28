@@ -1195,7 +1195,10 @@ that uses 'font-lock-warning-face'."
    ("u" backward-word)
    ("U" scroll-down-command)
    (";" end-of-line)
-   ("x" search-forward)
+   (":" end-of-line) ;; XXX switch back to insert mode!
+   ("x" isearch-forward)
+   ("X" isearch-backward)
+
    ;; backwards word
    ;; previous paragraph
    ;; next paragraph
@@ -1209,7 +1212,7 @@ that uses 'font-lock-warning-face'."
    ;; page up
    ;; page down
    ("," ryo-modal-repeat)
-
+   ("z" ryo-modal-mode)
    ("SPC" "C-SPC")
 
    ))

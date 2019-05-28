@@ -971,6 +971,13 @@ Don't expect any output."
     (when (do-cmd-was-true res)
         (assoc1 ':stdout res))))
 
+(defun do-cmd-async (program &optional args)
+  (process-connection-type nil)
+  (apply #'start-process "do-cmd" "do-cmd" program args))
+
+(defun do-cmd-finish (proc)
+  )
+
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
   (mapcar #'string-trim (split-string str (or regex "\n") t)))
@@ -2965,10 +2972,10 @@ rm -f ${ATTACHMENT}
                           res)))))
           (lookup)))))
 
-(defmacro memoize-fn (func &optional timeout name)
+(defmacro memoize-fn (func &optional timeout-sec name)
   (let ((memoized-fn (gensym)))
-    ;; Only use ,timeout once!
-    `(lexical-let ((,memoized-fn (memoize #',func ,timeout)))
+    ;; Only use ,timeout-sec once!
+    `(lexical-let ((,memoized-fn (memoize #',func ,timeout-sec)))
        (defun ,(or name (symbol-rename func (| concat % "-cached"))) (&rest args)
          (apply ,memoized-fn args)))))
 
