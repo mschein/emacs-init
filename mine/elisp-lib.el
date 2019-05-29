@@ -1924,6 +1924,10 @@ Returns a list of alists."
   (interactive "smins: ")
   (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
+(defun disable-screen-lockout-temporarily (min)
+  (interactive "smin: ")
+  (osx-screen-lock-renable-later (string-to-number min)))
+
 (defun run-osascript (script &rest args)
   (with-tempdir (:root-dir "/tmp")
     (let ((script-path "firefox-script"))
