@@ -1928,9 +1928,10 @@ Returns a list of alists."
   (interactive "smin: ")
   (osx-screen-lock-renable-later (string-to-number min)))
 
+;; To edit apple script, one option is to run: ScriptEditor.app
 (defun run-osascript (script &rest args)
   (with-tempdir (:root-dir "/tmp")
-    (let ((script-path "firefox-script"))
+    (let ((script-path "apple-script.txt"))
       (barf script script-path)
       (do-cmd (append (list "osascript" script-path) args) :throw t))))
 
@@ -1952,6 +1953,35 @@ Returns a list of alists."
     end tell
 end run
 " url))
+
+(defun open-quicktime-movie (path &optional start-time-sec)
+  (do-cmd (list "killall" "QuickTime Player"))
+  (sleep-for 5)
+
+  (run-osascript (format "tell application \"QuickTime Player\"
+    open %s
+    set myMovie to document 1
+    tell myMovie
+        %s
+        play
+        activate
+    end tell
+end tell" (quote-str path)))
+
+  (sleep-for 10)
+
+  (run-osascript (format "tell application \"QuickTime Player\"
+    open %s
+    set myMovie to document 1
+    tell myMovie
+        %s
+        play
+        activate
+    end tell
+end tell
+" (quote-str path) (if start-time-sec
+                                 (format "set current time to %d" start-time-sec)
+                               ""))))
 
 (defun get-chrome-path ()
   (ecase system-type
