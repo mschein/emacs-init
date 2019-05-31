@@ -1924,6 +1924,14 @@ Returns a list of alists."
   (interactive "smins: ")
   (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
+(defun kill-dock-osx ()
+  (interactive)
+  (run "killall" "Dock"))
+
+(defun kill-finder ()
+  (interactive)
+  (run "killall" "Finder"))
+
 (defun disable-screen-lockout-temporarily (min)
   (interactive "smin: ")
   (osx-screen-lock-renable-later (string-to-number min)))
