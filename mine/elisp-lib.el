@@ -2438,7 +2438,8 @@ python debugging session."
     (run-python python-interpreter t)))
 
 (defun clear-virtualenv-emacs ()
-  (mapc (| setenv % (assoc1 % virtualenv-saved-vars)) virtualenv-saved-vars))
+  (mapc (fn ((name . value))
+          (setenv name value)) virtualenv-saved-vars))
 
 (defun restore-env-from-alist (alist)
   ;; clear the env first.
