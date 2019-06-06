@@ -2491,7 +2491,6 @@ python debugging session."
     (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
              default-directory is-git-project project-root)
     (when is-git-project
-      (make-local-variable 'process-environment)
       (with-venv project-root
         (message "This is a git project, so activate the virtualenv if possible")
         ;; Setup the virtualenv
