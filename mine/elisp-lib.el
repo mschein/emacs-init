@@ -162,6 +162,14 @@ the setter work."
                        alist)
                "\n"))
 
+(defun assoc-group-dups (alist)
+  (let ((out))
+    (cl-loop for (k . v) in alist
+             do (if-let (cel (assoc k out))
+                    (setcdr cel (cons v (to-list (cdr cel))))
+                 (pushcons k v out)))
+    (reverse out)))
+
 ;; Make it so you can use assoc1 with setf.
 (gv-define-setter assoc1 (value &rest args) `(setcdr (--assoc1-common ,@args) ,value))
 
@@ -3052,5 +3060,11 @@ rm -f ${ATTACHMENT}
          (progn
            ,@body)
        (message "%.06f" (float-time (time-since time))))))
+
+(defun current-clipboard ()
+  "Return the current contents of the OS's clipboard."
+  (with-temp-buffer
+    (clipboard-yank)
+    (buffer-string)))
 
 (provide 'elisp-lib)

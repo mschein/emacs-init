@@ -10,6 +10,8 @@
 ;;
 (require 'sqlite3-api)
 
+;;
+;;
 
 ;; Stuff needed
 ;;
@@ -90,16 +92,22 @@
 
 (defun mysqlite3-create-join-table-str (tables-referenced)
   (let ((table-name (string-join tables-referenced "_")))
-    (format "CREATE TABLE %s(
+    (format "CREATE TABLE %s (
         %s
-);" table-name
-            (string-join
-             (mapcar (fn (table-name)
-                       (mysqlite3-create-foreign-key-str
-                        (format "%s_id" table-name)
-                        table-name "id"))
-                       tables-referenced)
-             ",\n        "))))
+);
+%s
+" table-name
+    (string-join
+     (mapcar (fn (table-name)
+               (mysqlite3-create-foreign-key-str
+                (format "%s_id" table-name)
+                table-name "id"))
+             tables-referenced)
+     ",\n        ")
+    (string-join (mapcar (fn (join-table-name)
+                           (mysqlite3-create-index-str table-name (concat join-table-name "_id")))
+                         tables-referenced)
+                 "\n"))))
 
 (defun mysqlite3-create-db-schema (path schema)
   (with-mysqlite3 path

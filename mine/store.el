@@ -28,6 +28,13 @@
 ;;   migration directory?  Does that make sense?
 ;;
 
+;;
+;; plans:
+;; 1. create a commands dir for holding all sql commands in individual files
+;; 2. allow for named vars and inheritance
+;;
+;;
+
 (defconst store--directory (expand-file-name "~/.emacs-data-store"))
 (defconst store--metadata-directories
   (mapcar #'expand-file-name '("~/emacs-init/store-metadata"
@@ -68,6 +75,18 @@
 (provide '%s)
 ")
 
+(defun store--name-to-root (store-name)
+  (cl-loop for root in store--metadata-directories
+           with metadata-dir = (path-join root store-name)
+           when (file-exists-p metadata-dir)
+              return metadata-dir))
+
+
+(defun store--name-to-dirs (store-name)
+  `((:metadata-dir . ,metadata-dir)
+    (:migration-dir . ,migration-dir)
+    (:sql-dir . ,sql-dir)))
+
 (defun store-create-metadata-dir (metadata-type store-name)
   "Create a basic metadata directory.
 
@@ -78,9 +97,12 @@
                           (required (first store--metadata-directories))
                           (local (second store--metadata-directories))))
          (metadata-dir (path-join metadata-root store-name))
-         (migration-dir (path-join metadata-dir "migrations")))
+         (migration-dir (path-join metadata-dir "migrations"))
+         (sql-dir (path-join metadata-dir "sql-queries")))
+
     (ensure-makedirs metadata-dir)
     (ensure-makedirs migration-dir)
+    (ensure-makedirs sql-dir)
 
     ;; Is there a nicer way to do this format string.  Like passing it an alist?
     (barf (format store--bare-store-elisp-file
@@ -169,6 +191,9 @@
                (store--load-metadata-dir metadata-root store-name)
                (return))))
 
+(defun store--load-sql-query (store-name query-name)
+  (let ((sql-query-file (path-join )))))
+
 (cl-defun store-create-store (store-name &key schema use-metadata)
   "Setup a store for future use.  Should be run before referencing any store."
   (ensure-makedirs store--directory)
@@ -191,10 +216,29 @@
   (and (file-exists-p path)
        (file-has-size path))))
 
-(defun store-remove-store (store-name)
+(defun --confirm-delete-file (file)
+  (when (and (file-exists-p file)
+           (y-or-n-p (format "Delete file %s:" file)))
+    (delete-file file)))
+
+(cl-defun store-remove-store (store-name &key all)
   "Delete a store specified by `store-name'.  This is an unrecoverable delete, so beware."
   (ensure-makedirs store--directory)
-  (delete-file (store-get-path store-name)))
+  (cl-flet ((make-file-name (index)
+              (format "%s.%d" (store-get-path store-name) index)))
+    (if all
+        (progn
+          (--confirm-delete-file (store-get-path store-name))
+          (cl-loop for x from 1
+                   if (file-exists-p (make-file-name x))
+                      do (--confirm-delete-file (make-file-name x))
+                   else
+                     return t))
+      (cl-loop for x from 1
+               when (not (file-exists-p (make-file-name x)))
+                 do (progn (rename-file (store-get-path store-name) (make-file-name x))
+                           (return))))))
+
 
 (defmacro with-store (store-name &rest body)
   "A macro for running mysqlite functions against a store.
@@ -202,5 +246,10 @@ Please use `store-create-store' at some point before calling this function"
   (declare (indent defun))
   `(with-mysqlite3 ((store-get-path ,store-name))
      ,@body))
+
+
+(defun store-run-query (store-name query-name params)
+
+  )
 
 (provide 'store)
