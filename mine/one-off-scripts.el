@@ -212,6 +212,9 @@ def %s_update(%s_id, conn=engine, **kwargs):
 (defconst *python-setup.py-file*
   "from setuptools import setup, find_packages
 
+# Use https://pyinstaller.readthedocs.io/en/stable/
+# for install.
+
 package = '%s'
 version = '0.1'
 
@@ -223,16 +226,25 @@ setup(name=package,
       },
       install_requires=[
           # Macros can be had with mcpy and macropy
+          # If this is a reusable component, put
+          # requirements here with ranges.
       ],
       tests_require=[
           # Unit test dependencies.
           \'mock\',
+          \'pytest\'
       ],
       include_package_data=True,
       packages=find_packages(),
       package_data={'': []},
       zip_safe=True
 )")
+
+(defconst *requirements.txt*
+  "# Put requirements here if this is an application.
+# you can also create this with pip freeze
+
+")
 
 (defconst *python-init-file* "# empty module file
 ")
@@ -241,33 +253,39 @@ setup(name=package,
   (interactive "sname: ")
 
   (message "Current directory: %s" default-directory)
-  (unless (file-exists-p name)
-    (message "make dir %s" name)
-    (make-directory name)
+  (if (not (file-exists-p name))
+      (progn
+        (message "make dir %s" name)
+        (make-directory name)
 
-    (pushd name
-       ;; write setup.py
-       (message "create setup.py")
-       (message "current dir %s" default-directory)
+        (pushd name
+          ;; write setup.py
+          (message "create setup.py")
+          (message "current dir %s" default-directory)
 
-       (with-temp-file "setup.py"
-         (insertf *python-setup.py-file* name))
+          (cl-loop for (file . contents) in `(("setup.py" . ,*python-setup.py-file*)
+                                              ("requirements.txt" . ,*requirements.txt*)
+                                              ("tox.ini" . "# Put any tox stuff here.")
+                                              ("README.md" . ,(format "My awesome project %s" name))
+                                              ("MANIFEST.in" . "# recursive-include app/templates *")
+                                              ("CHANGES.txt" . ""))
+                   do (barf contents file))
 
-       (message "create dirs")
-       (make-directory name)
-       (make-directory "test")
+          (message "create dirs")
+          (make-directory name)
+          (make-directory "test")
 
-       (message "create init.py")
-       (with-temp-file (path-join name "__init__.py")
-         (insertf *python-init-file*))
+          (message "create init.py")
+          (barf *python-init-file* (path-join name "__init__.py"))
 
-       ;; Run command to setup more stuff
-       (message "setup git module")
-       (run "git" "init")
-       (let ((venv-dir ".venv"))
-         (message "create virtualenv")
-         (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
-         (make-symbolic-link ".venv/bin/activate" "activate")))))
+          ;; Run command to setup more stuff
+          (message "setup git module")
+          (run "git" "init")
+          (let ((venv-dir ".venv"))
+            (message "create virtualenv")
+            (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
+            (make-symbolic-link ".venv/bin/activate" "activate"))))
+    (message "%s exists, giving up." (path-join default-directory name))))
 
 (defun unique-file-name (name index)
   "Make a unique name but save the extension"
