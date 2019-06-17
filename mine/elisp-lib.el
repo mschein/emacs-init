@@ -980,8 +980,8 @@ Don't expect any output."
         (assoc1 ':stdout res))))
 
 (defun do-cmd-async (program &optional args)
-  (process-connection-type nil)
-  (apply #'start-process "do-cmd" "do-cmd" program args))
+  (let ((process-connection-type nil))
+    (apply #'start-process "do-cmd" "do-cmd" program args)))
 
 (defun do-cmd-finish (proc)
   )
@@ -1970,7 +1970,7 @@ Returns a list of alists."
 end run
 " url))
 
-(defun open-quicktime-movie (path &optional start-time-sec)
+(defun init-quicktime-movie (path)
   (do-cmd (list "killall" "QuickTime Player"))
   (sleep-for 5)
 
@@ -1982,10 +1982,11 @@ end run
         play
         activate
     end tell
-end tell" (quote-str path)))
-
+end tell" (quote-str path) ""))
   (sleep-for 10)
+)
 
+(defun open-quicktime-movie (path &optional start-time-sec)
   (run-osascript (format "tell application \"QuickTime Player\"
     open %s
     set myMovie to document 1
