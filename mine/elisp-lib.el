@@ -1021,6 +1021,7 @@ Don't expect any output."
 
         (let ((proc (make-process :name program
                                   :buffer stdout-buffer
+                                  :stderr stderr-buffer
                                   :command (cons program args)
                                   :connection-type 'pipe
                                   :sentinel #'ignore)))
