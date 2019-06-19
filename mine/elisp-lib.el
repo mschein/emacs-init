@@ -1042,7 +1042,7 @@ Don't expect any output."
 
 (cl-defun do-cmd-finish (proc &key block wait-sec)
   (when (or block wait-sec)
-    (do-cmd-wait :timeout-sec wait-sec))
+    (do-cmd-wait proc :timeout-sec wait-sec))
 
   (unwind-protect
       (progn
