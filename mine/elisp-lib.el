@@ -991,7 +991,7 @@ Don't expect any output."
 ;; 4. I think it would be good to provide enough features so I can
 ;;    port web-request to do-cmd-async.
 ;;
-(cl-defun do-cmd-async (cmd &key stdout stderr throw)
+(cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw)
   "Run an exteral program in async fasion."
 
   (let* ((program (first cmd))
@@ -1019,11 +1019,16 @@ Don't expect any output."
 
         (message "Start async command: %s %s -> " program (cmd-to-shell-string args))
 
-        (make-process :name program
-                      :buffer stdout-buffer
-                      :command (cons program args)
-                      :connection-type 'pipe
-                      :sentinel #'ignore))))
+        (let ((proc (make-process :name program
+                                  :buffer stdout-buffer
+                                  :command (cons program args)
+                                  :connection-type 'pipe
+                                  :sentinel #'ignore)))
+          (when (or input input-file)
+            (process-send-string proc (or input
+                                          (slurp input-file)))
+            (process-send-eof proc))
+          proc))))
 
 (defun do-cmd-ready (proc)
   (equal 'exit (process-status proc)))
