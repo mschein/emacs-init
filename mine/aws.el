@@ -263,6 +263,12 @@
       (append! args (list "--filter" (aws--filter-alist-to-str filters))))
     (apply #'aws-ec2 "describe-instances" args)))
 
+;; Look for ami tags.
+;; expand this as needed in the future.
+(defun aws-ec2-describe-images (name)
+  (let ((-aws-return-json t))
+    (aws-ec2 "describe-images" "--filters" (format "Name=name,Values=%s" name))))
+
 (defun aws-describe-instances (&rest args)
   (interactive "sinstances: ")
   (let ((-aws-return-json t))

@@ -821,6 +821,7 @@ Example:
   ;;
   (string-join (mapcar #'shell-quote-argument cmd) " "))
 
+;;
 ;; Design Notes:
 ;;
 ;; ideal interface:
@@ -933,9 +934,9 @@ Example:
               (push (cons :code resp) output)
               (when stdout-buffer
                 (with-current-buffer stdout-buffer
-                  (push (cons :stdout (buffer-string)) output)))
+                  (pushcons :stdout (buffer-string) output)))
               (when stderr-string
-                (push (cons :stderr stderr-string) output))
+                (pushcons :stderr stderr-string output))
               output))
         ;; Always cleanup the stdout buffer we created.
         ;; all cleanup code should go there.
@@ -979,12 +980,88 @@ Don't expect any output."
     (when (do-cmd-was-true res)
         (assoc1 ':stdout res))))
 
-(defun do-cmd-async (program &optional args)
-  (let ((process-connection-type nil))
-    (apply #'start-process "do-cmd" "do-cmd" program args)))
+;;
+;; questions:
+;; 1. What code can be shared with do-cmd?
+;; 2. How closely should I match the behavior of do-cmd?
+;;    - For now keep it simple, and just use the popular features of do-cmd.
+;;
+;; 3. Should I eventually define do-cmd as a wrapper around do-cmd-async?  Is
+;;    that too inefficient somehow?
+;; 4. I think it would be good to provide enough features so I can
+;;    port web-request to do-cmd-async.
+;;
+(cl-defun do-cmd-async (cmd &key stdout stderr throw)
+  "Run an exteral program in async fasion."
 
-(defun do-cmd-finish (proc)
-  )
+  (let* ((program (first cmd))
+         (args (rest cmd)))
+    ;;
+    ;; make a buffer.
+    ;;
+    ;; save local variables:
+    ;; 1. stdout options
+    ;; 2. stderr options
+    ;; 3. throw
+    ;;
+
+    (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output" program)))
+          (stderr-buffer (when (equal 'string stderr)
+                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output" program)))))
+
+      (with-current-buffer stdout-buffer
+        (setq-local args args)
+        (setq-local stdout stdout)
+        (setq-local stderr stderr)
+        (setq-local stderr-buffer stderr-buffer)
+        (setq-local throw throw)
+        (setq-local program program))
+
+        (message "Start async command: %s %s -> " program (cmd-to-shell-string args))
+
+        (make-process :name program
+                      :buffer stdout-buffer
+                      :command (cons program args)
+                      :connection-type 'pipe
+                      :sentinel #'ignore))))
+
+(defun do-cmd-ready (proc)
+  (equal 'exit (process-status proc)))
+
+(cl-defun do-cmd-wait (proc &key timeout-sec)
+  (let ((start (current-time)))
+    (while (and (or (not timeout-sec)
+                    (< (current-time) (time-add start timeout-sec)))
+               (not (do-cmd-ready proc)))
+      (sleep-for .5))))
+
+(cl-defun do-cmd-finish (proc &key block wait-sec)
+  (when (or block wait-sec)
+    (do-cmd-wait :timeout-sec wait-sec))
+
+  (unwind-protect
+      (progn
+        (with-current-buffer (process-buffer proc)
+          (let* ((code (process-exit-status proc))
+                 (output `()))
+            (when (and throw (not (equal 0 code)))
+              (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
+
+            (when (equal stdout 'string)
+              (pushcons :stdout (buffer-string) output))
+
+            (when (equal stderr 'string)
+              (pushcons :stderr (with-current-buffer stderr-buffer
+                                  (buffer-string))
+                        output))
+            (pushcons :code code output)
+
+            (message "-> Finished Async Command(%s): %s %s" code program (cmd-to-shell-string args))
+            output)))
+    (progn
+      (with-current-buffer (process-buffer proc)
+        (kill-buffer stderr))
+      (kill-buffer (process-buffer proc)))))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)

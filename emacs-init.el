@@ -13,9 +13,9 @@
 ;;
 ;; find Jedi
 ;;
-;; Edebug:
+;; Edebug: [debug]
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Edebug.html#Edebug
-;; To turn on edebug: C-M-x C-u (function definition)
+;; To turn on edebug: C-u C-M-x (function definition)
 ;; also see: lispy-mode
 ;;
 ;; Orgmode notes
