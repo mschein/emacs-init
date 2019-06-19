@@ -1065,7 +1065,7 @@ Don't expect any output."
             output)))
     (progn
       (with-current-buffer (process-buffer proc)
-        (kill-buffer stderr))
+        (kill-buffer stderr-buffer))
       (kill-buffer (process-buffer proc)))))
 
 ;; TODO(scheinholtz): Unify buffer sections.
