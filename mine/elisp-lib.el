@@ -807,6 +807,37 @@ Example:
       (-> cmd (concat "\n") insert)
     (if doit (shell-command cmd)))))
 
+;;
+;; A simple (non-threaded) system for handling a set of callbacks
+;; that need to be called when a condition occurs.
+;;
+(let ((checker (ht))
+      (checker-id 0)
+      (checker-timer nil))
+
+  (defun checker-dump ()
+    checker)
+
+  (defun checker-clear ()
+    (setf checker (ht)))
+
+  (defun checker-timer ()
+    checker-timer)
+
+  (defun checker--check-timers ()
+    (cl-loop for (id (check-fn cb-fn)) in (ht-items checker)
+             when (funcall check-fn) do
+               (progn
+                 (funcall cb-fn)
+                 (ht-remove! checker id))))
+
+  (defun checker-add-fn (check-fn cb-fn)
+    (incf checker-id)
+    (ht-set! checker checker-id (list check-fn cb-fn))
+
+    (unless (timerp checker-timer)
+      (setf checker-timer (run-at-time nil 0.5 #'checker--check-timers)))))
+
 (defun cmd-to-shell-string (cmd)
   "Convert a list of raw strings into something you can
   pass to bash -c."
@@ -995,7 +1026,7 @@ Don't expect any output."
 ;; 1. callback fn
 ;;    - use a timer with a .5 second poll and answer anything ready.
 ;;
-(cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw)
+(cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw auto-cleanup callback-fn)
   "Run an exteral program in async fasion."
 
   (let* ((program (first cmd))
@@ -1033,6 +1064,17 @@ Don't expect any output."
             (process-send-string proc (or input
                                           (slurp input-file)))
             (process-send-eof proc))
+
+          (when (or auto-cleanup callback-fn)
+            (checker-add-fn (fn ()
+                              (do-cmd-ready proc))
+                            (fn ()
+                              ;; We know either auto-cleanup or the callback-fn is
+                              ;; set, so finish up and hand the result back if anyone is
+                              ;; listening.
+                              (let ((result (do-cmd-finish proc)))
+                                (when callback-fn
+                                  (funcall callback-fn result))))))
           proc))))
 
 (defun do-cmd-ready (proc)
@@ -2768,37 +2810,6 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
                   (concatenate 'list (to-list (assoc1 k output)) (list v)))
           (push entry output))))
     (nreverse output)))
-;;
-;; A simple (non-threaded) system for handling a set of callbacks
-;; that
-;;
-(let ((check-list (ht))
-      (check-list-id 0)
-      (check-list-timer nil))
-
-  (defun check-list-dump ()
-    check-list)
-
-  (defun check-list-clear ()
-    (setf check-list (ht)))
-
-  (defun check-list-timer ()
-    check-list-timer)
-
-  (defun check-list--check-timers ()
-    (cl-loop for (id (check-fn cb-fn)) in (ht-items check-list)
-             when (funcall check-fn) do
-               (progn
-                 (funcall cb-fn)
-                 (ht-remove! check-list id))))
-
-  (defun check-list-add-fn (check-fn cb-fn)
-    (incf check-list-id)
-    (ht-set! check-list check-list-id (list check-fn cb-fn))
-
-    (unless (timerp check-list-timer)
-      (setf check-list-timer (run-at-time nil 0.5 #'check-list--check-timers)))))
-
 
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
@@ -3007,6 +3018,10 @@ rm -f ${ATTACHMENT}
                     (let* ((resp (do-cmd cmd
                                          :input input-file
                                          :stdout 'string :stderr 'string :throw throw))
+                            ;;         :input input-file
+                            ;;         :stdout 'string :stderr 'string :throw throw)
+
+                                 )
                            (output (assoc1 :stdout resp))
                            ;; Split out the '< content-type: application/json' headers
                            ;; from curl, and turn them into an alist.
