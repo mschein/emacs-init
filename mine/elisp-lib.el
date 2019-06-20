@@ -991,6 +991,10 @@ Don't expect any output."
 ;; 4. I think it would be good to provide enough features so I can
 ;;    port web-request to do-cmd-async.
 ;;
+;; Other stuff to add:
+;; 1. callback fn
+;;    - use a timer with a .5 second poll and answer anything ready.
+;;
 (cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw)
   "Run an exteral program in async fasion."
 
@@ -1037,7 +1041,7 @@ Don't expect any output."
 (cl-defun do-cmd-wait (proc &key timeout-sec)
   (let ((start (current-time)))
     (while (and (or (not timeout-sec)
-                    (< (current-time) (time-add start timeout-sec)))
+                    (time-less-p (current-time) (time-add start timeout-sec)))
                (not (do-cmd-ready proc)))
       (sleep-for .5))))
 
@@ -2764,6 +2768,37 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
                   (concatenate 'list (to-list (assoc1 k output)) (list v)))
           (push entry output))))
     (nreverse output)))
+;;
+;; A simple (non-threaded) system for handling a set of callbacks
+;; that
+;;
+(let ((check-list (ht))
+      (check-list-id 0)
+      (check-list-timer nil))
+
+  (defun check-list-dump ()
+    check-list)
+
+  (defun check-list-clear ()
+    (setf check-list (ht)))
+
+  (defun check-list-timer ()
+    check-list-timer)
+
+  (defun check-list--check-timers ()
+    (cl-loop for (id (check-fn cb-fn)) in (ht-items check-list)
+             when (funcall check-fn) do
+               (progn
+                 (funcall cb-fn)
+                 (ht-remove! check-list id))))
+
+  (defun check-list-add-fn (check-fn cb-fn)
+    (incf check-list-id)
+    (ht-set! check-list check-list-id (list check-fn cb-fn))
+
+    (unless (timerp check-list-timer)
+      (setf check-list-timer (run-at-time nil 0.5 #'check-list--check-timers)))))
+
 
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
@@ -2825,8 +2860,18 @@ rm -f ${ATTACHMENT}
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
+;; Stuff to support
+;;
+;; 1. callback fn
+;;    - use a timer with a .5 second poll and answer anything ready.
+;;    - autocleanup?
+;;      -
+;;
+;; 2. async flag (can be fire and forget.)
+;; 3.
+
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers timeout insecure user-agent cookie-jar throw)
+                       &key (method "GET") params auth body json form file headers timeout insecure user-agent cookie-jar throw async auto-cleanup callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -2848,6 +2893,9 @@ rm -f ${ATTACHMENT}
    `cookie-jar': A place to send and receive cookies.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
+   `aysnc': Don't return a result, return a handle or use the callback-fn
+   `auto-cleanup': Don't return anything, and cleanup the result.
+   `callback-fn': Don't return anything, and call the callback-fn when the result returns.
 
    Dynamic Global Variables
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
