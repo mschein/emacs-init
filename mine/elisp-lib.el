@@ -3018,10 +3018,6 @@ rm -f ${ATTACHMENT}
                     (let* ((resp (do-cmd cmd
                                          :input input-file
                                          :stdout 'string :stderr 'string :throw throw))
-                            ;;         :input input-file
-                            ;;         :stdout 'string :stderr 'string :throw throw)
-
-                                 )
                            (output (assoc1 :stdout resp))
                            ;; Split out the '< content-type: application/json' headers
                            ;; from curl, and turn them into an alist.
