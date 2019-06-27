@@ -2842,7 +2842,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
-    (concat auth ":" (read-passwd (format "Password(%s):" auth)))))
+    (concat auth ":" (read-user-password (format "Password(%s):" auth) auth))))
 
 (defconst *webrequest-http-error-msg-len* 256)
 
