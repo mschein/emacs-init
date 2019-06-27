@@ -2819,17 +2819,28 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
   ;; With that i can get rid of -f and also get :form to work.
   ;;
   (let ((status-line)
-        (headers))
-    (dolist (line (remove-if #'string-empty-p
-                             (mapcar (| string-left-trim-regex "< *" %)
-                                     (remove-if-not (| string-starts-with "<" %)
-                                                    (string->list curl-header-block "\r*\n+")))))
-      (if status-line
-          (push (parse-http-header line) headers)
-        (let ((status (parse-http-status-line line)))
-          (unless (equal "100" (assoc1 :status-code status))
-            ;; it's a continue, so skip it.
-            (setf status-line status)))))
+        (headers)
+        (301-response))
+
+    (dolist (line (mapcar (| string-left-trim-regex "< *" %)
+                          (remove-if-not (| string-starts-with "<" %)
+                                         (string->list curl-header-block "\r*\n+"))))
+      (cond
+       ;; Save the header.
+       (status-line (unless (string-nil-or-empty-p line)
+                      (push (parse-http-header line) headers)))
+       (301-response
+        ;; skip until we find a new header
+        (when (string-nil-or-empty-p line)
+          (setf 301-response nil)))
+       (t
+        (let* ((status (parse-http-status-line line))
+               (status-code (assoc1 :status-code status)))
+          (cond
+           ;; it's a continue, so skip it.
+           ((equal "100" status-code) t)
+           ((equal "301" status-code) (setf 301-response t))
+           (t (setf status-line status)))))))
     `((:status-line . ,status-line)
       (:headers . ,(coalesce-alist headers)))))
 
@@ -2882,7 +2893,7 @@ rm -f ${ATTACHMENT}
 ;; 3.
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers timeout insecure user-agent cookie-jar throw async auto-cleanup callback-fn)
+                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw async auto-cleanup callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -2897,6 +2908,7 @@ rm -f ${ATTACHMENT}
    `json': An alist that will be converted to json and sent to the server.
    `form': An alist (like params) that will be sent as a form body.
    `headers': Override any headers to send on the request.  See *man curl* for rules.
+   `no-redirect': Don't follow redirects for this request.
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
@@ -2967,6 +2979,8 @@ rm -f ${ATTACHMENT}
 
         ;; TODO(mls): do I need append option, now that I have append!?
         ;; I guess the check for validity is nice.
+        (unless no-redirect
+          (append-atom! cmd "-L"))
         (append-option method (| (list (upcase (format "-X%s" method)))))
         (append-option input-file (| '("-K" "-")))
         (append-option user-agent (| `("-A" ,user-agent)))
