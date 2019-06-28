@@ -2907,7 +2907,23 @@ rm -f ${ATTACHMENT}
 ;;      -
 ;;
 ;; 2. async flag (can be fire and forget.)
-;; 3.
+;;
+;; How would you do this if you designed it to be async upfront?
+;;  stuff:
+;;  1. setup the arguments
+;;  2. setup the environment, and what we need to pass to curl.
+;;
+;;  if it's async:
+;;  1. Check the cache
+;;  2. process the result
+;;  2. call the cb fn
+;;  3. add back to cache and cleanup
+;;
+;;  if it's blocking:
+;;  1. check the cache
+;;  2.
+;;
+;;
 
 (cl-defun web-request (url
                        &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw async auto-cleanup callback-fn)
