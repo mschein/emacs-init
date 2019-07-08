@@ -2558,13 +2558,20 @@ python debugging session."
                                  (| cons % (cdr (assoc % env)))
                                       venv-required-vars)))
 
+(defun set-exec-path-to-bash-path ()
+  "Copy the current PATH into the emacs `exec-path'."
+  (setf exec-path (string-split ":" (getenv "PATH") )))
+
 (defun activate-virtualenv-emacs (location)
   (let ((vars (find-venv-variables location)))
     (when (not (assoc-get "VIRTUAL_ENV" vars))
       (error "Virtualenv not found in %s" location))
     (dolist (var venv-required-vars)
       (setenv var (assoc1 var vars))
-      (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))))
+      (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))
+
+    ;; Set the exec path, so call-process and what not match the shell.
+    (set-exec-path-to-bash-path)))
 
 (defun run-python-in-venv ()
   "Run the special emacs python interpreter inside a venv associated with the buffer."
@@ -2577,7 +2584,10 @@ python debugging session."
 
 (defun clear-virtualenv-emacs ()
   (mapc (fn ((name . value))
-          (setenv name value)) virtualenv-saved-vars))
+          (setenv name value)) virtualenv-saved-vars)
+
+  ;; Makre sure exec path matches the regular PATH
+  (set-exec-path-to-bash-path))
 
 (defun restore-env-from-alist (alist)
   ;; clear the env first.
@@ -2597,7 +2607,10 @@ python debugging session."
            (progn
              (activate-virtualenv-emacs ,root-dir)
              ,@body)
-         (setf process-environment ,old-env)))))
+         (progn
+           ;; Should I have a cleaner way to do this?
+           (setf process-environment ,old-env)
+           (set-exec-path-to-bash-path))))))
 
 (defmacro with-env-vars (env-vars-alist &rest body)
   "Run some code with a alist of environment variables set temporarily."
@@ -3212,6 +3225,7 @@ rm -f ${ATTACHMENT}
            collect href))
 
 (defmacro time-this-code (&rest body)
+  "A timer function for functions."
   `(let ((time (current-time)))
      (unwind-protect
          (progn
