@@ -249,6 +249,15 @@ setup(name=package,
 (defconst *python-init-file* "# empty module file
 ")
 
+(defun python-init-basic-dir (dir)
+  (pushd dir
+    (message "setup git module")
+    (run "git" "init")
+    (let ((venv-dir ".venv"))
+      (message "create virtualenv")
+      (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
+      (make-symbolic-link ".venv/bin/activate" "activate"))))
+
 (defun python-create-project (name)
   (interactive "sname: ")
 
@@ -279,13 +288,27 @@ setup(name=package,
           (barf *python-init-file* (path-join name "__init__.py"))
 
           ;; Run command to setup more stuff
-          (message "setup git module")
-          (run "git" "init")
-          (let ((venv-dir ".venv"))
-            (message "create virtualenv")
-            (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
-            (make-symbolic-link ".venv/bin/activate" "activate"))))
+          (python-init-basic-dir default-directory)))
     (message "%s exists, giving up." (path-join default-directory name))))
+
+(defun python-create-bare-project (dir)
+  (interactive "sdir: ")
+
+  (let ((project-name (basename dir)))
+    (message "Create project directory %s for %s" dir project-name)
+    (make-directory dir)
+
+    (pushd dir
+      (python-init-basic-dir dir))))
+
+(defun python-create-django-project (dir)
+  (interactive "sdir: ")
+  (python-create-bare-project dir)
+
+  (with-venv dir
+    (message "Install django")
+    (run "pip3" "install" "Django")
+    (run "django-admin" "startproject" (basename dir))))
 
 (defun unique-file-name (name index)
   "Make a unique name but save the extension"
