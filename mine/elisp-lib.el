@@ -2571,11 +2571,11 @@ python debugging session."
     (when (not (assoc-get "VIRTUAL_ENV" vars))
       (error "Virtualenv not found in %s" location))
     (dolist (var venv-required-vars)
-      (setenv var (assoc1 var vars))
-      (message "In virtualenv %s" (getenv "VIRTUAL_ENV")))
+      (setenv var (assoc1 var vars)))
 
     ;; Set the exec path, so call-process and what not match the shell.
-    (set-exec-path-to-bash-path)))
+    (set-exec-path-to-bash-path)
+    (message "In virtualenv %s" (getenv "VIRTUAL_ENV"))))
 
 (defun run-python-in-venv ()
   "Run the special emacs python interpreter inside a venv associated with the buffer."
