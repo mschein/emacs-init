@@ -2053,6 +2053,10 @@ Returns a list of alists."
     (run-at-time (format "%smin" min) nil #'osx-screen-lock-enabled)
     (message "Enable later status: %s" (osx-screen-lock-status))))
 
+(defun disable-lockout-temporarily (min)
+  (interactive "smin: ")
+  (osx-screen-lock-renable-later (string-to-number min)))
+
 (defun osx-sleep-now ()
   "Put the system to sleep immediately."
   (run "pmset" "sleepnow"))
