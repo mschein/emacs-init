@@ -42,11 +42,29 @@
     output-file))
 
 ;; ffprobe
-(cl-defun ffmpeg-to-mp3 (input-file)
-  (do-cmd
-   ;;(list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" )
+(cl-defun ffmpeg-to-mp3 (input-file &optional output-file)
+  (let ((output-file (or output-file
+                         (concat (file-name-base input-file) ".mp3"))))
+    (do-cmd-async
+     (list "ffmpeg" "-i" input-file "-q:a" "0" "-map" "a" output-file)
+     :callback-fn (lambda (&rest foo) (message "Finished processing %s -> %s" input-file output-file))
+     ))
+;;         "-i" input-file "-vn" "-acodec" "copy" )
    ;; ffmpeg -i sample.avi -q:a 0 -map a sample.mp3
-   ))
+   )
+
+(cl-defun ffmpeg-to-audio (input-file &optional output-file)
+  (let ((output-file (or output-file
+                         (concat (file-name-base input-file) ".aac"))))
+    (do-cmd-async (list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" output-file)
+                  :callback-fn (lambda (&rest foo)
+                                 (message "Finished processing %s -> %s" input-file output-file)))))
+
+(cl-defun ffmpeg-to-audio-dir (dir &key match)
+  ;; I know this is lame, but it's just a place holder.
+  (pushd dir
+    (cl-loop for file in (list-directory-entries dir :match match)
+             do (ffmpeg-to-audio file))))
 ;;
 ;; -filters
 ;; -codecs

@@ -828,7 +828,8 @@ Example:
     (cl-loop for (id (check-fn cb-fn)) in (ht-items checker)
              when (funcall check-fn) do
                (progn
-                 (funcall cb-fn)
+                 (with-demoted-errors
+                     (funcall cb-fn))
                  (ht-remove! checker id))))
 
   (defun checker-add-fn (check-fn cb-fn)
