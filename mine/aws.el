@@ -281,6 +281,16 @@
                "--no-dry-run"
              "--dry-run")))
 
+(cl-defun aws-autoscaling-terminate-instance (instance-id &key do-it)
+  "Terminate an instance in an autoscaling group.
+
+   This is faster than regular terminate-instances, because we inform the asg
+   so it can be smart.
+  "
+  (if do-it
+      (aws-autoscaling "terminate-instance-in-auto-scaling-group" "--instance-id" instance-id "--no-should-decrement-desired-capacity")
+    (aws-terminate-instances instance-id)))
+
 (defun aws-get-instance-ips (instance-id)
   (aws-traverse
    '(Reservations 0 Instances 0 PrivateIpAddress)
@@ -388,12 +398,15 @@
   (let ((-aws-return-json t))
     (mapcar (| aws-task->ip cluster %) (aws-ecs-list-tasks cluster service))))
 
+(defun aws-get-task-definition-in-cluster (cluster service-name)
+  (aws-ecs-describe-task-definition
+       (aws-traverse '(0 taskDefinitionArn)
+                     (aws-ecs-describe-tasks cluster (aref (aws-ecs-list-tasks cluster service-name) 0)))))
+
 (defun aws-get-task-definition-for-service (service-name)
   (let ((-aws-return-json t))
     (let ((cluster (aws-find-service-cluster service-name)))
-      (aws-ecs-describe-task-definition
-       (aws-traverse '(0 taskDefinitionArn)
-                     (aws-ecs-describe-tasks cluster (aref (aws-ecs-list-tasks cluster service-name) 0)))))))
+      (aws-get-task-definition-in-cluster cluster service-name))))
 
 (defun aws-get-service-ecr-image-name (service-name)
   (aws-traverse '(containerDefinitions 0 image)
