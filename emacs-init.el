@@ -536,6 +536,7 @@ that uses 'font-lock-warning-face'."
 (defalias 'er 'eval-region)
 (defalias 'fnd 'find-name-dired)
 (defalias 'i 'insert-interactive)
+(defalias 'ic 'insert-interactive-completing-read)
 (defalias 'ia 'insert-author)
 (defalias 'ir 'indent-region)
 (defalias 'ml 'magit-log)

@@ -65,6 +65,14 @@
   (pushd dir
     (cl-loop for file in (list-directory-entries dir :match match)
              do (ffmpeg-to-audio file))))
+
+
+;;
+;; Audio to single image movie.
+;;
+;; ffmpeg -f image2 -loop 1 -i picture.png -i music.mp3 -c:v libx264 -tune stillimage -c:a copy -shortest movie.mp4
+;;
+
 ;;
 ;; -filters
 ;; -codecs

@@ -1685,6 +1685,7 @@ Returns a list of alists."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun insert-interactive ()
+  "Generate an (interactive) declaration for a function."
   (interactive)
   (let ((pos (point)))
     (re-search-backward "(defun +[^ ]+ +(\\(.*?\\))")
@@ -1702,6 +1703,25 @@ Returns a list of alists."
                                   (mapcar (| format "s%s: " %)))
                              "\\n"))))
          (indent-region (line-beginning-position) (line-end-position)))
+       (error "unable to parse arglist"))))
+
+(defun insert-interactive-completing-read ()
+  "Generate an (interactive) declaration using `completing-read' for each field."
+  (interactive)
+  (let ((pos (point)))
+    (re-search-backward "(defun +[^ ]+ +(\\(.*?\\))")
+    (if-let (arg-str (match-string-no-properties 1))
+       (progn
+         (goto-char pos)
+         (insertf "(interactive%s)"
+                  (if (string-nil-or-empty-p arg-str)
+                      ""
+                    (format " (list %s)"
+                            (string-join
+                             (mapcar (| format "(completing-read \"%s: \" '() nil t)" %)
+                                     (string-split " " arg-str))
+                             "\n"))))
+         (indent-region pos (point)))
        (error "unable to parse arglist"))))
 
 (defun set-default-directory (dir)
