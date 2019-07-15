@@ -2542,6 +2542,30 @@ python debugging session."
       (find-venv-variables root-dir)
     (error nil)))
 
+(defun python-generate-pytest-call ()
+  (save-excursion
+    (re-search-backward "def \\([a-zA-Z-_][a-zA-Z0-9_-]*\\)(")
+    (if-let (fn-name (match-string-no-properties 1))
+        (format "pytest --disable-warnings --show-capture=all -svv %s::%s"
+                (buffer-file-name) fn-name)
+      (error "Unable to find python function name"))))
+
+(defun yank-to-pytest-fn ()
+  "Generate a pytest string for a particular python test fuction, and store it
+in the keyring."
+  (interactive)
+  (kill-new (python-generate-pytest-call)))
+
+(defun open-pytest-fn-shv ()
+  ""
+  (interactive)
+  (let* ((pytest-str (python-generate-pytest-call))
+         (project-root (git-project-root))
+         (project-name (basename project-root)))
+    (open-shell-dir-venv project-root)
+    (rename-buffer (generate-new-buffer-name (format "*venv-unit-test-%s-venv*" project-name)))
+    (insert pytest-str)))
+
 (defun open-shell-dir-venv (&optional dir)
   "Start a virtual env in the current repo."
   (interactive)
