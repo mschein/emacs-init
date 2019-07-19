@@ -1584,6 +1584,15 @@ supplied by the command."
               (mapcar* #'cons labels proc-info))
             processes)))
 
+(defun list-open-tcp-connections ()
+  (csv-split-text (run-to-str "lsof" "-i" "tcp") :split-regex "[ \t][ \t]+"))
+
+(defun list-open-files-buffer ()
+  (interactive)
+  (with-overwrite-buffer "+list-open-files-lsof+"
+    (shell (current-buffer))
+    (insertf "lsof -i tcp")))
+
 (defun process-is-running-regex-p (proc-name-regex)
   "Check all running processes agaist `PROC-NAME-REGEX'."
   (cl-loop for proc-info in (list-all-processes)
@@ -1819,8 +1828,8 @@ Returns a list of alists."
 
 (defvar m-bookmark-table (ht))
 
-(defun list-bookmark-functions ()
-  (ht-keys m-bookmark-table))
+(defun list-bookmark-data ()
+  (ht-to-alist m-bookmark-table))
 
 (defmacro make-bookmark (name url &rest urls)
   (assert (symbolp name))
@@ -1828,7 +1837,7 @@ Returns a list of alists."
   (dolist (u urls)
     (assert (or (symbolp u) (stringp u))))
 
-  (ht-set! m-bookmark-table ',name ',url)
+  (ht-set! m-bookmark-table name url)
   `(defun ,name ()
     ,(format "The `%s' function opens up the %s url.%s" name url
              (if (> (length urls) 1)
