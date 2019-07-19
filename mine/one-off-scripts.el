@@ -310,6 +310,89 @@ setup(name=package,
     (run "pip3" "install" "Django")
     (run "django-admin" "startproject" (basename dir))))
 
+;; May want to add more metadata to these.
+(defconst *cl-readme* "# ${name}
+### _Your Name <your.name@example.com>_
+
+<project info>
+
+## License
+
+Specify license
+
+")
+
+(defconst *cl-asd* ";;;; ${name}.asd
+
+(asdf:defsystem #:${name}
+  :description \"Describe ${name} here\"
+  :author \"Your Name <your.name@example.com>\"
+  :license  \"Specify license here\"
+  :version \"0.0.1\"
+  :serial t
+  :depends-on (${deps})
+  :components ((:file \"package\")
+               (:file \"${name}\")))
+")
+
+(defconst *cl-main* ";;;;
+;;;; ${name} main file.
+;;;;
+
+(in-package #:${name})
+")
+
+(defconst *cl-package* ";;;; package.lisp
+
+(defpackage #:${name}
+  (:use #:cl))
+")
+
+(defconst *common-lisp-standard-projects* '(("lib" . ())
+                                            ;; adopt may be worth looking at.
+                                            ("cli" . ("command-line-arguments"))
+                                            ("web" . ("drakma"
+                                                      "hunchentoot"))))
+
+(defun padding (length)
+  ;; There's probably a smarter way to do this.
+  (string-join (cl-loop for x below length collect " ") ""))
+
+(defun common-lisp-build-deps (type)
+  (let ((default-deps '("alexandria"
+                        "cl-ppcre"
+                        "split-sequence"
+                        "rutils"
+                        "rutilsx"
+                        "uiop"
+                        "let-plus"))
+        (padding (padding (length "  :depends-on ("))))
+
+    (string-join (mapcar (| format "#:%s" %) (concatenate 'list default-deps
+                                                          (assoc1 type *common-lisp-standard-projects*)))
+                 (concat "\n" padding))))
+
+(defun common-lisp-create-project (type name)
+  (interactive (list (completing-read "type: " (assoc-keys *common-lisp-standard-projects*) nil t)
+                     (read-string "name: ")))
+  (message "Current directory: %s" default-directory)
+
+  (when (file-exists-p name)
+    (error (format "Directory %s exists, abort common lisp create." name)))
+
+  (let* ((target (path-join default-directory name))
+         (template-vars `(("name" . ,name)
+                          ("deps" . ,(common-lisp-build-deps type)))))
+    (message "Create project %s" name)
+    (ensure-makedirs target)
+    (pushd target
+      (cl-loop for (file template) in `(("README.md" ,*cl-readme*)
+                                        (,(format "%s.asd" name) ,*cl-asd*)
+                                        (,(format "%s.lisp" name) ,*cl-main*)
+                                        ("package.lisp" ,*cl-package*))
+               do (barf (string-template-fill template template-vars)
+                        file)))))
+
 (defun unique-file-name (name index)
   "Make a unique name but save the extension"
   (format "%s-%d%s"

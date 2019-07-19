@@ -2764,6 +2764,32 @@ in the keyring."
     (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Template commands.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun string-template-fill (template vars)
+  "A simple template filling function.  Something like this probably exists
+   already.
+
+   Variables are: ${[a-z0-9A-Z]+}."
+  (cl-flet ((sub-fn (matched-var)
+                    ;;
+                    ;; this seems stupid, but I haven't found a better
+                    ;; way to do it.
+                    ;; It seems like you should get the match from
+                    ;; match-string-no-properties, but that doesn't
+                    ;; seem to register tha match made by string-replace.
+                    ;;
+                    (let ((key (first (string-find "${\\([^}]+\\)}" matched-var))))
+                      (assert key)
+                      (message "Substitute key %s" key)
+                      (assoc1 key vars))))
+    (cl-loop for (k . v) in vars
+             do (setf template (string-replace "${[a-zA-Z0-9]+}" #'sub-fn template)))
+    template))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
