@@ -1217,6 +1217,7 @@ Don't expect any output."
 (defmacro with-overwrite-buffer-pp (name &rest body)
   (declare (indent defun))
   `(with-overwrite-buffer ,name
+     (lisp-mode)
      (insert (pp-to-string
               ,@body))))
 
@@ -1847,6 +1848,11 @@ Returns a list of alists."
     (browse-url ,url t)
     ,@(mapcar (lambda (u)
                 `(browse-url ,u nil)) urls)))
+
+(defun show-web-bookmark-data ()
+  (interactive)
+  (with-overwrite-buffer-pp "+bookmarked-urls+"
+    (list-bookmark-data)))
 
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
