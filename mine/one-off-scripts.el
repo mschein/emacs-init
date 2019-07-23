@@ -360,12 +360,17 @@ Specify license
 
 (defun common-lisp-build-deps (type)
   (let ((default-deps '("alexandria"
+                        "closer-mop"
                         "cl-ppcre"
+                        "cl-interpol"
+                        "cl-data-structures"
+                        "trivia"
                         "split-sequence"
                         "rutils"
                         "rutilsx"
                         "uiop"
-                        "let-plus"))
+                        "let-plus"
+                        "prove"))
         (padding (padding (length "  :depends-on ("))))
 
     (string-join (mapcar (| format "#:%s" %) (concatenate 'list default-deps
