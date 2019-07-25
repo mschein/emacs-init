@@ -1528,11 +1528,11 @@ Example:
     (insert-file-contents path)
     (buffer-string)))
 
-(defun barf (str path)
+(defun barf (str path &optional append)
   "Write a file to disk."
   (with-temp-buffer
     (insert str)
-    (write-region (point-min) (point-max) path)))
+    (write-region (point-min) (point-max) path append)))
 
 (defun overwrite (str path)
   (assert (file-regular-p path))
@@ -2781,6 +2781,16 @@ in the keyring."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template commands.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; Other enhancements:
+;; 1. make it recursive (you can import other templates and have
+;;    them filled.)
+;; 2. fstring like feature?
+;; 3. refer to function calls?
+;;
+;; Could also integrate with python to access jinja2 templates.
+;;
 
 (defun string-template-fill (template vars)
   "A simple template filling function.  Something like this probably exists

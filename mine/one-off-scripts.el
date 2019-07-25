@@ -314,6 +314,8 @@ setup(name=package,
 (defconst *cl-readme* "# ${name}
 ### _Your Name <your.name@example.com>_
 
+Style Guide: https://lisp-lang.org/style-guide
+
 <project info>
 
 ## License
@@ -342,6 +344,84 @@ Specify license
 (in-package #:${name})
 ")
 
+(defconst *cl-cli-main* ";;;;
+;;;; ${name} main file.
+;;;;
+
+(in-package #:${name})
+
+(defun environment->alist ()
+  (mapcar (lambda (elm)
+            (destructuring-bind (key &optional value) (cl-ppcre:split \"=\" elm)
+              (cons key value)))
+          (sb-ext:posix-environ)))
+
+;; Pretty print a hash table
+(defmethod print-object ((object hash-table) stream)
+  (format stream \"#HASH{~{~{(~a : ~a)~}~^ ~}}\"
+          (loop for key being the hash-keys of object
+                using (hash-value value)
+                collect (list key value))))
+
+(defun main ()
+  (format t \"argv: ~A~%\" sb-ext:*posix-argv*)
+  (format t \"env: ~A~%\" (environment->alist)))
+")
+
+(defconst *cl-build-cli-sh* "#!/bin/bash -ev
+
+# Run this to create a lisp executable.
+
+rm -f ${name}
+
+sbcl --no-sysinit \\
+     --no-userinit \\
+     --load build-cli.lisp
+")
+
+(defconst *cl-build-cli-lisp* "(declaim (optimize (speed 3) (space 3) (debug 0)))
+
+;; Load quicklisp into the image.
+(let ((quicklisp-init (merge-pathnames \"quicklisp/setup.lisp\"
+                                       (user-homedir-pathname))))
+  (when (probe-file quicklisp-init)
+    (load quicklisp-init)))
+
+(ql:quickload :${name})
+
+(in-package :${name})
+
+(sb-ext:save-lisp-and-die \"${name}\"
+                          :toplevel #'main
+                          :executable t
+                          :save-runtime-options t
+                          :purify t
+                          ;; Note! this does make a difference
+                          ;; The trade off is startup time vs
+                          ;; executable size.
+                          ;; nil: 67MB vs .06s to start
+                          ;;   1: 17MB vs .2s
+                          ;;   5: 15MB vs .2s to start (noticable lag)
+                          ;;   9: 14MB vs .2s to start
+                          :compression nil)
+")
+
+(defconst *cl-cli-readme* "# ${name}
+### _Your Name <your.name@example.com>_
+
+Style Guide: https://lisp-lang.org/style-guide
+
+<project info>
+
+## To build the CLI, do:
+./build-cli.sh
+
+## License
+
+Specify license
+
+")
+
 (defconst *cl-package* ";;;; package.lisp
 
 (defpackage #:${name}
@@ -360,17 +440,17 @@ Specify license
 
 (defun common-lisp-build-deps (type)
   (let ((default-deps '("alexandria"
-                        "closer-mop"
-                        "cl-ppcre"
                         "cl-interpol"
-                        "cl-data-structures"
-                        "trivia"
-                        "split-sequence"
+                        "cl-ppcre"
+                        "closer-mop"
+                        "let-plus"
+                        "prove"
                         "rutils"
                         "rutilsx"
-                        "uiop"
-                        "let-plus"
-                        "prove"))
+                        "split-sequence"
+                        "trivia"
+                        "trivial-types"
+                        "uiop"))
         (padding (padding (length "  :depends-on ("))))
 
     (string-join (mapcar (| format "#:%s" %) (concatenate 'list default-deps
@@ -380,6 +460,9 @@ Specify license
 (defun common-lisp-create-project (type name)
   (interactive (list (completing-read "type: " (assoc-keys *common-lisp-standard-projects*) nil t)
                      (read-string "name: ")))
+
+  (assert (not (search " " name)) nil "Dont put spaces in the name")
+
   (message "Current directory: %s" default-directory)
 
   (when (file-exists-p name)
@@ -387,16 +470,31 @@ Specify license
 
   (let* ((target (path-join default-directory name))
          (template-vars `(("name" . ,name)
-                          ("deps" . ,(common-lisp-build-deps type)))))
+                          ("deps" . ,(common-lisp-build-deps type))))
+         (is-cli (equal "cli" type)))
     (message "Create project %s" name)
     (ensure-makedirs target)
     (pushd target
       (cl-loop for (file template) in `(("README.md" ,*cl-readme*)
                                         (,(format "%s.asd" name) ,*cl-asd*)
-                                        (,(format "%s.lisp" name) ,*cl-main*)
+                                        (,(format "%s.lisp" name) ,(if is-cli
+                                                                       *cl-cli-main*
+                                                                     *cl-main*))
                                         ("package.lisp" ,*cl-package*))
                do (barf (string-template-fill template template-vars)
-                        file)))))
+                        file))
+      (if is-cli
+          (cl-loop for (file template) in `(("build-cli.sh" ,*cl-build-cli-sh*)
+                                            ("build-cli.lisp" ,*cl-build-cli-lisp*))
+
+                   do (progn
+                        (barf (string-template-fill template template-vars)
+                              file)
+
+                        ;; This should probably be explicit, you know
+                        ;; have extra arguments witih the template strings.
+                        (when (equal "sh" (file-name-extension file))
+                          (chmod file #o755))))))))
 
 (defun unique-file-name (name index)
   "Make a unique name but save the extension"
