@@ -97,4 +97,10 @@
 
 (defun ffmpeg-slice ())
 
+
+;;
+;; extract metadata
+;; ffmpeg -i <some-movie>.mkv -f ffmetadata metadata
+;;
+
 (provide 'ffmpeg)
