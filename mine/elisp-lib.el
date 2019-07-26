@@ -993,6 +993,13 @@ Don't expect any output."
    It will throw an error if the command fails."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t)))
 
+(defun run-logged (&rest cmd-parts)
+  "Run a command like `run' but dump the output to *messages*"
+  (let ((res (do-cmd cmd-parts :stdout 'string :stderr 'string :throw t)))
+    (message "stdout: %s" (assoc1 :stdout res))
+    (message "stderr: %s" (assoc1 :stderr res))
+    res))
+
 ;; TODO(mls): maybe just make this a do-cmd option.
 (defun run-to-json (&rest cmd-parts)
   (json-read-from-string (apply #'run-to-str cmd-parts)))

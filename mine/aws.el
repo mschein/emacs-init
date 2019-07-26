@@ -500,6 +500,9 @@
       (cons (cons :json (ignore-errors (json-read-from-string (assoc1 :stdout res))))
             res))))
 
+(defun aws-ssm-delete-parameter (name)
+  (aws-ssm "delete-parameter" "--name" name))
+
 (provide 'aws)
 
 
