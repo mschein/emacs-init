@@ -451,6 +451,9 @@
                       when (string-match-p service-pattern service) do
                         (return-from aws-ecs-service-pattern-in-env-p cluster)))))
 
+(defun aws-find-task-for-service (service-name)
+  (aws-ecs-list-tasks (aws-find-service-cluster service-name) service-name))
+
 (cl-defun aws-ecs-collect-services (service-pattern)
   (let ((aws-access-key (aws-current-access-key-id)))
     (assert aws-access-key)
@@ -499,6 +502,9 @@
     (when-let ((res (do-cmd args :stdout 'string :stderr 'string)))
       (cons (cons :json (ignore-errors (json-read-from-string (assoc1 :stdout res))))
             res))))
+
+(defun aws-describe-service (service)
+  (aws-ecs-describe-services (aws-find-service-cluster service) service))
 
 (defun aws-ssm-delete-parameter (name)
   (aws-ssm "delete-parameter" "--name" name))
