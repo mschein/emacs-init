@@ -1017,7 +1017,7 @@ Don't expect any output."
 (defun which (executable)
   (let ((res (do-cmd (list "which" executable) :stdout 'string)))
     (when (do-cmd-was-true res)
-        (assoc1 ':stdout res))))
+        (string-trim (assoc1 ':stdout res)))))
 
 ;;
 ;; questions:
