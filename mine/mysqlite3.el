@@ -26,6 +26,11 @@
 ;;
 
 ;;
+;; NOTE: I could use named parameters, but that would require
+;; changing the c code in the sqlite3-api.
+;;
+
+;;
 ;; should i use a dynamic variable for the db connection
 ;; (mysqlite-enable-connection name)
 ;; or
