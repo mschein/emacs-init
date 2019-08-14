@@ -1,5 +1,11 @@
 (require 'kv)
 
+;;
+;; I should cache certain kinds of errors:
+;; I think mostly 404's, and only if its' on perminent?
+;; Maybe for a limited time?
+;;
+
 (defconst m-url-cache-store-name "url-cache")
 
 (defun m-url-cache-init ()

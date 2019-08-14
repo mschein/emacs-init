@@ -2973,7 +2973,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
-    (concat auth ":" (read-user-password (format "Password(%s):" auth) auth))))
+    (concat auth ":" (read-user-password (format "Password(%s): " auth) auth))))
 
 (defconst *webrequest-http-error-msg-len* 256)
 
@@ -3154,8 +3154,7 @@ rm -f ${ATTACHMENT}
                               (slurp json-file)
                               (string-join cmd " "))
                       output-file)
-                (chmod output-file #o700)))
-          (message "Web-request running %s" cmd))
+                (chmod output-file #o700))))
 
         ;;
         ;; When passwords are used, we must use stdin to send
