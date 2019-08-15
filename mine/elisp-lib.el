@@ -2754,9 +2754,14 @@ in the keyring."
       (sort-lines nil import-start import-end))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Docker Commands
+;; Code for parsing large blocks of formatted text
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (cl-defun csv-split-text (text &key (split-regex ",") split-line-fn (has-header-line t) field-names)
+  "Parse a csv file, and split it into a list of assoc lists, based on the csv header.
+
+Note this is not all of csv, so it won't work on all files.  It's more for a quick
+and dirty parsing of command output."
   (cl-flet ((--split-line (line)
               (cond
                (split-regex (string-split split-regex line))
@@ -2779,6 +2784,34 @@ in the keyring."
                          field-names
                          (--split-line line)))
               lines))))
+
+(defun ldif-unwrap-lines (lines)
+  "Given a list of lines, unwrap any that start with a space, as in ldif:
+https://www.ietf.org/rfc/rfc2849.txt."
+  (nreverse (reduce (fn (current next)
+                      (let ((space-regex "^ +"))
+                        (if (string-match space-regex next)
+                            (progn
+                              (setcar current (concat (car current) (string-replace space-regex "" next)))
+                              current)
+                          (cons next current))))
+                    lines
+                    :initial-value (list))))
+
+(defun ldif-split-text (text)
+  "Do a simple conversion of ldif to an assoc list."
+  (cl-loop for line in (mapcar #'string-trim (ldif-unwrap-lines (split-string text "\n" t)))
+           when (string-has-value-p line)
+           collect (progn
+                     (if-let (split (string-split ": " line))
+                         (destructuring-bind (key value) split
+                           (cons key value))
+                       (debug)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Docker Commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 (defun docker-list-processes ()
   (interactive)
@@ -3359,5 +3392,24 @@ rm -f ${ATTACHMENT}
   (with-temp-buffer
     (clipboard-yank)
     (buffer-string)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LDAP Lookup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(cl-defun ldapsearch (&key ldap-server search-base bind-dn passwd-fn query user-lookup)
+  (let ((pw-file "pw.txt")
+        (query (or query
+                   (format "(uid=%s)" user-lookup))))
+    (with-tempdir (:root-dir "/tmp")
+      (touch pw-file)
+      (chmod pw-file #o600)
+      (barf (funcall passwd-fn) pw-file)
+      (ldif-split-text (run-to-str "ldapsearch" "-LLL"
+                                   "-h" ldap-server
+                                   "-b" search-base
+                                   "-D" bind-dn
+                                   "-y" pw-file
+                                   query)))))
 
 (provide 'elisp-lib)
