@@ -30,7 +30,8 @@
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
         (seconds (+ seconds (or (* 60 minutes) 0))))
-    (when overwrite-output
+    (when (and overwrite-output
+               (file-exists-p output-file))
       (delete-file output-file t))
 
     (do-cmd
