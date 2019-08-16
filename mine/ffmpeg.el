@@ -25,11 +25,14 @@
 ;;  convert -loop 0 frames/ffout*.png output.gif
 
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
-(cl-defun ffmpeg-to-gif (input-file &key (scale-width 480) start minutes length)
-  (assert (file-exists-p input-file))
+(cl-defun ffmpeg-to-gif (input-file &key (scale-width 480) minutes seconds length overwrite-output)
+  (assert (file-exists-p input-file) "Input file does not exist.")
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
         (start (+ start (or (* 60 minutes) 0))))
+    (when overwrite-output
+      (delete-file output-file t))
+
     (do-cmd
      (list "ffmpeg"
            "-ss" (format "%s" start)

@@ -2159,7 +2159,7 @@ end run
         activate
     end tell
 end tell" (quote-str path) ""))
-  (sleep-for 10)
+  (sleep-for 120)
 )
 
 (defun open-quicktime-movie (path &optional start-time-sec)
