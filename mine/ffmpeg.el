@@ -29,13 +29,13 @@
   (assert (file-exists-p input-file) "Input file does not exist.")
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
-        (start (+ start (or (* 60 minutes) 0))))
+        (seconds (+ seconds (or (* 60 minutes) 0))))
     (when overwrite-output
       (delete-file output-file t))
 
     (do-cmd
      (list "ffmpeg"
-           "-ss" (format "%s" start)
+           "-ss" (format "%s" seconds)
            "-t"  (format "%s" length)
            "-i" input-file
            "-filter_complex" (format "[0:v] fps=12,scale=w=%d:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1"
