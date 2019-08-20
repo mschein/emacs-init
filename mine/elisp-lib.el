@@ -366,6 +366,9 @@ of the test."
     (list (vconcat thing))
     (t (vector thing))))
 
+(defun vector-to-list (vec)
+  (append vec nil))
+
 (defun last-car (list)
   (car (last list)))
 
