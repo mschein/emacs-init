@@ -494,7 +494,9 @@ Specify license
                         ;; This should probably be explicit, you know
                         ;; have extra arguments witih the template strings.
                         (when (equal "sh" (file-name-extension file))
-                          (chmod file #o755))))))))
+                          (chmod file #o755)))))
+      (message "Setup git repo in %s" target)
+      (git-init-repo "."))))
 
 (defun unique-file-name (name index)
   "Make a unique name but save the extension"
