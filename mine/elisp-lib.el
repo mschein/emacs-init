@@ -499,11 +499,9 @@ of the test."
                     (lambda (elm)
                       (if (atom elm)
                           elm
-                        (progn
-                          (let ((sym (gensym)))
-                            (setq destruct-list
-                                  (cons `(,elm . ,sym) destruct-list))
-                            sym))))
+                        (let ((sym (gensym)))
+                          (pushcons elm sym destruct-list)
+                          sym)))
                     args)))
     `(lambda ,arg-list
        ;; Build nested destructuring binds.
