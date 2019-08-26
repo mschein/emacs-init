@@ -1523,6 +1523,19 @@ Example:
 (defun current-last-dirname ()
   (directory-last-dirname default-directory))
 
+(defun file-list-parents (start-dir)
+  "Return a list of all of the parent directories of `start-dir'.
+Note that this includes start-dir itself."
+  ;; Make sure we're only dealing with a directory, or
+  ;; this wont' work.
+  (let ((dir (file-name-directory start-dir)))
+    (cl-loop for i below 100
+             collect dir
+             until (or (equal dir "/")
+                       ;; OSX is weird.
+                       (equal dir "/private"))
+             do (setf dir (file-truename (path-join dir ".."))))))
+
 (defun directory-file-under-dir (dir file)
   "Is the `file' path underneath the directory `dir'?"
   (string-starts-with (file-truename dir) (file-truename file)))
@@ -2623,7 +2636,17 @@ in the keyring."
   "Find the `root' of a python project."
   (if (git-in-working-tree)
       (git-project-root)
-    default-directory))
+    (let ((python-root-files '("setup.py" "requirements.txt" "activate")))
+      ;;
+      ;; See if we can find setup.py or requirements.txt
+      ;;
+      (if-let (dir (cl-loop for parent in (file-list-parents default-directory)
+                            when (cl-loop for file in python-root-files
+                                          when (file-exists-p (path-join parent file))
+                                            return t)
+                            return parent))
+          dir
+        default-directory))))
 
 (defvar virtualenv-saved-vars (let ((env (dumpenv)))
                                 (mapcar
@@ -2648,11 +2671,17 @@ in the keyring."
 (defun run-python-in-venv ()
   "Run the special emacs python interpreter inside a venv associated with the buffer."
   (interactive)
-  (let ((python-interpreter (path-join
-                             (assoc1 "VIRTUAL_ENV"
-                                     (find-venv-variables (git-project-root))) "bin/python")))
-    (message "Run python interpreter: %s" python-interpreter)
-    (run-python python-interpreter t)))
+
+  ;;
+  ;; First, get to the root of the project, because that will make the imports nicer.
+  ;;
+  (pushd (python-get-project-root)
+    (let ((python-interpreter (path-join
+                               (assoc1 "VIRTUAL_ENV"
+                                       (find-venv-variables (git-project-root))) "bin/python")))
+      (message "Run python interpreter: %s" python-interpreter)
+      (run-python python-interpreter t))))
+
 
 (defun clear-virtualenv-emacs ()
   (mapc (fn ((name . value))
