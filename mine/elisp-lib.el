@@ -819,8 +819,13 @@ Example:
   (defun checker-dump ()
     checker)
 
+  (defun checker-clear-timer ()
+    (setf checker-timer nil))
+
   (defun checker-clear ()
-    (setf checker (ht)))
+    (setf checker (ht))
+    (setf checker-id 0)
+    (checker-clear-timer))
 
   (defun checker-timer ()
     checker-timer)
@@ -967,7 +972,7 @@ Example:
               (push (cons :code resp) output)
               (when stdout-buffer
                 (with-current-buffer stdout-buffer
-                  (pushcons :stdout (buffer-string) output)))
+                  (pushcons :stdout (buffer->string) output)))
               (when stderr-string
                 (pushcons :stderr stderr-string output))
               output))
@@ -1109,11 +1114,11 @@ Don't expect any output."
               (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
 
             (when (equal stdout 'string)
-              (pushcons :stdout (buffer-string) output))
+              (pushcons :stdout (buffer->string) output))
 
             (when (equal stderr 'string)
               (pushcons :stderr (with-current-buffer stderr-buffer
-                                  (buffer-string))
+                                  (buffer->string))
                         output))
             (pushcons :code code output)
 
@@ -1139,7 +1144,7 @@ Don't expect any output."
 
 (defun buffer->list ()
   "Convert the current buffer into a list."
-  (string->list (buffer-string)))
+  (string->list (buffer->string)))
 
 (defun region->list (begin end)
   (string->list (buffer-substring-no-properties begin end)))
@@ -1155,6 +1160,11 @@ Don't expect any output."
 (defun buffer->buffer-regex (regex)
   (interactive "sregex: ")
   (list->buffer (remove-if-not-regex regex (buffer->list)) "regex-buffer"))
+
+(defun buffer->string ()
+  "Get the entire content of the current buffer as a string.
+Use this likely in leu of `buffer-string'."
+  (buffer-substring-no-properties (point-min) (point-max)))
 
 ;;TODO(scheinholtz)
 ;;
@@ -1547,7 +1557,7 @@ Note that this includes start-dir itself."
 
   (with-temp-buffer
     (insert-file-contents path)
-    (buffer-string)))
+    (buffer->string)))
 
 (defun barf (str path &optional append)
   "Write a file to disk."
@@ -1588,6 +1598,31 @@ Note that this includes start-dir itself."
 
 (defun file-has-size (path)
   (> (assoc1 'size (get-file-info path) ) 0))
+
+(cl-defun du (dir &key (max-depth 2) callback-fn)
+  "Call `du' and use a callback.
+
+The `callback' function should take one argument,
+which is the same as the result alist returned
+by `do-cmd'
+"
+  (do-cmd-async (list "bash" "-c" (format "du -h -d %s \'%s\' | sort -h" max-depth (expand-file-name dir)))
+                :stdout 'string
+                :throw t
+                :callback-fn callback-fn))
+
+(cl-defun du-output (dir max-depth)
+  (interactive (list (read-string "dir: " "~")
+                     (completing-read "max-depth: " nil nil nil "2")))
+  (du dir
+      :max-depth max-depth
+      :callback-fn (lambda (result)
+                     (with-overwrite-buffer-pp (format "+du-for-%s-du+" dir)
+                       (csv-split-text (assoc1 :stdout result)
+                                       :split-regex "[\t ]+"
+                                       :has-header-line nil
+                                       :field-names '("size" "path"))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
@@ -3421,7 +3456,7 @@ rm -f ${ATTACHMENT}
   "Return the current contents of the OS's clipboard."
   (with-temp-buffer
     (clipboard-yank)
-    (buffer-string)))
+    (buffer->string)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LDAP Lookup
