@@ -3106,7 +3106,7 @@ rm -f ${ATTACHMENT}
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
    `form': An alist (like params) that will be sent as a form body.
-   `headers': Override any headers to send on the request.  See *man curl* for rules.
+   `headers': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
    `no-redirect': Don't follow redirects for this request.
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
@@ -3200,8 +3200,8 @@ rm -f ${ATTACHMENT}
 
               (append! cmd (list "-F" (format "%s=@%s" name filename))))))
         (append-option body (| `("--data-raw" ,body)))
-        (cl-loop for header in headers do
-                 (append-option t (| `("-H" ,header))))
+        (cl-loop for (name . value)  in headers do
+                 (append-option t (| `("-H" ,(format "%s: %s" name value)))))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
         (append-option file (| `("--data-binary" ,(concat "@" file))))
