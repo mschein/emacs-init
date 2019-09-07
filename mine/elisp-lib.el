@@ -2208,7 +2208,7 @@ end run
         activate
     end tell
 end tell" (quote-str path) ""))
-  (sleep-for 120)
+  (sleep-for 30)
 )
 
 (defun open-quicktime-movie (path &optional start-time-sec)
@@ -2620,6 +2620,11 @@ python debugging session."
         (format "pytest --disable-warnings --show-capture=all -svv %s::%s"
                 (buffer-file-name) fn-name)
       (error "Unable to find python function name"))))
+
+(defun python-setup-venv ()
+  (interactive)
+  (run "python3" "-m" "venv" ".venv/")
+  (run "ln" "-s" ".venv/bin/activate" "activate"))
 
 (defun yank-to-pytest-fn ()
   "Generate a pytest string for a particular python test fuction, and store it

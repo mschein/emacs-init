@@ -306,6 +306,7 @@ setup(name=package,
   (python-create-bare-project dir)
 
   (with-venv dir
+    ;; Add a docker file?
     (message "Install django")
     (run "pip3" "install" "Django")
     (run "django-admin" "startproject" (basename dir))))
