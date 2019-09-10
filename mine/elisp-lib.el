@@ -808,43 +808,6 @@ Example:
       (-> cmd (concat "\n") insert)
     (if doit (shell-command cmd)))))
 
-;;
-;; A simple (non-threaded) system for handling a set of callbacks
-;; that need to be called when a condition occurs.
-;;
-(let ((checker (ht))
-      (checker-id 0)
-      (checker-timer nil))
-
-  (defun checker-dump ()
-    checker)
-
-  (defun checker-clear-timer ()
-    (setf checker-timer nil))
-
-  (defun checker-clear ()
-    (setf checker (ht))
-    (setf checker-id 0)
-    (checker-clear-timer))
-
-  (defun checker-timer ()
-    checker-timer)
-
-  (defun checker--check-timers ()
-    (cl-loop for (id (check-fn cb-fn)) in (ht-items checker)
-             when (funcall check-fn) do
-               (progn
-                 (with-demoted-errors
-                     (funcall cb-fn))
-                 (ht-remove! checker id))))
-
-  (defun checker-add-fn (check-fn cb-fn)
-    (incf checker-id)
-    (ht-set! checker checker-id (list check-fn cb-fn))
-
-    (unless (timerp checker-timer)
-      (setf checker-timer (run-at-time nil 0.5 #'checker--check-timers)))))
-
 (defun cmd-to-shell-string (cmd)
   "Convert a list of raw strings into something you can
   pass to bash -c."
@@ -1036,9 +999,8 @@ Don't expect any output."
 ;; 4. I think it would be good to provide enough features so I can
 ;;    port web-request to do-cmd-async.
 ;;
-;; Other stuff to add:
-;; 1. callback fn
-;;    - use a timer with a .5 second poll and answer anything ready.
+;; FYI, I learned that timers aren't really reliable.  I'm going to
+;; try set-process-sentinel.
 ;;
 (cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw auto-cleanup callback-fn)
   "Run an exteral program in async fasion."
@@ -1064,7 +1026,9 @@ Don't expect any output."
         (setq-local stderr stderr)
         (setq-local stderr-buffer stderr-buffer)
         (setq-local throw throw)
-        (setq-local program program))
+        (setq-local program program)
+        (setq-local callback-fn callback-fn)
+        (setq-local auto-cleanup auto-cleanup)
 
         (message "Start async command: %s %s -> " program (cmd-to-shell-string args))
 
@@ -1075,36 +1039,13 @@ Don't expect any output."
                                   :connection-type 'pipe
                                   :sentinel #'ignore)))
           (when (or input input-file)
-            (process-send-string proc (or input
-                                          (slurp input-file)))
+            (process-send-string proc (or input (slurp input-file)))
             (process-send-eof proc))
 
-          (when (or auto-cleanup callback-fn)
-            (checker-add-fn (fn ()
-                              (do-cmd-ready proc))
-                            (fn ()
-                              ;; We know either auto-cleanup or the callback-fn is
-                              ;; set, so finish up and hand the result back if anyone is
-                              ;; listening.
-                              (let ((result (do-cmd-finish proc)))
-                                (when callback-fn
-                                  (funcall callback-fn result))))))
-          proc))))
+          (set-process-sentinel proc #'do-cmd-finish)
+          proc)))))
 
-(defun do-cmd-ready (proc)
-  (equal 'exit (process-status proc)))
-
-(cl-defun do-cmd-wait (proc &key timeout-sec)
-  (let ((start (current-time)))
-    (while (and (or (not timeout-sec)
-                    (time-less-p (current-time) (time-add start timeout-sec)))
-               (not (do-cmd-ready proc)))
-      (sleep-for .5))))
-
-(cl-defun do-cmd-finish (proc &key block wait-sec)
-  (when (or block wait-sec)
-    (do-cmd-wait proc :timeout-sec wait-sec))
-
+(cl-defun do-cmd-finish (proc change-desc)
   (unwind-protect
       (progn
         (with-current-buffer (process-buffer proc)
@@ -1123,7 +1064,8 @@ Don't expect any output."
             (pushcons :code code output)
 
             (message "-> Finished Async Command(%s): %s %s" code program (cmd-to-shell-string args))
-            output)))
+            (when callback-fn
+              (funcall callback-fn output)))))
     (progn
       (with-current-buffer (process-buffer proc)
         (kill-buffer stderr-buffer))
@@ -3132,7 +3074,7 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw async auto-cleanup callback-fn)
+                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw async callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3156,7 +3098,6 @@ rm -f ${ATTACHMENT}
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
    `aysnc': Don't return a result, return a handle or use the callback-fn
-   `auto-cleanup': Don't return anything, and cleanup the result.
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
 
    Dynamic Global Variables
