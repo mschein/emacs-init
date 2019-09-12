@@ -25,7 +25,7 @@
 ;;  convert -loop 0 frames/ffout*.png output.gif
 
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
-(cl-defun ffmpeg-to-gif (input-file &key (scale-width 480) minutes seconds length overwrite-output)
+(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length overwrite-output)
   (assert (file-exists-p input-file) "Input file does not exist.")
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
@@ -34,7 +34,7 @@
                (file-exists-p output-file))
       (delete-file output-file t))
 
-    (do-cmd
+    (do-cmd-async
      (list "ffmpeg"
            "-ss" (format "%s" seconds)
            "-t"  (format "%s" length)
@@ -42,6 +42,8 @@
            "-filter_complex" (format "[0:v] fps=12,scale=w=%d:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1"
                                      scale-width)
            output-file)
+     :callback-fn (lambda (&rest foo)
+                    (message "Finished processing %s to gif" input-file))
      :throw t)
     output-file))
 
@@ -51,6 +53,7 @@
                          (concat (file-name-base input-file) ".mp3"))))
     (do-cmd-async
      (list "ffmpeg" "-i" input-file "-q:a" "0" "-map" "a" output-file)
+     :throw t
      :callback-fn (lambda (&rest foo) (message "Finished processing %s -> %s" input-file output-file))
      ))
 ;;         "-i" input-file "-vn" "-acodec" "copy" )
@@ -60,9 +63,8 @@
 (cl-defun ffmpeg-to-audio (input-file &optional output-file)
   (let ((output-file (or output-file
                          (concat (file-name-base input-file) ".aac"))))
-    (do-cmd-async (list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" output-file)
-                  :callback-fn (lambda (&rest foo)
-                                 (message "Finished processing %s -> %s" input-file output-file)))))
+    (do-cmd (list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" output-file)
+            )))
 
 (cl-defun ffmpeg-to-audio-dir (dir &key match)
   ;; I know this is lame, but it's just a place holder.
@@ -99,7 +101,26 @@
 ;;  - like an options alist or something.
 ;;
 
-(defun ffmpeg-slice ())
+(cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length (overwrite-output t))
+  "Get a slice from a video."
+  (let ((output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file)))
+        (seconds (+ seconds (or (* 60 minutes) 0))))
+    (when (and overwrite-output
+               (file-exists-p output-file))
+      (delete-file output-file t))
+
+    (do-cmd-async
+     (list "ffmpeg"
+           "-ss" (format "%s" seconds)
+           "-t"  (format "%s" length)
+           "-i" input-file
+           "-c" "copy"
+           output-file)
+     :callback-fn (lambda (&rest foo)
+                    (message "Finished processing %s" input-file))
+     :throw t)
+    output-file))
+
 
 
 ;;
