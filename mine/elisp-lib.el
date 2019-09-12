@@ -856,23 +856,23 @@ Example:
   or any output if requested.
 
   The arguments are:
-   1. cmd: a list with the program to run and its arguments.
-           The arguments won't be interpreted by the shell.
+   1. `cmd': a list with the program to run and its arguments.
+             The arguments won't be interpreted by the shell.
 
-   2. input: The file to hand to the input process.  nil is the same as /dev/null
+   2. `input': The file to hand to the input process.  nil is the same as /dev/null
 
-   3. stdout: What to do with the stdout from the subprocess.
-             'current-buffer: Dump into the current buffer.
-             'string:         Return it as a string in the result alist.
-             <buffer object>
-             nil
-             (:buffer <buffer-name>)
-             (:file <file-path> 'append) ; append is optional.
+   3. `stdout': What to do with the stdout from the subprocess.
+               'current-buffer: Dump into the current buffer.
+               'string:         Return it as a string in the result alist.
+               <buffer object>
+               nil
+               (:buffer <buffer-name>)
+               (:file <file-path> 'append) ; append is optional.
 
-   4. stderr: The same as stdout with one additional option.
-              NOTE: this is on by default to make error messages better.
-              'stdout: combine stdout and stderr.
-   5. throw: Raise an error on failure instead of returning the alist.
+   4. `stderr': The same as stdout with one additional option.
+                NOTE: this is on by default to make error messages better.
+                'stdout: combine stdout and stderr.
+   5. `throw': Raise an error on failure instead of returning the alist.
 
   output: (list
            (:code . <int>) ; Did it succeed or fail
@@ -996,14 +996,38 @@ Don't expect any output."
 ;;
 ;; 3. Should I eventually define do-cmd as a wrapper around do-cmd-async?  Is
 ;;    that too inefficient somehow?
-;; 4. I think it would be good to provide enough features so I can
-;;    port web-request to do-cmd-async.
+;; 4. I should provide more options to stdout and stderr, so they can use
+;;    buffers in addition to strings.
 ;;
 ;; FYI, I learned that timers aren't really reliable.  I'm going to
 ;; try set-process-sentinel.
 ;;
-(cl-defun do-cmd-async (cmd &key input input-file stdout stderr throw auto-cleanup callback-fn)
-  "Run an exteral program in async fasion."
+(cl-defun do-cmd-async (cmd &key callback-fn input input-file stdout stderr throw)
+  "Use Emacs's make-process function to run a command in async fashion.
+
+The goal is to do work in the background without locking Emacs until
+the command completes.
+
+The arguments are:
+1. `cmd': a list with the program to run and its arguments.
+          The arguments won't be interpreted by the shell.
+2. `callback-fn': A function that takes one argument (the response object
+                  described below).  This is required.
+3. `input': A string to send to the input process as stdin.
+
+4. `input-file': A path to a file to send as input/stdin to the command.
+5. `stdout': What to do with the stdout from the subprocess.
+             'string:         Return it as a string in the result alist.
+6. `stderr': Include stderr in the response object.
+7. `throw': Raise an error on failure.
+            Currently won't call the callback fn.
+
+output: (list
+         (:code . <int>) ; Did it succeed or fail
+         (:stdout . \"string\")  ; if any
+         (:stderr . \"string\")) ; if any
+
+output is passed to the callback-fn."
 
   (let* ((program (first cmd))
          (args (rest cmd)))
@@ -1028,7 +1052,6 @@ Don't expect any output."
         (setq-local throw throw)
         (setq-local program program)
         (setq-local callback-fn callback-fn)
-        (setq-local auto-cleanup auto-cleanup)
 
         (message "Start async command: %s %s -> " program (cmd-to-shell-string args))
 
@@ -2150,7 +2173,7 @@ end run
         activate
     end tell
 end tell" (quote-str path) ""))
-  (sleep-for 30)
+  (sleep-for 15)
 )
 
 (defun open-quicktime-movie (path &optional start-time-sec)
@@ -3074,7 +3097,7 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw async callback-fn)
+                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3097,7 +3120,6 @@ rm -f ${ATTACHMENT}
    `cookie-jar': A place to send and receive cookies.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
-   `aysnc': Don't return a result, return a handle or use the callback-fn
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
 
    Dynamic Global Variables
@@ -3144,7 +3166,8 @@ rm -f ${ATTACHMENT}
                            input-file-path)))
            (final-url (if params
                           (concat url "?" (url-encode-params params))
-                        url)))
+                        url))
+           (use-caching +webrequest-cache-urls+))
 
       ;; Dump out the json to a file, if needed.
       (when json
@@ -3201,75 +3224,107 @@ rm -f ${ATTACHMENT}
                 (chmod output-file #o700))))
 
         ;;
-        ;; When passwords are used, we must use stdin to send
-        ;; them without them being recorded.  So create a tempdir
-        ;; where we can dump things like this.
+        ;; This gets complicated because we've elected to support async, sync, and caching
+        ;; in the same function.
         ;;
-        ;; Should I put this function in its own scope?
+        ;; use cl-labels to break shared code in separate functions, so I can keep the
+        ;; 'if' complexity to a minimium.
         ;;
-        (cl-flet ((webrequest-fn ()
-                    (let* ((resp (do-cmd cmd
-                                         :input input-file
-                                         :stdout 'string :stderr 'string :throw throw))
-                           (output (assoc1 :stdout resp))
-                           ;; Split out the '< content-type: application/json' headers
-                           ;; from curl, and turn them into an alist.
-                           (resp-block (parse-http-header-block (assoc1 :stderr resp)))
-                           (status-line (assoc1 :status-line resp-block))
-                           (curl-code (assoc1 :code resp))
-                           (http-code (if (= curl-code 0)
-                                          (string-to-number (assoc1 :status-code status-line))
-                                        -1))
-                           (http-error-type (http-classify-status-code http-code))
+        (cl-labels ((is-async ()
+                      "Is this call async?  This is mostly for future proofing."
+                      (not (not callback-fn)))
+                    (handle-response-fn (resp)
+                      "Handle a `resp' response structure either from the url cache or from do-cmd/do-cmd-async"
 
-                           (headers (assoc1 :headers resp-block))
-                           ;; I decided to always try to parse json, if only
-                           ;; because sometimes I deal with improperly implemented
-                           ;; web services.
-                           (resp-json (ignore-errors
-                                        (json-read-from-string (assoc1 :stdout resp))))
-                           (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
-                                        (ignore-errors
-                                          (parse-html-string output)))))
+                      ;; Try to share the cache updating code between sync and async mode
+                      (message "web->handle-response-fn code: %s" (assoc1 :code resp))
+                      (when use-caching
+                        (message "web->handle-response-fn cache url %s code %s" final-url
+                                 (assoc1 :code resp))
+                        (m-url-cache-set final-url resp
+                                         (if (equal use-caching :forever)
+                                             nil
+                                           use-caching)))
 
-                      (message "Web-request. curl code: %s http code: %s, status-line: %s"
-                               curl-code http-code status-line)
+                      (let* ((output (assoc1 :stdout resp))
+                             ;; Split out the '< content-type: application/json' headers
+                             ;; from curl, and turn them into an alist.
+                             (resp-block (parse-http-header-block (assoc1 :stderr resp)))
+                             (status-line (assoc1 :status-line resp-block))
+                             (curl-code (assoc1 :code resp))
+                             (http-code (if (= curl-code 0)
+                                            (string-to-number (assoc1 :status-code status-line))
+                                          -1))
+                             (http-error-type (http-classify-status-code http-code))
+                             (headers (assoc1 :headers resp-block))
+                             ;; I decided to always try to parse json, if only
+                             ;; because sometimes I deal with improperly implemented
+                             ;; web services.
+                             (resp-json (ignore-errors
+                                          (json-read-from-string (assoc1 :stdout resp))))
+                             (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
+                                          (ignore-errors
+                                            (parse-html-string output)))))
 
-                      ;; Check to see if we're supposed to throw an error
-                      (when throw
+                        (message "web-request: curl code: %s http code: %s, status-line: %s"
+                                 curl-code http-code status-line)
+
+                        ;;
+                        ;; Check to see if we're supposed to throw an error
+                        ;;
+                        ;;
+                        (when throw
                           (unless (eq http-error-type :success)
                             (let ((error-message
                                    (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
                                            http-code (assoc1 :message status-line)
                                            (string-truncate output *webrequest-http-error-msg-len*))))
-                            (message error-message)
-                            (error error-message))))
+                              (message error-message)
+                              (error error-message))))
 
-                      ;; If the alist gets so large it's annoying in ielm,
-                      ;; I could make separate functions for accessing
-                      ;; json or parsed html.
-                      `((:http-code . ,http-code)
-                        (:http-status . ,http-error-type)
-                        (:status-line . ,status-line)
-                        (:headers . ,headers)
-                        (:final-url . ,final-url)
-                        (:method . ,method)
-                        (:url . ,url)
-                        (:params . ,params)
-                        (:curl-code . ,curl-code)
-                        (:stderr . ,(when curl-code
-                                      (assoc1 :stderr resp)))
-                        (:resp . ,output)
-                        (:json . ,resp-json)
-                        (:html . ,resp-html)))))
+                        ;; If the alist gets so large it's annoying in ielm,
+                        ;; I could make separate functions for accessing
+                        ;; json or parsed html.
+                        (let ((output `((:http-code . ,http-code)
+                                        (:http-status . ,http-error-type)
+                                        (:status-line . ,status-line)
+                                        (:headers . ,headers)
+                                        (:final-url . ,final-url)
+                                        (:method . ,method)
+                                        (:url . ,url)
+                                        (:params . ,params)
+                                        (:curl-code . ,curl-code)
+                                        (:stderr . ,(when curl-code
+                                                      (assoc1 :stderr resp)))
+                                        (:resp . ,output)
+                                        (:json . ,resp-json)
+                                        (:html . ,resp-html))))
+                          (message "web->handle-response-fn finish")
 
-          ;; Actually make the web request, caching the output if needed.
-          (if +webrequest-cache-urls+
-              (m-url-cache-or-fetch final-url #'webrequest-fn
-                                    :ttl-sec (if (equal +webrequest-cache-urls+ :forever)
-                                                 nil
-                                               +webrequest-cache-urls+))
-            (webrequest-fn)))))))
+                          (if (is-async)
+                              (funcall callback-fn output)
+                            output))))
+                    (make-request-fn ()
+                      (let ((args (list :input input-file
+                                        :stdout 'string :stderr 'string :throw throw)))
+                        (if (is-async)
+                            (apply #'do-cmd-async cmd :callback-fn #'handle-response-fn args)
+                          (handle-response-fn (apply #'do-cmd cmd args))))))
+
+          ;;
+          ;; Actually make the web request, either async or not
+          ;; caching the output if needed.
+          ;;
+          (message "web-request: start request for %s" final-url)
+
+          (if use-caching
+              (if-let (resp (m-url-cache-get final-url))
+                  ;; We already have the cached response from the url cache.
+                  (progn
+                    (message "web-request: cache hit on %s" final-url)
+                    (handle-response-fn resp))
+                (make-request-fn))
+            (make-request-fn)))))))
 
 ;; TODO(mls): make this consistent with do-cmd-was-true
 (defun web-request-success-p (resp)
