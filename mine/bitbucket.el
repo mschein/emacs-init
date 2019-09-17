@@ -225,6 +225,8 @@
                          (lambda () (bitbucket-repo-to-url-raw bb repo))
                          :ttl-sec (* 60 60 24 5)))
 
+;; TODO: It would be nice to make this async, but I'll have to
+;; redesign the whole library :p.
 (cl-defun bitbucket-inbox (bb &optional role)
   (bitbucket-request-all bb "inbox/pull-requests"
                          :params (remove-if (| not (cdr %))

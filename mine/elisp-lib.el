@@ -1029,6 +1029,9 @@ output: (list
 
 output is passed to the callback-fn."
 
+  ;; The callback is required'
+  (assert callback-fn nil "A callback-fn must be provided.")
+
   (let* ((program (first cmd))
          (args (rest cmd)))
     ;;
@@ -2310,8 +2313,29 @@ end tell
     (message "Removing remote %s" remote-name)
     (git-remote-remove remote-name)))
 
+(defun git-first-commit ()
+  (string-trim (run-to-str "git" "rev-list" "--max-parents=0" "HEAD")))
+
+;; Make this less dumbx
+;; (defun git-log ()
+;;   (run-to-str "git" "log"))
+
 (defun git-push-origin-master ()
   (run "git" "push" "-u" "origin" "master"))
+
+(defun git-push-sha (sha &optional branch)
+  (let ((branch (or branch "master")))
+    (run "git" "push" "-u" "origin" (format "%s:refs/heads/%s" sha branch))))
+
+(defun git-push-current-branch ()
+  ""
+  ;;
+  ;; git push -v origin test:refs/heads/test
+  ;;
+
+  (let ((target "origin"))
+    (run "git" "push" target (format "%s:%s" (git-current-branch) (git-current-branch-ref)))))
+
 
 (defun git-get-origin-info ()
   (destructuring-bind (host project repo)
@@ -2344,6 +2368,27 @@ end tell
       (append-atom! args "--bare"))
     (apply #'run "git" "init" args)))
 
+(cl-defun git-branch-create (branch-name &key start-point track force)
+  "Create a branch in the current git repo."
+  (assert (git-within-git-repo-p) nil "This command must be run inside a git repo.")
+
+  (let ((options `(,@(when track
+                       (list "--track"))
+                   ,@(when force
+                       (list "-f")))))
+    (apply #'run `("git" "branch" ,@options ,branch-name ,@start-point))))
+
+(defun git-branch-list ()
+  "Return a list of git branches."
+  (assert (git-within-git-repo-p) nil "This command must be run inside a git repo."))
+
+(cl-defun git-checkout (branch &key create-branch)
+  "Switch to a new branch"
+  (assert (git-within-git-repo-p) nil "This command must be run inside a git repo.")
+  (apply #'run `("git" "checkout" ,@(when create-branch
+                                      (list "-b"))
+                 ,branch)))
+
 (cl-defun git-commit-changes (path &key (message "Save current files."))
   (pushd path
     (run "git" "add" ".")
@@ -2352,7 +2397,8 @@ end tell
 (defun git-rev-parse-is-inside-working-tree ()
   (do-cmd-was-true (do-cmd (list "git" "rev-parse" "--is-inside-work-tree"))))
 
-(defun git-in-working-tree (&optional dir)
+;; TODO: rename this to indicate it's a test.  It's hard to find.
+(defun git-within-git-repo-p (&optional dir)
   "Is the current or provided directory inside a valid git repo?"
   (pushd (or dir default-directory)
     (git-rev-parse-is-inside-working-tree)))
@@ -2378,7 +2424,7 @@ end tell
       (git-init-repo remote-repo-dir t)
 
       (pushd dir
-        (if (git-in-working-tree)
+        (if (git-within-git-repo-p)
             (progn (message "Set origin of existing repo.")
                    (git-remote-add-origin remote-repo-dir)
                    (git-push-origin-master))
@@ -2395,7 +2441,7 @@ end tell
   "Create a master git repo in the `git-repo-remote-dir' directory."
   (interactive)
   (git-init-setup-remote-repo-dir
-   (if (git-in-working-tree)
+   (if (git-within-git-repo-p)
        (git-project-root)
      (if (y-or-n-p (format "Is %s the base of the repo?" default-directory))
          default-directory
@@ -2639,7 +2685,7 @@ in the keyring."
 
 (defun python-get-project-root ()
   "Find the `root' of a python project."
-  (if (git-in-working-tree)
+  (if (git-within-git-repo-p)
       (git-project-root)
     (let ((python-root-files '("setup.py" "requirements.txt" "activate")))
       ;;
@@ -2743,7 +2789,7 @@ in the keyring."
 ;; To use, install: sudo -H pip install python-language-server
 ;; and sudo -H pip3 install python-language-server
 (defun python-setup-lsp-project ()
-  (let* ((is-git-project (git-in-working-tree))
+  (let* ((is-git-project (git-within-git-repo-p))
          (project-root (python-get-project-root)))
     (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
              default-directory is-git-project project-root)
@@ -2819,6 +2865,21 @@ and dirty parsing of command output."
                          field-names
                          (--split-line line)))
               lines))))
+
+(cl-defun assoc-to-csv (alist)
+  "Convert an alist to csv."
+
+  ;; figure out the headers
+  (assert alist)
+
+  (let* ((separator ",")
+         (headers (mapcar (| format "%s" %) (assoc-keys (first alist))))
+         (header-string (string-join headers separator)))
+    (string-join
+     (cons header-string
+           (cl-loop for data in alist
+                    collect (string-join (mapcar (| format "%s" %) (assoc-values data)) separator)))
+     "\n")))
 
 (defun ldif-unwrap-lines (lines)
   "Given a list of lines, unwrap any that start with a space, as in ldif:
@@ -3070,34 +3131,16 @@ rm -f ${ATTACHMENT}
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 
+;;
 ;; Stuff to support
 ;;
-;; 1. callback fn
-;;    - use a timer with a .5 second poll and answer anything ready.
-;;    - autocleanup?
-;;      -
-;;
-;; 2. async flag (can be fire and forget.)
-;;
-;; How would you do this if you designed it to be async upfront?
-;;  stuff:
-;;  1. setup the arguments
-;;  2. setup the environment, and what we need to pass to curl.
-;;
-;;  if it's async:
-;;  1. Check the cache
-;;  2. process the result
-;;  2. call the cb fn
-;;  3. add back to cache and cleanup
-;;
-;;  if it's blocking:
-;;  1. check the cache
-;;  2.
-;;
+;; 1. async flag (can be fire and forget.)... just pass an identity callback
+;; 2. Create a 'map-fn' argument that applies the function to the output
+;;    befor handing it back to either the callback-fn or returning it.
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw callback-fn)
+                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3120,6 +3163,7 @@ rm -f ${ATTACHMENT}
    `cookie-jar': A place to send and receive cookies.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
+   `map-fn': Apply the function to the data before handing back to the callback.
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
 
    Dynamic Global Variables
@@ -3285,20 +3329,23 @@ rm -f ${ATTACHMENT}
                         ;; If the alist gets so large it's annoying in ielm,
                         ;; I could make separate functions for accessing
                         ;; json or parsed html.
-                        (let ((output `((:http-code . ,http-code)
-                                        (:http-status . ,http-error-type)
-                                        (:status-line . ,status-line)
-                                        (:headers . ,headers)
-                                        (:final-url . ,final-url)
-                                        (:method . ,method)
-                                        (:url . ,url)
-                                        (:params . ,params)
-                                        (:curl-code . ,curl-code)
-                                        (:stderr . ,(when curl-code
-                                                      (assoc1 :stderr resp)))
-                                        (:resp . ,output)
-                                        (:json . ,resp-json)
-                                        (:html . ,resp-html))))
+                        (let* ((output `((:http-code . ,http-code)
+                                         (:http-status . ,http-error-type)
+                                         (:status-line . ,status-line)
+                                         (:headers . ,headers)
+                                         (:final-url . ,final-url)
+                                         (:method . ,method)
+                                         (:url . ,url)
+                                         (:params . ,params)
+                                         (:curl-code . ,curl-code)
+                                         (:stderr . ,(when curl-code
+                                                       (assoc1 :stderr resp)))
+                                         (:resp . ,output)
+                                         (:json . ,resp-json)
+                                         (:html . ,resp-html)))
+                               (output (if map-fn
+                                           (funcall map-fn output)
+                                         output)))
                           (message "web->handle-response-fn finish")
 
                           (if (is-async)
