@@ -3140,7 +3140,7 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn callback-fn)
+                       &key (method "GET") params auth body json data form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3153,7 +3153,8 @@ rm -f ${ATTACHMENT}
            a password, or a full curl auth string like \"user:password\".
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
-   `form': An alist (like params) that will be sent as a form body.
+   `data': An alist that will be url-encoded and sent to the server in a request body.
+   `form': An alist that will be sent as a multi-part form body.
    `headers': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
    `no-redirect': Don't follow redirects for this request.
    `file': A file to upload to the server.
@@ -3186,9 +3187,9 @@ rm -f ${ATTACHMENT}
   ;; Check the args
   (assert url)
   (let ((bjff (mapcar (fn (elm) (if elm 1 0))
-                     (list body json form file))))
+                     (list body data json form file))))
     (assert (<= (sum bjff) 1) nil
-            (format "You must only chose one of :body, :json, :file, or :form: %s" bjff)))
+            (format "You must only chose one of :body, :data, :json, :file, or :form: %s" bjff)))
   (if timeout
       (assert (integerp timeout)))
 
@@ -3202,6 +3203,7 @@ rm -f ${ATTACHMENT}
   (with-tempdir (:root-dir "/tmp")
     (let* ((cmd (list "curl" "--verbose" "--silent"))
            (json-file "request-attachment.json")
+           (data-file "url-encoded-data.txt")
            (input-file (when auth
                          (let ((input-file-path "input-file"))
                            (touch input-file-path)
@@ -3220,6 +3222,10 @@ rm -f ${ATTACHMENT}
                 (json-encode json))
               json-file))
 
+      ;; Dump url-encoded data, if needed.
+      (when data
+        (barf (url-encode-params data) data-file))
+
       (cl-flet ((append-option (arg value-fn)
                                (when arg
                                  (setf cmd (append cmd (funcall value-fn))))))
@@ -3233,6 +3239,8 @@ rm -f ${ATTACHMENT}
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
+
+        ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
           (cl-loop for (name .  value) in form
                    for i from 0
@@ -3252,6 +3260,8 @@ rm -f ${ATTACHMENT}
                  (append-option t (| `("-H" ,(format "%s: %s" name value)))))
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
+        (append-option data (| `("-H" "Content-Type:application/x-www-form-urlencoded"
+                                 "--data" ,(concat "@" data-file))))
         (append-option file (| `("--data-binary" ,(concat "@" file))))
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
