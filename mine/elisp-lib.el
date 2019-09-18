@@ -1012,7 +1012,7 @@ The arguments are:
 1. `cmd': a list with the program to run and its arguments.
           The arguments won't be interpreted by the shell.
 2. `callback-fn': A function that takes one argument (the response object
-                  described below).  This is required.
+                  described below).
 3. `input': A string to send to the input process as stdin.
 
 4. `input-file': A path to a file to send as input/stdin to the command.
@@ -1028,9 +1028,6 @@ output: (list
          (:stderr . \"string\")) ; if any
 
 output is passed to the callback-fn."
-
-  ;; The callback is required'
-  (assert callback-fn nil "A callback-fn must be provided.")
 
   (let* ((program (first cmd))
          (args (rest cmd)))
