@@ -3137,7 +3137,7 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json data form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn callback-fn)
+                       &key (method "GET") params auth body json data form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn async callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3162,6 +3162,7 @@ rm -f ${ATTACHMENT}
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
    `map-fn': Apply the function to the data before handing back to the callback.
+   `async': Don't block, but also don't worry about calling a callback.
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
 
    Dynamic Global Variables
@@ -3201,6 +3202,7 @@ rm -f ${ATTACHMENT}
     (let* ((cmd (list "curl" "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
+           (callback-fn (or callback-fn  (when async #'identity)))
            (input-file (when auth
                          (let ((input-file-path "input-file"))
                            (touch input-file-path)
