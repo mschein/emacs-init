@@ -2122,6 +2122,10 @@ Returns a list of alists."
   (interactive "smins: ")
   (run-at-time (format "%s min" mins) nil #'osx-sleep-now))
 
+(defun osx-num-cores ()
+  "Get the number of logical cores on an osx system."
+  (string-to-number (string-trim (run-to-str "sysctl" "-n" "hw.ncpu"))))
+
 (defun kill-dock-osx ()
   (interactive)
   (run "killall" "Dock"))
