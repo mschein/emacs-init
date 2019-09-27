@@ -2462,6 +2462,15 @@ end tell
          default-directory
        (error "Please run this command from the root of the repo!")))))
 
+(defun git-status ()
+  (cl-loop for line in (string->list (run-to-str "git" "status" "--short"))
+           collect (destructuring-bind (status path)
+                       (string-find "\\([^\s]+\\) \\(.*\\)" line)
+                     (cons status path))))
+
+(defun git-modified-files ()
+  (mapcar #'string-trim (string->list (run-to-str "git" "ls-files" "-m"))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
