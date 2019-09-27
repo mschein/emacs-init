@@ -704,16 +704,21 @@ Example:
 
 (defalias 'string-replace-region 'replace-regex-region)
 
+(cl-defun escape-string (str escape-chars &optional (escaper "\\"))
+  "Escape a the string `str', that is put an `escape-char' in front of
+each character in the string `chars'."
+  (let ((escape-chars (concat escaper escape-chars)))
+    (with-output-to-string
+      (cl-loop for c across str
+               when (cl-find c escape-chars)
+                  do (princ escaper)
+               do (princ (char-to-string c))))))
+
 (defun quote-str (str)
   "Quote a string, escaping '\" and \\"
   (apply #'concat
          `("\""
-           ,@(mapcar (fn [chr]
-                         (let ((s (string chr)))
-                           (if (search s "\"\'\\")
-                               (concat "\\" s)
-                             s)))
-                     str)
+           ,@(escape-string str "\"\'\\")
            "\"")))
 
 ;;
@@ -731,13 +736,9 @@ Example:
         (in-quote nil))
     (while (< i (length str))
       (let ((c (aref str i)))
-        (message "str[%d] = %s out-str: %s in-quote: %s quote-char: %s" i c out-str in-quote
-                 quote-char)
         (if in-quote
             (cond
-              ((equal c quote-char) (progn
-                                      (message "here..")
-                                      (setf in-quote nil)))
+              ((equal c quote-char) (setf in-quote nil))
               ((equal c ?\\) (progn
                                (incf i)
                                (append-atom! out-str (aref str i))))
@@ -2126,6 +2127,10 @@ Returns a list of alists."
   "Get the number of logical cores on an osx system."
   (string-to-number (string-trim (run-to-str "sysctl" "-n" "hw.ncpu"))))
 
+(defun osx-num-cores-physical ()
+  "Get the number of logical cores on an osx system."
+  (string-to-number (string-trim (run-to-str "sysctl" "-n" "hw.physicalcpu"))))
+
 (defun kill-dock-osx ()
   (interactive)
   (run "killall" "Dock"))
@@ -2390,10 +2395,19 @@ end tell
                                       (list "-b"))
                  ,branch)))
 
+(defun git-commit (message)
+  (run "git" "commit" "-m" message))
+
+(cl-defun git-commit-buffer (&key message)
+  (let ((message (or message
+                     (format "Committing changes to %s" (buffer-name)))))
+    (run "git" "add" (buffer-file-name))
+    (git-commit message)))
+
 (cl-defun git-commit-changes (path &key (message "Save current files."))
   (pushd path
     (run "git" "add" ".")
-    (run "git" "commit" "-a" "-m" message)))
+    (git-commit message)))
 
 (defun git-rev-parse-is-inside-working-tree ()
   (do-cmd-was-true (do-cmd (list "git" "rev-parse" "--is-inside-work-tree"))))
