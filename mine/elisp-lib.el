@@ -716,10 +716,7 @@ each character in the string `chars'."
 
 (defun quote-str (str)
   "Quote a string, escaping '\" and \\"
-  (apply #'concat
-         `("\""
-           ,@(escape-string str "\"\'\\")
-           "\"")))
+  (concat "\"" (escape-string str "\"\'\\") "\""))
 
 ;;
 ;; Not working just yet :p.
@@ -2075,10 +2072,12 @@ Returns a list of alists."
           (core-services-screen-saver '("/System/Library/CoreServices/ScreenSaverEngine.app/Contents/MacOS/ScreenSaverEngine"))
           (cgsession-saver '("/System/Library/CoreServices/Menu Extras/User.menu/Contents/Resources/CGSession" "-suspend")))
 
+      (message "See if we need to start the screen saver.")
       (if (not (process-is-running-regex-p "ScreenSaverEngine$"))
           (cl-loop for cmd-list in (list frameworks-screen-saver core-services-screen-saver cgsession-saver)
                    when (file-exists-p (first cmd-list)) do
                    (destructuring-bind (cmd &rest args) cmd-list
+                     (message "Start screen saver: proc running: %s cmd: %s" (process-is-running-regex-p "ScreenSaverEngine$") cmd)
                      (apply #'run-bg cmd args)
                      (return)))
         (message "Don't start the screen saver, it's already running."))))
