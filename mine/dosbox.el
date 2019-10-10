@@ -1,9 +1,24 @@
 ;; -*- lexical-binding: t -*-
 (require 'elisp-lib)
 
-(defconst dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
-(defconst dosbox-exec "/Applications/DosBox/DOSBox.app/Contents/MacOS/DOSBox" "Dosbox exec")
-(defconst dosbox-games "/Applications/DosBox/games/" "Where to search for dos games")
+;; Make these configurable
+
+(defgroup dosbox-module-config nil
+  "Config values for dosbox path locations."
+  :group 'dosbox)
+
+(defcustom dosbox-global-config nil
+  "Path to dosbox preference file."
+  :type 'string)
+
+(defcustom dosbox-exec nil
+  "Path to the dosbox exec."
+  :type 'string
+  :options '("/Applications/DosBox/DOSBox.app/Contents/MacOS/DOSBox"))
+
+(defcustom dosbox-games nil
+  "Where to search for dos games"
+  :type 'string)
 
 (defvar dosbox-game-table '() "alist of game name -> location mappings")
 
