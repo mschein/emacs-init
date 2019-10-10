@@ -107,7 +107,7 @@
   (apply #'run-to-str dosbox-exec cmd))
 
 (defun dosbox-version ()
-  (let ((version (first (string-find "version \\([0-9.]+\\)" (dosbox-run-to-str "-version")))))
+  (let ((version (first (string-find "version \\([0-9.-]+\\)" (dosbox-run-to-str "-version")))))
     (assert version)
     version))
 
