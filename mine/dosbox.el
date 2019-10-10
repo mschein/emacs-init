@@ -98,10 +98,10 @@
   (setf dosbox-game-table game-table))
 
 (defun dosbox-run (&rest cmd)
-  ;; The real commands need extra quoting, since some of
-  ;; it gets stripped off by bash.
-  (run "bash" "-c" (concat (cmd-to-shell-string (cons dosbox-exec cmd))
-                           " &")))
+  (do-cmd-async (apply #'list "nohup" dosbox-exec cmd)
+                :callback-fn (lambda (resp)
+                               (message "dosbox command \"%s\" with code %s"
+                                        cmd (assoc1 :code resp)))))
 
 (defun dosbox-run-to-str (&rest cmd)
   (apply #'run-to-str dosbox-exec cmd))
