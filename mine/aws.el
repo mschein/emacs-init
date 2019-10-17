@@ -221,6 +221,7 @@
                  (safe-date-to-time (assoc1 'time %2))
                  (safe-date-to-time (assoc1 'time %1))))))
 
+;; Replace with something like with-overwrite-buffer-pp
 (defun data-to-buffer (data fmt &rest args)
   (to-buffer-switch
    (apply #'format fmt args)
@@ -317,6 +318,11 @@
     (sort res (| time-less-p
                  (safe-date-to-time (assoc1 time-symbol %2))
                  (safe-date-to-time (assoc1 time-symbol %1))))))
+
+;; This is super slow, so do it async
+(defun aws-rds-describe-db-engine-versions (cb-fn)
+  (do-cmd-async (list "aws" "rds" "describe-db-engine-versions")
+                :callback-fn cb-fn))
 
 (defun aws-latest-rds-snapshot (db-id)
   "Return the latest rds snapshot for the given db id"

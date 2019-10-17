@@ -8,24 +8,20 @@
 
 """
 
-import argparse
+import click
 import os
 import sys
 
+@click.group()
+def main():
+    pass
 
-def some_function(args):
+
+@main.command()
+@click.option('--arg', help='this is an arg')
+def some_function(arg):
     print('Hello world')
     sys.exit(0)
-
-
-def main():
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--arg', help='')
-    parser.set_defaults(func=some_function)
-
-    # Call the function
-    args = parser.parse_args()
-    args.func(args)
 
 
 if __name__ == '__main__':
