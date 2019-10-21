@@ -1995,6 +1995,30 @@ Returns a list of alists."
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Math Functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun byte-conv-fn (in in-units out-units)
+  (let* ((conv-table '((B . 1)
+                       (KB . 2)
+                       (MB . 3)
+                       (GB . 4)
+                       (TB . 5)
+                       (PB . 6)
+                       (EB . 7)))
+         (unit-diff (- (assoc1 in-units conv-table)
+                       (assoc1 out-units conv-table)))
+         (conv-amount (expt 1024 (abs unit-diff))))
+
+    (if (>= unit-diff 0)
+        (* in conv-amount)
+      (/ in conv-amount))))
+
+;; (byte-conv (5 MB) B)
+(cl-defmacro conv ((in units) out-units)
+  `(byte-conv-fn ,in ',units ',out-units))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSX Utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2252,6 +2276,13 @@ end tell
    I'm not completely clear on that.
    "
   (osx-open (format "vnc://%s" ip)))
+
+(defun du (dir)
+  (string-to-int
+   (assoc1 'size (last-car
+                  (csv-split-text
+                   (run-to-str "du" "-k" "-d" "0" "-c" dir)
+                   :split-regex "[ \t]" :has-header-line nil :field-names '(size name))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Environment Commands
