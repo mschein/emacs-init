@@ -52,6 +52,9 @@
   (message "Ensure %s exists" metadata-dir)
   (ensure-makedirs metadata-dir))
 
+(defun store-directory ()
+  store--directory)
+
 (defun store-get-path (store-name)
   "Return the path to the sqlite3 database specified by `store-name'"
   (assert (string-has-value-p store-name))
