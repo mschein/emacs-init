@@ -1168,6 +1168,9 @@ Use this likely in leu of `buffer-string'."
 ;; Is there a smarter way to do this?  The with- macro sort
 ;; of implies you'll do stuff after the macro is finished.
 ;;
+;; XXX: I think I don't need this... I think
+;; I can either use set-buffer or with-current-buffer.
+;;
 (defmacro with-new-buffer (name-prefix &rest body)
   (declare (indent defun))
   (let ((old-buffer (gensym))
@@ -1202,6 +1205,14 @@ Use this likely in leu of `buffer-string'."
      (insert (pp-to-string
               ,@body))))
 
+;; (defun shell-open-with-command (dir cmd &optional name)
+;;   "Open a new shell buffer and run a command in it."
+;;   (pushd dir
+;;     (with-current-buffer (shell (generate-new-buffer (or name (make-shell-buffer-name dir))))
+;;       (insertf cmd)
+;;       (comint-send-input nil t))))
+
+;; Can this function be simplified?
 (defmacro with-shell-buffer (dir name &rest body)
   (declare (indent defun))
   (with-gensyms (buffer buffer-name)
@@ -1236,6 +1247,15 @@ Use this likely in leu of `buffer-string'."
   "Open a shell in the current default directory"
   (interactive)
   (shell-open-dir default-directory))
+
+(defun run-shell-command (cmd &rest args)
+  (insertf "%s %s" cmd (string-join (mapcar #'shell-quote-argument args) " "))
+  (comint-send-input nil t))
+
+(defun shell-open-with-command (dir cmd &optional name)
+  "Open a new shell buffer and run a command in it."
+  (with-shell-buffer dir (generate-new-buffer-name (or name (make-shell-buffer-name dir)))
+    (apply #'run-shell-command (car cmd) (cdr cmd))))
 
 (defun eshell-dir ()
   (interactive)
@@ -2014,8 +2034,21 @@ Returns a list of alists."
         (* in conv-amount)
       (/ in conv-amount))))
 
+(defun time-conv-fn (in in-units out-units)
+  (let ((conv-table '((nano . (0.001 micro))
+                      (micro . (0.001 mil))
+                      (mil . 0.001)
+                      (s . 1)
+                      (m . (60 s))
+                      (h . (60 m))
+                      (d . (24 h))
+                      (mon . (30 d))
+                      (y . (365 d))
+                      (decade . (10 y))
+                      (century . (100 y)))))))
+
 ;; (byte-conv (5 MB) B)
-(cl-defmacro conv ((in units) out-units)
+(cl-defmacro bconv ((in units) out-units)
   `(byte-conv-fn ,in ',units ',out-units))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

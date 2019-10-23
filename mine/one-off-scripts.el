@@ -616,4 +616,11 @@ Specify license
                       (apply #'combinations rest)))
             first)))
 
+(defun osx-install-command-line-tools ()
+  (interactive)
+  (run "xcode-select" "--install"))
+
+;;(defun jenv-list-versions ()
+;;  ())
+
 (provide 'one-off-scripts)
