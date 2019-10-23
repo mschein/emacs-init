@@ -2152,12 +2152,12 @@ Returns a list of alists."
 (defun osx-firefox-open-new-window (url)
   (run-osascript "on run argv
     tell application \"System Events\"
-        if (name of processes) contains \"Firefox\" then
-            tell application \"Firefox\" to activate
+        if (name of processes) contains \"firefox\" then
+            tell application \"firefox\" to activate
             keystroke \"n\" using command down
             delay 0.5 -- UI scripting delay
         else
-            tell application \"Firefox\" to activate
+            tell application \"firefox\" to activate
             delay 0.5 -- more delay
         end if
         keystroke \"l\" using command down
