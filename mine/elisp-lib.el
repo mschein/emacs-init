@@ -3014,8 +3014,8 @@ https://www.ietf.org/rfc/rfc2849.txt."
 
   (save-excursion
     (let* ((whitespace-re "[ \t\n]")
-           (end (save-excursion (re-search-forward whitespace-re)))
-           (start (save-excursion (re-search-backward whitespace-re))))
+           (end (1- (save-excursion (re-search-forward whitespace-re))))
+           (start (1+ (save-excursion (re-search-backward whitespace-re)))))
       (if (< start end)
           (docker-run-image (buffer-substring-no-properties start end))
         (error "Unable to find image id.")))))
