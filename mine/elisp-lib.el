@@ -2953,6 +2953,9 @@ and dirty parsing of command output."
                          (--split-line line)))
               lines))))
 
+;; (defun assoc-transpose (alist)
+;;   )
+
 (cl-defun assoc-to-csv (alist)
   "Convert an alist to csv."
 
@@ -2995,11 +2998,27 @@ https://www.ietf.org/rfc/rfc2849.txt."
 ;; Docker Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defun docker-list-processes ()
   (interactive)
   (with-overwrite-buffer-pp "+docker-ps+"
     (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+")))
+
+(defun docker-run-image (image-id)
+  (with-shell-buffer "~" (format "*sh-docker-container-%s" image-id)
+    (insertf "# To install bash in Apline, do: apk add bash\n")
+    (insertf "docker run -it %s /bin/sh" image-id)
+    (comint-send-input nil t)))
+
+(defun docker-run-image-at-point ()
+  (interactive)
+
+  (save-excursion
+    (let* ((whitespace-re "[ \t\n]")
+           (end (save-excursion (re-search-forward whitespace-re)))
+           (start (save-excursion (re-search-backward whitespace-re))))
+      (if (< start end)
+          (docker-run-image (buffer-substring-no-properties start end))
+        (error "Unable to find image id.")))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template commands.
