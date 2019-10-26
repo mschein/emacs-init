@@ -3624,6 +3624,33 @@ rm -f ${ATTACHMENT}
     (clipboard-yank)
     (buffer->string)))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Firefox based commands.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconst +osx-path-to-firefox+ "/Applications/Firefox.app/Contents/MacOS/firefox")
+(defconst +osx-firefox-headless-profile "headless")
+
+;; Note that these commands will shutdown a currently active firefox.
+(defun firefox-cmd (cmd &rest args)
+  (apply #'do-cmd-async (concatenate 'list
+                                     (list +osx-path-to-firefox+ "-P" +osx-firefox-headless-profile)
+                                     cmd)
+         args))
+
+(cl-defun firefox-screenshot (url &optional (output-dir (expand-file-name "~/Desktop/")))
+  (pushd output-dir
+    (firefox-cmd (list "--screenshot" url))))
+
+;;
+;; other interesting commands:
+;; --search
+;; --remote-debugging-port <port> Start the Firefox remote agent, which is
+;; a low-level debugging interface based on the CDP protocol.
+;; Defaults to listen on localhost:9222.
+;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; LDAP Lookup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
