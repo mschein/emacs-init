@@ -292,7 +292,7 @@ setup(name=package,
     (message "%s exists, giving up." (path-join default-directory name))))
 
 (defun python-create-bare-project (dir)
-  (interactive "sdir: ")
+  (interactive "Fdir: ")
 
   (let ((project-name (basename dir)))
     (message "Create project directory %s for %s" dir project-name)
@@ -302,7 +302,7 @@ setup(name=package,
       (python-init-basic-dir dir))))
 
 (defun python-create-django-project (dir)
-  (interactive "sdir: ")
+  (interactive "Fdir: ")
   (python-create-bare-project dir)
 
   (with-venv dir
@@ -622,5 +622,12 @@ Specify license
 
 ;;(defun jenv-list-versions ()
 ;;  ())
+
+;;
+;; setting up selenium with python:
+;;
+;; brew install geckodriver
+;; brew cask install chromedriver
+;;
 
 (provide 'one-off-scripts)
