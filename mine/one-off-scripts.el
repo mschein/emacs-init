@@ -258,38 +258,35 @@ setup(name=package,
       (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
       (make-symbolic-link ".venv/bin/activate" "activate"))))
 
-(defun python-create-project (name)
-  (interactive "sname: ")
+(defun python-create-project (dir)
+  (interactive "Fdir: ")
 
-  (message "Current directory: %s" default-directory)
-  (if (not (file-exists-p name))
-      (progn
-        (message "make dir %s" name)
-        (make-directory name)
+  (let ((name (basename dir)))
+    (message "Create project directory %s for %s" dir name)
+    (make-directory dir)
 
-        (pushd name
-          ;; write setup.py
-          (message "create setup.py")
-          (message "current dir %s" default-directory)
+    (pushd dir
+      ;; write setup.py
+      (message "create setup.py")
+      (message "current dir %s" default-directory)
 
-          (cl-loop for (file . contents) in `(("setup.py" . ,*python-setup.py-file*)
-                                              ("requirements.txt" . ,*requirements.txt*)
-                                              ("tox.ini" . "# Put any tox stuff here.")
-                                              ("README.md" . ,(format "My awesome project %s" name))
-                                              ("MANIFEST.in" . "# recursive-include app/templates *")
-                                              ("CHANGES.txt" . ""))
-                   do (barf contents file))
+      (cl-loop for (file . contents) in `(("setup.py" . ,*python-setup.py-file*)
+                                          ("requirements.txt" . ,*requirements.txt*)
+                                          ("tox.ini" . "# Put any tox stuff here.")
+                                          ("README.md" . ,(format "My awesome project %s" name))
+                                          ("MANIFEST.in" . "# recursive-include app/templates *")
+                                          ("CHANGES.txt" . ""))
+               do (barf contents file))
 
-          (message "create dirs")
-          (make-directory name)
-          (make-directory "test")
+      (message "create dirs")
+      (make-directory name)
+      (make-directory "test")
 
-          (message "create init.py")
-          (barf *python-init-file* (path-join name "__init__.py"))
+      (message "create init.py")
+      (barf *python-init-file* (path-join name "__init__.py"))
 
-          ;; Run command to setup more stuff
-          (python-init-basic-dir default-directory)))
-    (message "%s exists, giving up." (path-join default-directory name))))
+      ;; Run command to setup more stuff
+      (python-init-basic-dir default-directory))))
 
 (defun python-create-bare-project (dir)
   (interactive "Fdir: ")
