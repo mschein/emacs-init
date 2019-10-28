@@ -1885,7 +1885,10 @@ Returns a list of alists."
                ""))
     (interactive)
     (browse-url ,url t)
+    (sleep-for 1)
     ,@(mapcar (lambda (u)
+                ;; You must pass nil, so it doesn't use the default
+                ;; value for browse-url-new-window-flag
                 `(browse-url ,u nil)) urls)))
 
 (defun show-web-bookmark-data ()
@@ -2206,24 +2209,7 @@ Returns a list of alists."
       (barf script script-path)
       (do-cmd (append (list "osascript" script-path) args) :throw t))))
 
-(defun osx-firefox-open-new-window (url)
-  (run-osascript "on run argv
-    tell application \"System Events\"
-        if (name of processes) contains \"firefox\" then
-            tell application \"firefox\" to activate
-            keystroke \"n\" using command down
-            delay 0.5 -- UI scripting delay
-        else
-            tell application \"firefox\" to activate
-            delay 0.5 -- more delay
-        end if
-        keystroke \"l\" using command down
-        keystroke item 1 of argv
-        keystroke return
-        delay 1.5
-    end tell
-end run
-" url))
+(defconst +osx-path-to-firefox+ "/Applications/Firefox.app/Contents/MacOS/firefox")
 
 (defun init-quicktime-movie (path)
   (do-cmd (list "killall" "QuickTime Player"))
@@ -2290,10 +2276,9 @@ end tell
    (setq browse-url-browser-function 'browse-url-firefox-osx)
    (setq browse-url-new-window-flag t)"
   (interactive (browse-url-interactive-arg "URL: "))
-
-  (if new-window
-      (osx-firefox-open-new-window url)
-    (run "open" url)))
+  (do-cmd `(,+osx-path-to-firefox+ ,@(when new-window
+                                       '("--new-window"))
+                                   ,url)))
 
 (defun osx-open (&rest cmd)
   "OSX's open command can be used for many things, including
@@ -3629,7 +3614,6 @@ rm -f ${ATTACHMENT}
 ;; Firefox based commands.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconst +osx-path-to-firefox+ "/Applications/Firefox.app/Contents/MacOS/firefox")
 (defconst +osx-firefox-headless-profile "headless")
 
 ;; Note that these commands will shutdown a currently active firefox.
