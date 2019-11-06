@@ -626,5 +626,8 @@ Specify license
 ;; brew install geckodriver
 ;; brew cask install chromedriver
 ;;
+;; Create the python project.
+;; pip install selenium
+;;
 
 (provide 'one-off-scripts)
