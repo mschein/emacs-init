@@ -837,10 +837,13 @@ that uses 'font-lock-warning-face'."
   ;;                          #'projectile-project-root
   ;;                          '("pyls"))
 
-  ;; XXX Do I need to make sure this is running inside a venv?
+  ;;
+  ;; Make sure we use the pyls from the correct virtual env.
+  ;;
   (lsp-define-stdio-client lsp-python "python"
-                           #'python-setup-lsp-project
-                           '("pyls"))
+                           #'python-lsp-setup-project
+                           nil
+                           :command-fn #'python-lsp-find-pyls)
 
   ;; make sure this is activated when python-mode is activated
   ;; lsp-python-enable is created by macro above
@@ -876,6 +879,18 @@ that uses 'font-lock-warning-face'."
 
   ;; (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg)
   )
+
+;;
+;; To enable yapf-mode for python editing, you'll
+;; need to activate it with this code:
+;;
+;; (add-hook 'python-mode-hook 'yapf-mode)
+;;
+;; and be sure to install yapf globally, or
+;; setup your venv in such a way that running
+;; "yapf" will find it.
+;;
+
 
 ;;
 ;; Autopair mode

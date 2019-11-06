@@ -2864,7 +2864,10 @@ in the keyring."
 
 ;; To use, install: sudo -H pip install python-language-server
 ;; and sudo -H pip3 install python-language-server
-(defun python-setup-lsp-project ()
+;;
+;; check out: https://pypi.org/project/python-language-server/
+;;
+(defun python-lsp-setup-project ()
   (let* ((is-git-project (git-within-git-repo-p))
          (project-root (python-get-project-root)))
     (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
@@ -2880,9 +2883,28 @@ in the keyring."
         (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
           (message "Check to see if the install has already been run: %s" (file-exists-p installation-finished-file))
           (unless (file-exists-p installation-finished-file)
-            (run "pip" "install" "python-language-server" "autopep8" "pydocstyle" "yapf" "rope")
+            ;; Note: Don't install the project "pyls", that is something else.
+            ;;(run "pip" "install" "python-language-server" "pydocstyle" "yapf" "rope")
+            (run "pip" "install" "python-language-server[all]" "yapf")
             (touch installation-finished-file)))))
     project-root))
+
+(defun python-lsp-find-pyls ()
+  (let* ((is-git-project (git-within-git-repo-p))
+         (project-root (python-get-project-root))
+         (default-pyls "pyls"))
+    (message "Find pyls for project %s" project-root)
+
+    (if is-git-project
+        (condition-case nil
+            (with-venv project-root
+              (which "pyls"))
+          (error
+           (message "Failed to find a pyls in this virtual-env, or venv not found.  Create one
+and remove the .python-lsp-installed file")
+           default-pyls))
+
+      default-pyls)))
 
 (defun current-virtualenv ()
   (getenv "VIRTUAL_ENV"))
