@@ -1252,10 +1252,14 @@ Use this likely in leu of `buffer-string'."
   (insertf "%s %s" cmd (string-join (mapcar #'shell-quote-argument args) " "))
   (comint-send-input nil t))
 
-(defun shell-open-with-command (dir cmd &optional name)
+(defun shell-open-run-command (dir cmd &optional name)
   "Open a new shell buffer and run a command in it."
   (with-shell-buffer dir (generate-new-buffer-name (or name (make-shell-buffer-name dir)))
     (apply #'run-shell-command (car cmd) (cdr cmd))))
+
+(defun shell-open-with-command (dir cmd &optional name)
+  (with-shell-buffer dir (generate-new-buffer-name (or name (make-shell-buffer-name dir)))
+    (insertf (string-join (mapcar #'shell-quote-argument cmd) " "))))
 
 (defun eshell-dir ()
   (interactive)
