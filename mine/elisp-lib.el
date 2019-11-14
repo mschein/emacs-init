@@ -2059,6 +2059,35 @@ Returns a list of alists."
   `(byte-conv-fn ,in ',units ',out-units))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ini files
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconst ini-section-template
+  "
+#
+# %s
+#
+[%s]
+%s
+")
+
+(defun ini-string (ini-lisp)
+  ;;
+  ;; The lisp code should be a alist of sections:
+  ;; as in:
+  ;; (dosbox .
+  ;;           (language . nil)
+  ;;           (captures . something)
+  (cl-loop for (section . values) in ini-lisp
+           concat (format ini-section-template
+                          (assoc-get 'comment values "Section")
+                          section
+                          (cl-loop for (key . value) in values
+                                   concat (format "%s=%s\n" key (if value value ""))))))
+
+(defun ini-write (ini-lisp path)
+  (barf (ini-string ini-lisp) path))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSX Utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -2861,6 +2890,8 @@ in the keyring."
 (defun parse-yaml-file (path)
   (json-read-from-string (run-python-pipe path "import sys, json, yaml; print(json.dumps(yaml.load(sys.stdin)))")))
 
+(defun pip-install (&rest library-options)
+  (apply #'run "pip" "install" library-options))
 
 ;; To use, install: sudo -H pip install python-language-server
 ;; and sudo -H pip3 install python-language-server
@@ -2885,7 +2916,7 @@ in the keyring."
           (unless (file-exists-p installation-finished-file)
             ;; Note: Don't install the project "pyls", that is something else.
             ;;(run "pip" "install" "python-language-server" "pydocstyle" "yapf" "rope")
-            (run "pip" "install" "python-language-server[all]" "yapf")
+            (pip-install "python-language-server[all]" "yapf")
             (touch installation-finished-file)))))
     project-root))
 
@@ -3148,7 +3179,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
   ;; see:
   ;; http://www.bizcoder.com/everything-you-need-to-know-about-http-header-syntax-but-were-afraid-to-ask
   ;; for more details
-  (if-let (result (string-find "\\([^:]+\\)[ \t]*:[ \t]*\\(.+\\)$"
+  (if-let (result (string-find "\\([^:]+\\)[ \t]*:[ \t]*\\(.*\\)$"
                                (string-trim-right header)))
       (cons (string-to-keyword (downcase (first result)))
             (second result))
@@ -3257,7 +3288,7 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json data form file headers no-redirect timeout insecure user-agent cookie-jar throw map-fn async callback-fn)
+                       &key (method "GET") params auth body json data form file headers headers-secret no-redirect timeout insecure user-agent cookie-jar throw map-fn async callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3273,6 +3304,7 @@ rm -f ${ATTACHMENT}
    `data': An alist that will be url-encoded and sent to the server in a request body.
    `form': An alist that will be sent as a multi-part form body.
    `headers': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
+   `headers-secret': An alist of headers you don't want shown in the *messages* buffer.
    `no-redirect': Don't follow redirects for this request.
    `file': A file to upload to the server.
    `timeout': A time in seconds to wait for the request to finish before giving up.
@@ -3323,11 +3355,23 @@ rm -f ${ATTACHMENT}
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
-           (input-file (when auth
+           ;;
+           ;; I should probably clean this up...
+           ;; consolidate quoting and how we create values,
+           ;; etc.  Make it its own function
+           ;;
+           (input-file (when (or auth headers-secret)
                          (let ((input-file-path "input-file"))
                            (touch input-file-path)
                            (chmod input-file-path #o600)
-                           (barf (format "user = \"%s\"" (web-request--handle-auth auth)) input-file-path)
+                           (barf (string-join (concatenate 'list
+                                                           (when auth
+                                                             (list (format "user = %s" (quote-str (web-request--handle-auth auth)))))
+                                                           (cl-loop for (name . value) in headers-secret
+                                                                    collect (format "Header = %s" (quote-str
+                                                                                                   (concat name ": " value)))))
+                                              "\n")
+                                 input-file-path)
                            input-file-path)))
            (final-url (if params
                           (concat url "?" (url-encode-params params))
