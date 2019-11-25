@@ -1457,7 +1457,7 @@ Use this likely in leu of `buffer-string'."
 
 (defun touch (path)
   "Create an empty file at the given `path'"
-  (barf "" path))
+  (run "touch" path))
 
 (defun ensure-makedirs (dir)
   (unless (file-exists-p dir)
