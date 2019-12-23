@@ -3145,7 +3145,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 
 (defun random-choice (list)
   "Select a random item from the list."
-  (random-items 1 list))
+  (first (random-items 1 list)))
 
 (defun random-words (n &optional max-word-len)
   "Return `N' random words from the dictionary"
