@@ -178,6 +178,10 @@
     (assoc1 'repositories
             (apply #'aws-ecr "describe-repositories" args))))
 
+(defun aws-ecr-create-repository (name)
+  (let ((-aws-return-json t))
+    (aws-ecr "create-repository" "--repository-name" name)))
+
 (defun aws--filter-alist-to-str (filter)
   (string-join
    (mapcar (fn ((name . values))
