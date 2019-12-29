@@ -1,5 +1,17 @@
 ;; -*- lexical-binding: t -*-
 
+;;
+;; Explore more complex filters:
+;;
+;; See: https://ffmpeg.org/ffmpeg-filters.html
+;; and https://github.com/kkroening/ffmpeg-python
+;;  for a python example.
+;;
+;; a tutorial: http://dranger.com/ffmpeg/tutorial01.html
+;;
+;;
+;;
+
 (require 'elisp-lib)
 
 ;;
@@ -86,7 +98,6 @@
 ;; -filters
 ;; -codecs
 ;;
-
 
 
 ;;

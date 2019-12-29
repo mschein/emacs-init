@@ -2552,6 +2552,10 @@ end tell
 (defun git-modified-files ()
   (mapcar #'string-trim (string->list (run-to-str "git" "ls-files" "-m"))))
 
+(defun git-modified-file (path)
+  (not (string-nil-or-empty-p (run-to-str "git" "ls-files" "-m" path))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3159,6 +3163,14 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
   (interactive "r")
   (replace-regex-region "[\n ]+" " " begin end))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; web-request functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun firefox-extract-cookies ()
+  (with-tempdir (:root-dir "/tmp")
+    ~/.mozilla/firefox/*/cookies.sqlite))
+
 (defun url-encode-params (params)
   "Doc encode an alist into url parameters.  Nil implies a single param."
   (string-join
@@ -3172,7 +3184,14 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
    "&"))
 
 (defun url-build (url params)
-  (concat url "?" (url-encode-params params)))
+  "Construct a url from its base path parts and the parameters.
+
+Be sure to url encode the parameters.
+
+`params' should be an alist of key value pairs."
+  (if params
+      (concat url "?" (url-encode-params params))
+    url))
 
 (defun parse-http-header (header)
   "A simple header splitter."
@@ -3373,9 +3392,7 @@ rm -f ${ATTACHMENT}
                                               "\n")
                                  input-file-path)
                            input-file-path)))
-           (final-url (if params
-                          (concat url "?" (url-encode-params params))
-                        url))
+           (final-url (url-build url params))
            (use-caching +webrequest-cache-urls+))
 
       ;; Dump out the json to a file, if needed.

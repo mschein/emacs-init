@@ -3,8 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "pfuture" "pfuture.el" (24003 16754 852613
-;;;;;;  327000))
+;;;### (autoloads nil "pfuture" "pfuture.el" (0 0 0 0))
 ;;; Generated autoloads from pfuture.el
 
 (autoload 'pfuture-new "pfuture" "\
@@ -20,6 +19,12 @@ this is wrong: (pfuture-new \"git status\")
 this is right: (pfuture-new \"git\" \"status\")
 
 \(fn &rest CMD)" nil nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "pfuture" '("pfuture-")))
+
+;;;***
+
+;;;### (autoloads nil nil ("pfuture-pkg.el") (0 0 0 0))
 
 ;;;***
 

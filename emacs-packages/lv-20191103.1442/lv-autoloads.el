@@ -3,7 +3,14 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil nil ("lv.el") (24003 16753 692186 397000))
+;;;### (autoloads nil "lv" "lv.el" (0 0 0 0))
+;;; Generated autoloads from lv.el
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "lv" '("lv-")))
+
+;;;***
+
+;;;### (autoloads nil nil ("lv-pkg.el") (0 0 0 0))
 
 ;;;***
 

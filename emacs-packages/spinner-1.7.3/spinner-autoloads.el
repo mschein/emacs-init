@@ -3,8 +3,7 @@
 ;;; Code:
 (add-to-list 'load-path (directory-file-name (or (file-name-directory #$) (car load-path))))
 
-;;;### (autoloads nil "spinner" "spinner.el" (24003 15219 562706
-;;;;;;  131000))
+;;;### (autoloads nil "spinner" "spinner.el" (0 0 0 0))
 ;;; Generated autoloads from spinner.el
 
 (autoload 'spinner-create "spinner" "\
@@ -57,6 +56,12 @@ displaying the spinner. It is safe to cancel the spinner before
 this time, in which case it won't display at all.
 
 \(fn &optional TYPE-OR-OBJECT FPS DELAY)" nil nil)
+
+(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "spinner" '("spinner")))
+
+;;;***
+
+;;;### (autoloads nil nil ("spinner-pkg.el") (0 0 0 0))
 
 ;;;***
 

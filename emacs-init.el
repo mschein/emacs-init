@@ -812,68 +812,71 @@ that uses 'font-lock-warning-face'."
 (add-to-list 'interpreter-mode-alist '("python" . python-mode))
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
 
+(use-package lsp-mode
+  :hook (python-mode . lsp)
+  :commands lsp)
 ;;
 ;; See docs here:
 ;; https://github.com/emacs-lsp/lsp-mode
 ;;
-(use-package lsp-mode
-  :ensure t
-  :config
+;; (use-package lsp-mode
+;;   :ensure t
+;;   :config
 
-  ;; ;; XXX Do I really want this?
-  ;; ;; make sure we have lsp-imenu everywhere we have LSP
-  ;; (require 'lsp-imenu)
-  ;; (add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
+;;   ;; ;; XXX Do I really want this?
+;;   ;; ;; make sure we have lsp-imenu everywhere we have LSP
+;;   ;; (require 'lsp-imenu)
+;;   ;; (add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
 
-  ;; get lsp-python-enable defined
-  ;; NB: use either projectile-project-root or ffip-get-project-root-directory
-  ;;     or any other function that can be used to find the root directory of a project
-  ;; (lsp-define-stdio-client lsp-python "python"
-  ;;                          #'projectile-project-root
-  ;;                          '("pyls"))
+;;   ;; get lsp-python-enable defined
+;;   ;; NB: use either projectile-project-root or ffip-get-project-root-directory
+;;   ;;     or any other function that can be used to find the root directory of a project
+;;   ;; (lsp-define-stdio-client lsp-python "python"
+;;   ;;                          #'projectile-project-root
+;;   ;;                          '("pyls"))
 
-  ;;
-  ;; Make sure we use the pyls from the correct virtual env.
-  ;;
-  (lsp-define-stdio-client lsp-python "python"
-                           #'python-lsp-setup-project
-                           nil
-                           :command-fn #'python-lsp-find-pyls)
+;;   ;;
+;;   ;; Make sure we use the pyls from the correct virtual env.
+;;   ;;
+;;   (lsp-define-stdio-client lsp-python "python"
+;;                            #'python-lsp-setup-project
+;;                            nil
+;;                            :command-fn #'python-lsp-find-pyls)
 
-  ;; make sure this is activated when python-mode is activated
-  ;; lsp-python-enable is created by macro above
-  (add-hook 'python-mode-hook (| lsp-python-enable))
+;;   ;; make sure this is activated when python-mode is activated
+;;   ;; lsp-python-enable is created by macro above
+;;   (add-hook 'python-mode-hook (| lsp-python-enable))
 
-  ;; lsp extras
-  ;;
-  ;; I think it's the lsp-ui, that is a little funky.
-  ;;
-  (use-package lsp-ui
-    :ensure t
-    :config
-    (setq lsp-ui-sideline-ignore-duplicate t)
-    (add-hook 'lsp-mode-hook 'lsp-ui-mode))
+;;   ;; lsp extras
+;;   ;;
+;;   ;; I think it's the lsp-ui, that is a little funky.
+;;   ;;
+;;   (use-package lsp-ui
+;;     :ensure t
+;;     :config
+;;     (setq lsp-ui-sideline-ignore-duplicate t)
+;;     (add-hook 'lsp-mode-hook 'lsp-ui-mode))
 
-  (use-package company-lsp
-    :config
-    (push 'company-lsp company-backends))
+;;   (use-package company-lsp
+;;     :config
+;;     (push 'company-lsp company-backends))
 
 
-  (add-hook 'prog-major-mode #'lsp-prog-major-mode-enable)
+;;   (add-hook 'prog-major-mode #'lsp-prog-major-mode-enable)
 
-  ;; ;; NB: only required if you prefer flake8 instead of the default
-  ;; ;; send pyls config via lsp-after-initialize-hook -- harmless for
-  ;; ;; other servers due to pyls key, but would prefer only sending this
-  ;; ;; when pyls gets initialised (:initialize function in
-  ;; ;; lsp-define-stdio-client is invoked too early (before server
-  ;; ;; start)) -- cpbotha
-  ;; (defun lsp-set-cfg ()
-  ;;   (let ((lsp-cfg `(:pyls (:configurationSources ("flake8")))))
-  ;;     ;; TODO: check lsp--cur-workspace here to decide per server / project
-  ;;     (lsp--set-configuration lsp-cfg)))
+;;   ;; ;; NB: only required if you prefer flake8 instead of the default
+;;   ;; ;; send pyls config via lsp-after-initialize-hook -- harmless for
+;;   ;; ;; other servers due to pyls key, but would prefer only sending this
+;;   ;; ;; when pyls gets initialised (:initialize function in
+;;   ;; ;; lsp-define-stdio-client is invoked too early (before server
+;;   ;; ;; start)) -- cpbotha
+;;   ;; (defun lsp-set-cfg ()
+;;   ;;   (let ((lsp-cfg `(:pyls (:configurationSources ("flake8")))))
+;;   ;;     ;; TODO: check lsp--cur-workspace here to decide per server / project
+;;   ;;     (lsp--set-configuration lsp-cfg)))
 
-  ;; (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg)
-  )
+;;   ;; (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg)
+;;   )
 
 ;;
 ;; To enable yapf-mode for python editing, you'll
@@ -1107,9 +1110,12 @@ that uses 'font-lock-warning-face'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(dosbox-exec "/Applications/DosBox/DOSBox.app/Contents/MacOS/DOSBox")
+ '(dosbox-games "/Applications/DosBox/games/")
+ '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
  '(package-selected-packages
    (quote
-    (gnu-elpa-keyring-update flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-lsp company-shell use-package lsp-css lsp-html lsp-java lsp-javascript-flow lsp-mode lsp-python lsp-ui hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (dap-mode lsp-java lsp-ui flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
