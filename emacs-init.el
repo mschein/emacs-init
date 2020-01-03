@@ -812,102 +812,26 @@ that uses 'font-lock-warning-face'."
 (add-to-list 'interpreter-mode-alist '("python" . python-mode))
 (font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
 
-(use-package lsp-mode
-  :hook (python-mode . lsp)
-  :commands lsp)
 ;;
 ;; See docs here:
 ;; https://github.com/emacs-lsp/lsp-mode
 ;;
-;; (use-package lsp-mode
-;;   :ensure t
-;;   :config
 
-;;   ;; ;; XXX Do I really want this?
-;;   ;; ;; make sure we have lsp-imenu everywhere we have LSP
-;;   ;; (require 'lsp-imenu)
-;;   ;; (add-hook 'lsp-after-open-hook 'lsp-enable-imenu)
+(use-package lsp-mode
+  :hook (java-mode . lsp)
+  :hook (ruby-mode . lsp)
+  :hook (go-mode . lsp)
+  :hook (python-mode . lsp)
+  ;;
+  ;; python mode gets setup below, to make sure
+  ;; everything works with virtualenvs
+  ;;
+  :commands lsp)
 
-;;   ;; get lsp-python-enable defined
-;;   ;; NB: use either projectile-project-root or ffip-get-project-root-directory
-;;   ;;     or any other function that can be used to find the root directory of a project
-;;   ;; (lsp-define-stdio-client lsp-python "python"
-;;   ;;                          #'projectile-project-root
-;;   ;;                          '("pyls"))
-
-;;   ;;
-;;   ;; Make sure we use the pyls from the correct virtual env.
-;;   ;;
-;;   (lsp-define-stdio-client lsp-python "python"
-;;                            #'python-lsp-setup-project
-;;                            nil
-;;                            :command-fn #'python-lsp-find-pyls)
-
-;;   ;; make sure this is activated when python-mode is activated
-;;   ;; lsp-python-enable is created by macro above
-;;   (add-hook 'python-mode-hook (| lsp-python-enable))
-
-;;   ;; lsp extras
-;;   ;;
-;;   ;; I think it's the lsp-ui, that is a little funky.
-;;   ;;
-;;   (use-package lsp-ui
-;;     :ensure t
-;;     :config
-;;     (setq lsp-ui-sideline-ignore-duplicate t)
-;;     (add-hook 'lsp-mode-hook 'lsp-ui-mode))
-
-;;   (use-package company-lsp
-;;     :config
-;;     (push 'company-lsp company-backends))
-
-
-;;   (add-hook 'prog-major-mode #'lsp-prog-major-mode-enable)
-
-;;   ;; ;; NB: only required if you prefer flake8 instead of the default
-;;   ;; ;; send pyls config via lsp-after-initialize-hook -- harmless for
-;;   ;; ;; other servers due to pyls key, but would prefer only sending this
-;;   ;; ;; when pyls gets initialised (:initialize function in
-;;   ;; ;; lsp-define-stdio-client is invoked too early (before server
-;;   ;; ;; start)) -- cpbotha
-;;   ;; (defun lsp-set-cfg ()
-;;   ;;   (let ((lsp-cfg `(:pyls (:configurationSources ("flake8")))))
-;;   ;;     ;; TODO: check lsp--cur-workspace here to decide per server / project
-;;   ;;     (lsp--set-configuration lsp-cfg)))
-
-;;   ;; (add-hook 'lsp-after-initialize-hook 'lsp-set-cfg)
-;;   )
-
-;;
-;; To enable yapf-mode for python editing, you'll
-;; need to activate it with this code:
-;;
-;; (add-hook 'python-mode-hook 'yapf-mode)
-;;
-;; and be sure to install yapf globally, or
-;; setup your venv in such a way that running
-;; "yapf" will find it.
-;;
-
-
-;;
-;; Autopair mode
-;;
-;; NOTE: wrong argument characterp issues are usually autopair's fault.
-;;
-(require 'autopair)
-
-;; Don't add autopair in certain modes
-(dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
-  (add-hook mode #'(lambda ()
-                     (setq autopair-dont-activate t)
-                     (autopair-mode -1))))
-;;
-;; enable autopair in all buffers
-;; TODO(mls): I may want to move this into mode hooks, to improve
-;; performance.
-;;
-(autopair-global-mode)
+(use-package lsp-ui :commands lsp-ui-mode)
+(use-package company-lsp :commands company-lsp)
+(use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+(use-package dap-mode)
 
 ;;
 ;; Python Mode stuff.
@@ -1005,7 +929,12 @@ that uses 'font-lock-warning-face'."
           (lambda()
             (setq-default indent-tabs-mode nil)
             (subword-mode)
-            (flymake-mode)))
+            (flymake-mode)
+            ;; Setup lsp-mode, but in the right directory
+            (destructuring-bind (pyls-path library-path)
+                (python-lsp-get-config)
+              (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
+              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) library-path))))
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
 
@@ -1071,6 +1000,26 @@ that uses 'font-lock-warning-face'."
             (set (make-local-variable 'sgml-basic-offset) 4)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Autopair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Autopair mode
+;;
+;; NOTE: wrong argument characterp issues are usually autopair's fault.
+;;
+(require 'autopair)
+
+;; Don't add autopair in certain modes
+(dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
+  (add-hook mode #'(lambda ()
+                     (setq autopair-dont-activate t)
+                     (autopair-mode -1))))
+;;
+;; enable autopair in all buffers
+;; TODO(mls): I may want to move this into mode hooks, to improve
+;; performance.
+;;
+(autopair-global-mode)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;(require 'psvn)
 
@@ -1115,7 +1064,7 @@ that uses 'font-lock-warning-face'."
  '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
  '(package-selected-packages
    (quote
-    (dap-mode lsp-java lsp-ui flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode dash s-buffer request jinja2-mode daemons pipenv python-pytest magit magit-popup ht jira ldap-mode paredit pg rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info popup queue seq spinner web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (dap-mode lsp-ui flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

@@ -2692,9 +2692,11 @@ python debugging session."
                   (parse-env-lines (run-to-str "bash" input-path)))))
     (debug "Unable to find virtualenv activation file in %s" root-dir)))
 
+(defun find-venv-root (root-dir)
+  (assoc1 "VIRTUAL_ENV" (find-venv-variables root-dir)))
+
 (defun find-venv-binary (root-dir binary)
-  (let ((bin-path (path-join (assoc1 "VIRTUAL_ENV" (find-venv-variables root-dir))
-                             binary)))
+  (let ((bin-path (path-join (find-venv-root root-dir) binary)))
     (assert (file-exists-p bin-path))
     bin-path))
 
@@ -2703,6 +2705,10 @@ python debugging session."
 
 (defun find-venv-pip-binary (root-dir)
   (find-venv-binary root-dir "bin/pip"))
+
+(defun in-venv-p ()
+  "Are we currently inside a python virtualenv?"
+  (assoc "VIRTUAL_ENV" (dumpenv)))
 
 (defun python-return-version-string (python-bin)
   "Amusingly, python switched between stdout and stderr between versions 2
@@ -2902,44 +2908,51 @@ in the keyring."
 ;;
 ;; check out: https://pypi.org/project/python-language-server/
 ;;
-(defun python-lsp-setup-project ()
-  (let* ((is-git-project (git-within-git-repo-p))
-         (project-root (python-get-project-root)))
-    (message "+++ Setup lsp project.  Current dir:%s is git project: %s, project root: %s"
-             default-directory is-git-project project-root)
-    (when is-git-project
-      (with-venv project-root
-        (message "This is a git project, so activate the virtualenv if possible")
-        ;; Setup the virtualenv
+(defun python-lsp-setup-project (project-root)
+  ;; TODO: should this auto-create a venv?
 
-        (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
+  (message "+++ Setup lsp project in %s" project-root)
+  (with-venv project-root
+    (message "This is a git project, so activate the virtualenv if possible")
+    (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
 
-        ;; This is safe to do here, since we're in the venv.
-        (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
-          (message "Check to see if the install has already been run: %s" (file-exists-p installation-finished-file))
-          (unless (file-exists-p installation-finished-file)
-            ;; Note: Don't install the project "pyls", that is something else.
-            ;;(run "pip" "install" "python-language-server" "pydocstyle" "yapf" "rope")
-            (pip-install "python-language-server[all]" "yapf")
-            (touch installation-finished-file)))))
-    project-root))
+    ;; This is safe to do here, since we're in the venv.
+    (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
+      (message "Check to see if the install has already been run: %s"
+               (file-exists-p installation-finished-file))
+      (unless (and (file-exists-p installation-finished-file)
+                   (which "pyls"))
+        ;; Note: Don't install the project "pyls", that is something else.
+        (run "pip" "install" "python-language-server[all]" "yapf")
+        (touch installation-finished-file)))))
 
-(defun python-lsp-find-pyls ()
+(defun python-lsp-get-config ()
+  "Return the path to pyls and the virtualenv directory."
   (let* ((is-git-project (git-within-git-repo-p))
          (project-root (python-get-project-root))
-         (default-pyls "pyls"))
-    (message "Find pyls for project %s" project-root)
+         (has-venv (find-virtualenv-file project-root))
+         (output (list "pyls" "/usr/")))
 
-    (if is-git-project
-        (condition-case nil
-            (with-venv project-root
-              (which "pyls"))
-          (error
-           (message "Failed to find a pyls in this virtual-env, or venv not found.  Create one
-and remove the .python-lsp-installed file")
-           default-pyls))
+    ;;
+    ;; algorithm
+    ;;
+    ;; is this a single script or a full python project?
+    ;; full project: is_git or has its own venv
+    ;;   point to the custom installed one
+    ;; else
+    ;;   use the defaults.
+    ;;
 
-      default-pyls)))
+    (when (or is-git-project has-venv)
+      ;; Make sure pyls is available for this project.
+      (when has-venv
+          (with-venv project-root
+            (python-lsp-setup-project project-root)
+            (if-let (pyls-path (which "pyls"))
+                (setf output (list pyls-path (find-venv-root project-root)))
+              (error "Failed to find a pyls in this virtual-env, or venv not found.  Create one and remove the .python-lsp-installed file")))))
+      ;; default values
+      output))
 
 (defun current-virtualenv ()
   (getenv "VIRTUAL_ENV"))
