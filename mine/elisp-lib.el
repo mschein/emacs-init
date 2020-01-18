@@ -2380,12 +2380,6 @@ end tell
       url
     (error "Unable to find git remote.origin.url.  Is this a git repo?")))
 
-(defun git-get-project-repo ()
-  (destructuring-bind (project repo)
-      (string-find "://.*/\\([a-zA-Z9-0-.]+\\)/\\([a-zA-Z9-0-.]+\\)\.git" (git-remote-origin-url))
-    `((:project . ,project)
-      (:repo . ,repo))))
-
 (defun git-remote-add-origin (origin)
   (run "git" "remote" "add" "origin" origin))
 
@@ -2425,12 +2419,15 @@ end tell
 
 
 (defun git-get-origin-info ()
-  (destructuring-bind (host project repo)
-      (string-find
-       ;; It's matching "ssh://git@(git.tcc.li):7999/(oe)/(auth).git"
-       "[[:word:]]+://[[:word:]]+@\\([^:/]+\\).*/\\([^/]+\\)/\\([^.]+\\).git"
-       (git-remote-origin-url))
-    (list host project repo)))
+  (let* ((urlobj (url-generic-parse-url (git-remote-origin-url)))
+         (pandq (first (url-path-and-query urlobj)))
+         (repo (file-name-sans-extension (basename pandq)))
+         (path (file-name-directory pandq)))
+
+    ;; It might be nicer to return an alist.
+    `((host . ,(url-host urlobj))
+      (path . ,path)
+      (repo . ,repo))))
 
 (defun git-symbolic-ref (&rest args)
   "Run the git symbolic-ref command, see the man page for details."
@@ -3314,8 +3311,7 @@ rm -f ${ATTACHMENT}
 ;;
 ;; Stuff to support
 ;;
-;; 1. async flag (can be fire and forget.)... just pass an identity callback
-;; 2. Create a 'map-fn' argument that applies the function to the output
+;; 1. Create a 'map-fn' argument that applies the function to the output
 ;;    befor handing it back to either the callback-fn or returning it.
 ;;
 
