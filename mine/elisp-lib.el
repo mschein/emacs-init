@@ -641,6 +641,9 @@ Example:
             `(if ,test ,val))
        alist)))
 
+(defun pprint (obj)
+  (pp obj)
+  nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
@@ -1610,6 +1613,7 @@ by `do-cmd'
                                        :has-header-line nil
                                        :field-names '("size" "path"))))))
 
+;;(defun find-and-grep )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
@@ -2087,6 +2091,9 @@ Returns a list of alists."
 (defun ini-write (ini-lisp path)
   (barf (ini-string ini-lisp) path))
 
+;; (defun ini-parse (path)
+;;   (cl-loop for line in ))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSX Utilities
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2552,6 +2559,20 @@ end tell
 (defun git-modified-file (path)
   (not (string-nil-or-empty-p (run-to-str "git" "ls-files" "-m" path))))
 
+(defun git-remove-sensitive-file ()
+  (interactive)
+  (let ((file-path (buffer-file-name)))
+    (when (y-or-n-p (format "Are you sure you want to purge %s?: " file-path))
+      (do-cmd-async
+       (list "git" "filter-branch" "--force" "--index-filter"
+             (format "git rm --cached --ignore-unmatch %s" file-path)
+             "--prune-empty" "--tag-name-filter" "cat" "--" "--all")
+       :callback-fn (fn (res)
+                      (when (y-or-n-p "Post removal to remote?: ")
+                        ;; To do tags, do:
+                        ;; git push origin --force --tags
+                        (do-cmd "git" "push" "origin" "--force" "--all")))
+       :throw t))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
@@ -2920,7 +2941,7 @@ in the keyring."
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
-        (run "pip" "install" "python-language-server[all]" "yapf")
+        (run "pip" "install" "python-language-server[all]==0.31.8" "yapf,==0.29.0")
         (touch installation-finished-file)))))
 
 (defun python-lsp-get-config ()
@@ -3065,6 +3086,10 @@ https://www.ietf.org/rfc/rfc2849.txt."
     (insertf "docker run -it %s /bin/sh" image-id)
     (comint-send-input nil t)))
 
+;;
+;; Should add some support for port mapping:
+;; docker -p <exterior:interior>
+;;
 (defun docker-run-image-at-point ()
   (interactive)
 
@@ -3735,10 +3760,25 @@ rm -f ${ATTACHMENT}
 ;; LDAP Lookup
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(cl-defun ldapsearch (&key ldap-server search-base bind-dn passwd-fn query user-lookup)
-  (let ((pw-file "pw.txt")
-        (query (or query
-                   (format "(uid=%s)" user-lookup))))
+(defun ldap-query-to-string (query)
+  (cond
+   ((stringp query) query)
+   ((listp query)
+    (string-join
+     (cl-loop for (key . val) in query
+              collect (format "(%s=%s)" key val))
+     ""))
+   (t (error "The ldap query must be a list or a string."))))
+
+(cl-defun ldapsearch (&key ldap-server search-base bind-dn passwd-fn query)
+  "Use the ldapsearch command to bind to an ldap server and make a query.
+
+  `ldap-server': The server host name.
+  `search-base': The place in ldap to start looking, example: ou=users,dc=corp,dc=company,dc=com
+  `bind-dn': Name to use for authenticating against the server
+  `passwd-fn': Function will be called with no arguments.  It should return the bind-dn password.
+  `query': an alist or string of query parameters."
+  (let ((pw-file "pw.txt"))
     (with-tempdir (:root-dir "/tmp")
       (touch pw-file)
       (chmod pw-file #o600)
@@ -3748,6 +3788,6 @@ rm -f ${ATTACHMENT}
                                    "-b" search-base
                                    "-D" bind-dn
                                    "-y" pw-file
-                                   query)))))
+                                   (ldap-query-to-string query))))))
 
 (provide 'elisp-lib)

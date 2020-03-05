@@ -328,6 +328,35 @@
   (do-cmd-async (list "aws" "rds" "describe-db-engine-versions")
                 :callback-fn cb-fn))
 
+;; Should make the paging more generic?
+;; should I use a callback?
+(defun aws-rds-describe-db-instances ()
+  (let ((-aws-return-json t)
+        (first-iteration t)
+        (next-token nil)
+        (output '()))
+    (cl-flet ((get-db-instances ()
+                 (let ((args (list "describe-db-instances" "--max-items" "50")))
+                   (when next-token
+                     (append! args (list "--starting-token" next-token)))
+                   (apply #'aws-rds args))))
+
+      (cl-loop while (or first-iteration next-token)
+               for resp = (get-db-instances)
+               do (let ((token (assoc-get 'NextToken resp)))
+                    (message "got token: %s" token)
+                    (cl-loop for db across (assoc1 'DBInstances resp)
+                             do (push db output))
+                    (setf first-iteration nil)
+                    (setf next-token token))))
+    output))
+
+(cl-defun aws-rds-query-db-instances (&key db-instance-re)
+  (cl-loop for db in (aws-rds-describe-db-instances)
+           if (string-match db-instance-re (assoc1 'DBInstanceIdentifier db))
+              collect db))
+
+
 (defun aws-latest-rds-snapshot (db-id)
   "Return the latest rds snapshot for the given db id"
   (interactive "sdb-id: ")
@@ -518,6 +547,8 @@
 
 (defun aws-ssm-delete-parameter (name)
   (aws-ssm "delete-parameter" "--name" name))
+
+;; describe-container-instances can get you the ami id.
 
 (provide 'aws)
 

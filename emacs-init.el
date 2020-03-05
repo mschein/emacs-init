@@ -934,7 +934,9 @@ that uses 'font-lock-warning-face'."
             (destructuring-bind (pyls-path library-path)
                 (python-lsp-get-config)
               (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
-              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) library-path))))
+              ;; This call here causes problems sometimes.  Is this code actually needed?
+              ;; or can i reliy on lsp-pyls to set itself up.
+              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))))
 
 (add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
 
