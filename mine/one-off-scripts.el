@@ -312,8 +312,6 @@ setup(name=package,
 (defconst *cl-readme* "# ${name}
 ### _Your Name <your.name@example.com>_
 
-Style Guide: https://lisp-lang.org/style-guide
-
 <project info>
 
 ## License
@@ -339,6 +337,10 @@ Specify license
 ;;;; ${name} main file.
 ;;;;
 
+;;
+;; Style Guide: https://lisp-lang.org/style-guide
+;;
+
 (in-package #:${name})
 ")
 
@@ -346,6 +348,9 @@ Specify license
 ;;;; ${name} main file.
 ;;;;
 
+;;
+;; Style Guide: https://lisp-lang.org/style-guide
+;;
 (in-package #:${name})
 
 (defun environment->alist ()
@@ -361,6 +366,7 @@ Specify license
                 using (hash-value value)
                 collect (list key value))))
 
+;; https://github.com/libre-man/unix-opts
 (defun main ()
   (format t \"argv: ~A~%\" sb-ext:*posix-argv*)
   (format t \"env: ~A~%\" (environment->alist)))
@@ -407,8 +413,6 @@ sbcl --no-sysinit \\
 (defconst *cl-cli-readme* "# ${name}
 ### _Your Name <your.name@example.com>_
 
-Style Guide: https://lisp-lang.org/style-guide
-
 <project info>
 
 ## To build the CLI, do:
@@ -448,7 +452,8 @@ Specify license
                         "split-sequence"
                         "trivia"
                         "trivial-types"
-                        "uiop"))
+                        "uiop"
+                        "unix-opts"))
         (padding (padding (length "  :depends-on ("))))
 
     (string-join (mapcar (| format "#:%s" %) (concatenate 'list default-deps
@@ -473,7 +478,10 @@ Specify license
     (message "Create project %s" name)
     (ensure-makedirs target)
     (pushd target
-      (cl-loop for (file template) in `(("README.md" ,*cl-readme*)
+      ;; Do I want to keep the is-cli check?
+      (cl-loop for (file template) in `(("README.md" ,(if is-cli
+                                                          *cl-cli-readme*
+                                                        *cl-readme*))
                                         (,(format "%s.asd" name) ,*cl-asd*)
                                         (,(format "%s.lisp" name) ,(if is-cli
                                                                        *cl-cli-main*
