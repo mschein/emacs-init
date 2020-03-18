@@ -2510,22 +2510,32 @@ end tell
 (defcustom git-repo-remote-dir nil
   "A variable pointing to a 'local' directory for storing git repos.")
 
+(defcustom git-repo-local-root-dir nil
+  "A variable that specifies the root of local git repos.  The idea
+is that the remote-setup dir will use this to create folders in
+the remote git directory.   That way you can have dir/project not
+conflict with dir/subdir/project.")
+
 (defun git-init-setup-remote-repo-dir (dir)
   ;; I could try prompting for the password and automounting
   (assert (file-exists-p git-repo-remote-dir) t
           (format "Don't forget to mount %s" git-repo-remote-dir))
 
-  (let ((repo-name (last-car (f-split (expand-file-name dir)))))
+  (let* ((remote-path-prefix (cl-set-difference (f-split (expand-file-name dir))
+                                                (f-split git-repo-local-root-dir) :test #'equal))
+         (repo-name (last-car remote-path-prefix)))
     (assert (not (string-nil-or-empty-p repo-name)))
 
     (message "Add repo %s to our remote repository." repo-name)
-    (let ((remote-repo-dir (path-join git-repo-remote-dir (concat repo-name ".git"))))
+    (let ((remote-repo-dir (path-join git-repo-remote-dir
+                                      (concat (apply #'f-join remote-path-prefix) ".git"))))
       (message "Init remote repo: %s" remote-repo-dir)
       (git-init-repo remote-repo-dir t)
 
       (pushd dir
         (if (git-within-git-repo-p)
             (progn (message "Set origin of existing repo.")
+                   (git-remote-remove-all)
                    (git-remote-add-origin remote-repo-dir)
                    (git-push-origin-master))
           (progn

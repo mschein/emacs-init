@@ -255,7 +255,7 @@ setup(name=package,
     (run "git" "init")
     (let ((venv-dir ".venv"))
       (message "create virtualenv")
-      (run "virtualenv" "-p" "python3" "--no-site-packages" venv-dir)
+      (run "python3" "-m" "venv" venv-dir)
       (make-symbolic-link ".venv/bin/activate" "activate"))))
 
 (defun python-create-project (dir)
