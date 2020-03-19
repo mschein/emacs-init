@@ -42,7 +42,7 @@
      ,@body))
 
 (defun --assoc1-common (keys list)
-  "Don't call this directly usually.  It's hear to make
+  "Don't call this directly usually.  It's here to make
 the setter work."
   (let ((keys (to-list keys))
         out '())
