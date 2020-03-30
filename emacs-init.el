@@ -732,6 +732,14 @@ that uses 'font-lock-warning-face'."
 ;; I'm used to.
 (setq org-insert-heading-respect-content t)
 
+;; Turn on syntax highlighting in code blocks.
+(setq org-src-fontify-natively t
+      org-src-tab-acts-natively t
+      org-confirm-babel-evaluate nil
+      ;; Should I have this on... needs more thought.
+      org-edit-src-content-indentation 0
+      )
+
 ;; Fix multi-line wrapping and what not in org mode
 ;;
 ;; I can't use this unless I upgrade emacs.  It crashes 23.1
