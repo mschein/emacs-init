@@ -548,6 +548,13 @@
 (defun aws-ssm-delete-parameter (name)
   (aws-ssm "delete-parameter" "--name" name))
 
+(defun aws-lambda-exists (name)
+  (do-cmd-was-true (do-cmd (list "aws" "lambda" "get-function" "--function-name" name))))
+
+(defun aws-lambda-get (name)
+  (let ((-aws-return-json t))
+    (aws-lambda "get-function" "--function-name" name)))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)

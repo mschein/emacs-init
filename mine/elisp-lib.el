@@ -1189,17 +1189,13 @@ Use this likely in leu of `buffer-string'."
 
 (defmacro with-overwrite-buffer (name &rest body)
   (declare (indent defun))
-  (with-gensyms (old-buffer buffer-name)
-    `(let ((,old-buffer (current-buffer))
-           (,buffer-name ,name))
-       (unwind-protect
-           (progn
-             (switch-to-buffer ,buffer-name)
-             (clear-buffer (current-buffer))
-             ,@body)
-         (progn
-           (switch-to-buffer ,buffer-name)
-           (beginning-of-buffer))))))
+  (with-gensyms (buffer-name)
+    `(let ((,buffer-name ,name))
+       (switch-to-buffer ,buffer-name)
+       (clear-buffer (current-buffer))
+       ,@body
+       (beginning-of-buffer)
+       (current-buffer))))
 
 (defmacro with-overwrite-buffer-pp (name &rest body)
   (declare (indent defun))
