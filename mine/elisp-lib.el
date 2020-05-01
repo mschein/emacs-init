@@ -1333,7 +1333,6 @@ Use this likely in leu of `buffer-string'."
 ;; Time utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; NOTE!!! Bigtable timestamps are msec since epoch!
 (defun usec->time (usec)
   (seconds-to-time (/ usec 1000000)))
 

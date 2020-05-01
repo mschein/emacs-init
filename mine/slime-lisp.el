@@ -27,7 +27,7 @@
 
 ;; (setq inferior-lisp-program "~/bin/ccl64")
 (setq slime-lisp-implementations
-      '((sbcl ("/usr/local/bin/sbcl"))
+      '((sbcl ("/usr/local/bin/sbcl" "--dynamic-space-size" "2048"))
         (ccl ("~/bin/ccl64" "--quiet"))
         (abcl ("~/bin/abcl"))))
 (setq load-path (remove-if (| string-match "slime" %) load-path))
