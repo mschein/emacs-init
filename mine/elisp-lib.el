@@ -2947,7 +2947,7 @@ in the keyring."
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
-        (run "pip" "install" "python-language-server[all]==0.31.8" "yapf,==0.29.0")
+        (run "pip" "install" "python-language-server[all]==0.31.8" "yapf==0.29.0")
         (touch installation-finished-file)))))
 
 (defun python-lsp-get-config ()
