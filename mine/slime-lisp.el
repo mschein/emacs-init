@@ -25,11 +25,15 @@
     (unload-feature 'slime)
   (error nil))
 
-;; (setq inferior-lisp-program "~/bin/ccl64")
+;;
+;; To use this do: c-u - M-x slime
+;; the - is key
+;;
+
 (setq slime-lisp-implementations
       '((sbcl ("/usr/local/bin/sbcl" "--dynamic-space-size" "2048"))
-        (ccl ("~/bin/ccl64" "--quiet"))
-        (abcl ("~/bin/abcl"))))
+        (ccl ("/usr/local/bin/ccl64" "--quiet"))
+        (abcl ("/usr/local/bin/abcl"))))
 (setq load-path (remove-if (| string-match "slime" %) load-path))
 ;;(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 
