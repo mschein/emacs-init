@@ -447,9 +447,19 @@
     (let ((cluster (aws-find-service-cluster service-name)))
       (aws-get-task-definition-in-cluster cluster service-name))))
 
-(defun aws-get-service-ecr-image-name (service-name)
-  (aws-traverse '(containerDefinitions 0 image)
+(defun aws-get-service-container (service-name)
+  (aws-traverse '(0 containers 0)
                 (aws-get-task-definition-for-service service-name)))
+
+(defun aws-get-service-ecr-image (service-name)
+  (assoc1 'image (aws-get-service-container service-name)))
+
+(defun aws-get-container-for-service (cluster service)
+  (let ((-aws-return-json t))
+    (assoc1 'containerDefinitions aws-get-task-definition-for-service)
+    ))
+
+
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
