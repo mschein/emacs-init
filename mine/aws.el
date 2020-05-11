@@ -555,6 +555,10 @@
   (let ((-aws-return-json t))
     (aws-lambda "get-function" "--function-name" name)))
 
+(defun aws-lambda-delete (name)
+  (let ((-aws-return-json t))
+    (aws-lambda "delete-function" "--function-name" name)))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)
