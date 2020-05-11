@@ -3346,7 +3346,28 @@ rm -f ${ATTACHMENT}
 ;;
 
 (cl-defun web-request (url
-                       &key (method "GET") params auth body json data form file headers headers-secret no-redirect timeout insecure user-agent cookie-jar throw map-fn async callback-fn)
+                       &key
+                       (method "GET")
+                       params
+                       auth
+                       body
+                       json
+                       data
+                       form
+                       file
+                       headers
+                       headers-secret
+                       no-redirect
+                       timeout
+                       insecure
+                       user-agent
+                       cookie-jar
+                       retry
+                       retry-delay-sec
+                       throw
+                       map-fn
+                       async
+                       callback-fn)
   "Make a web request with curl.
 
    Params:
@@ -3369,6 +3390,8 @@ rm -f ${ATTACHMENT}
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
    `user-agent': Set the user agent string.
    `cookie-jar': A place to send and receive cookies.
+   `retry': Number of times to attempt the command
+   `retry-delay-sec': Time to wait betwey retries in seconds.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
    `map-fn': Apply the function to the data before handing back to the callback.
@@ -3446,8 +3469,8 @@ rm -f ${ATTACHMENT}
         (barf (url-encode-params data) data-file))
 
       (cl-flet ((append-option (arg value-fn)
-                               (when arg
-                                 (setf cmd (append cmd (funcall value-fn))))))
+                  (when arg
+                    (setf cmd (append cmd (funcall value-fn))))))
 
         ;; TODO(mls): do I need append option, now that I have append!?
         ;; I guess the check for validity is nice.
@@ -3455,6 +3478,8 @@ rm -f ${ATTACHMENT}
           (append-atom! cmd "-L"))
         (append-option method (| (list (upcase (format "-X%s" method)))))
         (append-option input-file (| '("-K" "-")))
+        (append-option retry (| (list "--retry" (number-to-string retry))))
+        (append-option retry-delay-sec (| (list "--retry-delay" (number-to-string retry-delay-sec))))
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
