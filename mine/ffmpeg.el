@@ -132,6 +132,11 @@
      :throw t)
     output-file))
 
+(defun ffmpeg-get-movie-metadata (path)
+  (run-to-json "ffprobe" "-v" "quiet" "-print_format" "json" "-show_format" path))
+
+(defun ffmpeg-movie-length (path)
+  (string-to-number (assoc1 '(format duration) (ffmpeg-get-movie-metadata path))))
 
 
 ;;
