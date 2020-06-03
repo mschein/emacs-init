@@ -912,19 +912,19 @@ that uses 'font-lock-warning-face'."
         (setup-python3-mode))
 
       ;; If we're in python mode, make sure flymake comes on.
-      (add-hook 'python-mode-hook #'(lambda ()
-                                      ;; enable flymake-python for files with no '.py' extension
-                                      (make-local-variable 'flymake-allowed-file-name-masks)
-                                      (if (guess-python-version-3)
-                                          (setup-python3-mode)
-                                        (setup-python2-mode)))))
+      (add-hook 'python-mode-hook (lambda ()
+                                    ;; enable flymake-python for files with no '.py' extension
+                                    (make-local-variable 'flymake-allowed-file-name-masks)
+                                    (if (guess-python-version-3)
+                                        (setup-python3-mode)
+                                      (setup-python2-mode)))))
   ;; emacs 26 version
   (progn
-    (add-hook 'python-mode-hook #'(lambda ()
-                                    ;; enable flymake-python for files with no '.py' extension
-                                    (if (guess-python-version-3)
-                                        (setq python-shell-interpreter "python3")
-                                      (setq python-shell-interpreter "python"))))))
+    (add-hook 'python-mode-hook (lambda ()
+                                  ;; enable flymake-python for files with no '.py' extension
+                                  (if (guess-python-version-3)
+                                      (setq python-shell-interpreter "python3")
+                                    (setq python-shell-interpreter "python"))))))
 
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
@@ -1020,15 +1020,19 @@ that uses 'font-lock-warning-face'."
 
 ;; Don't add autopair in certain modes
 (dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
-  (add-hook mode #'(lambda ()
-                     (setq autopair-dont-activate t)
-                     (autopair-mode -1))))
+  (add-hook mode (lambda ()
+                   (setq autopair-dont-activate t)
+                   (autopair-mode -1))))
 ;;
 ;; enable autopair in all buffers
 ;; TODO(mls): I may want to move this into mode hooks, to improve
 ;; performance.
 ;;
 (autopair-global-mode)
+
+;; Special changes for autopair behavior
+(add-hook 'html-mode-hook (lambda ()
+                            (setq autopair-dont-pair (plist-put autopair-dont-pair :never (list ?')))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;(require 'psvn)
