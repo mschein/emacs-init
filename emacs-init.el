@@ -946,7 +946,7 @@ that uses 'font-lock-warning-face'."
               ;; or can i reliy on lsp-pyls to set itself up.
               (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))))
 
-(add-hook 'before-save-hook (lambda (&optional foo) (delete-trailing-whitespace)))
+(add-hook 'before-save-hook (lambda () (delete-trailing-whitespace)))
 
 ;; Try out jinja2 mode.
 (require 'jinja2-mode)
