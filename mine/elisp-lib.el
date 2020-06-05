@@ -24,7 +24,7 @@
 (require 'uuidgen)
 ;; (require 'dash)
 (require 'ht)
-
+(require 'anaphora)
 
 (setf directory-sep "/")
 
@@ -214,7 +214,7 @@ the setter work."
         (while matched
           (aif (match-string-no-properties i str)
                (progn
-                 (setf out (cons  _it_ out)))
+                 (setf out (cons  it out)))
                (setf matched nil))
           (setf i (1+ i)))
         (reverse out))))
@@ -242,12 +242,6 @@ test.  If the test returned nil, then the body will not execute."
   (declare (indent 2))
   `(let ((,name ,test))
      (when ,name ,@body)))
-
-(defmacro aif (test &rest forms)
-  "Anaphoric if that sets the test value to _it_"
-  (declare (indent 2))
-  `(let ((_it_ ,test))
-     (if _it_ ,@forms)))
 
 (unless (fboundp 'if-let)
   (defmacro if-let (test-binding &rest forms)
@@ -2086,8 +2080,17 @@ Returns a list of alists."
 (defun ini-write (ini-lisp path)
   (barf (ini-string ini-lisp) path))
 
-;; (defun ini-parse (path)
-;;   (cl-loop for line in ))
+;; (defun ini-parse (str)
+;;   (let ((output))
+;;     (dolist (list (string->lines str))
+;;       ;; would be nice to have cond-let or something like that for this.
+;;       (acond
+;;        ())
+
+
+(defun ini-load-file (path)
+  "Parse an .ini file and return its contents as an alist."
+  (ini-parse (slurp path)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; OSX Utilities
