@@ -2080,12 +2080,34 @@ Returns a list of alists."
 (defun ini-write (ini-lisp path)
   (barf (ini-string ini-lisp) path))
 
-;; (defun ini-parse (str)
-;;   (let ((output))
-;;     (dolist (list (string->lines str))
-;;       ;; would be nice to have cond-let or something like that for this.
-;;       (acond
-;;        ())
+(defun ini-parse (str)
+  (cl-loop for (key . value) in (mapcar (fn (line)
+                                            (acond
+                                             ((string-find "\\[\\(.+?\\)\\]" line)
+                                              (cons :section (first it)))
+                                             ((string-find "\\([^ =]+\\) *= *\\([^ =]+\\)" line)
+                                              ;; line
+                                              (destructuring-bind (key value) it
+                                                (cons key value)))
+                                             (t
+                                              ;; skip
+                                              )))
+                                          (string->list str))
+           with sections = '()
+           do (progn
+                (message "sections: %s" sections)
+                (cond
+                 ((eql :section key)
+                  (pushcons value '() sections))
+                 ((not sections)
+                  (pushcons key value sections))
+                 ((let ((section-list (cdr (first sections))))
+                    (or (not section-list)
+                        (consp section-list)))
+                  (pushcons key value (cdr (first sections))))
+                 (t
+                  (pushcons key value sections))))
+           finally (return sections)))
 
 
 (defun ini-load-file (path)
