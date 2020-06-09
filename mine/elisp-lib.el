@@ -2966,12 +2966,13 @@ in the keyring."
 
     ;; This is safe to do here, since we're in the venv.
     (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
-      (message "Check to see if the install has already been run: %s"
-               (file-exists-p installation-finished-file))
+      (message "Check to see if the install has already been run: %s %s"
+               (file-exists-p installation-finished-file)
+               installation-finished-file1)
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
-        (run "pip" "install" "python-language-server[all]==0.31.8" "yapf==0.29.0")
+        (run "pip" "install" "python-language-server[all]==0.33.1" "yapf==0.30.0")
         (touch installation-finished-file)))))
 
 (defun python-lsp-get-config ()
