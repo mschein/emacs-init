@@ -943,7 +943,7 @@ that uses 'font-lock-warning-face'."
                 (python-lsp-get-config)
               (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
               ;; This call here causes problems sometimes.  Is this code actually needed?
-              ;; or can i reliy on lsp-pyls to set itself up.
+              ;; or can i rely on lsp-pyls to set itself up.
               (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))))
 
 (add-hook 'before-save-hook (lambda () (delete-trailing-whitespace)))
