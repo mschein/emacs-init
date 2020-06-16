@@ -2968,7 +2968,7 @@ in the keyring."
     (let ((installation-finished-file (path-join project-root ".python-lsp-installed")))
       (message "Check to see if the install has already been run: %s %s"
                (file-exists-p installation-finished-file)
-               installation-finished-file1)
+               installation-finished-file)
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
