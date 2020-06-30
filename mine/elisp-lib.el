@@ -943,11 +943,19 @@ each character in the string `chars'."
   (equal 0 (assoc1 :code results)))
 
 (defun run-to-str-async (callback-fn &rest cmd-parts)
+  (assert cmd-parts)
   (do-cmd-async cmd-parts
                 :stdout 'string
                 :throw t
                 :callback-fn (lambda (resp)
                                (funcall callback-fn (assoc1 :stdout resp)))))
+
+(defun run-to-json-async (callback-fn &rest cmd-parts)
+  (apply #'run-to-str-async
+         (lambda (s)
+           (funcall callback-fn (json-read-from-string s)))
+         cmd-parts))
+
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `do-cmd'
    for return value.
