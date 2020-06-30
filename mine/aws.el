@@ -501,7 +501,9 @@
                         (return-from aws-ecs-service-pattern-in-env-p cluster)))))
 
 (defun aws-find-task-for-service (service-name)
-  (aws-ecs-list-tasks (aws-find-service-cluster service-name) service-name))
+  (let ((cluster (aws-find-service-cluster service-name)))
+    (assert cluster)
+    (aws-ecs-list-tasks cluster service-name)))
 
 (cl-defun aws-ecs-collect-services (service-pattern)
   (let ((aws-access-key (aws-current-access-key-id)))
@@ -568,6 +570,10 @@
 (defun aws-lambda-delete (name)
   (let ((-aws-return-json t))
     (aws-lambda "delete-function" "--function-name" name)))
+
+(defun aws-describe-firehose-stream (name)
+  (let ((-aws-return-json t))
+    (aws-firehose "describe-delivery-stream" "--delivery-stream-name" name)))
 
 ;; describe-container-instances can get you the ami id.
 

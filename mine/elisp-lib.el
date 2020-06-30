@@ -939,6 +939,15 @@ each character in the string `chars'."
         (when stdout-buffer
           (kill-buffer stdout-buffer))))))
 
+(defun do-cmd-was-true (results)
+  (equal 0 (assoc1 :code results)))
+
+(defun run-to-str-async (callback-fn &rest cmd-parts)
+  (do-cmd-async cmd-parts
+                :stdout 'string
+                :throw t
+                :callback-fn (lambda (resp)
+                               (funcall callback-fn (assoc1 :stdout resp)))))
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `do-cmd'
    for return value.
@@ -971,9 +980,6 @@ Don't expect any output."
 (defun run-to-str-ssh (host &rest cmd-parts)
   "Run a command with ssh on the remote host."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t :ssh host)))
-
-(defun do-cmd-was-true (results)
-  (equal 0 (assoc1 :code results)))
 
 (defun run-is-true (&rest cmd-parts)
   (do-cmd-was-true (do-cmd cmd-parts)))
@@ -2950,6 +2956,10 @@ in the keyring."
 
 (defun pip-install (&rest library-options)
   (apply #'run "pip" "install" library-options))
+
+(defun python-lsp-clear-cache ()
+  ;; find . -name .python-lsp-installed -print0 | xargs -0 rm -f
+  )
 
 ;; To use, install: sudo -H pip install python-language-server
 ;; and sudo -H pip3 install python-language-server
