@@ -1079,29 +1079,27 @@ output is passed to the callback-fn."
 
 (cl-defun do-cmd-finish (proc change-desc)
   (unwind-protect
-      (progn
-        (with-current-buffer (process-buffer proc)
-          (let* ((code (process-exit-status proc))
-                 (output `()))
-            (when (and throw (not (equal 0 code)))
-              (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
-
-            (when (equal stdout 'string)
-              (pushcons :stdout (buffer->string) output))
-
-            (when (equal stderr 'string)
-              (pushcons :stderr (with-current-buffer stderr-buffer
-                                  (buffer->string))
-                        output))
-            (pushcons :code code output)
-
-            (message "-> Finished Async Command(%s): %s %s" code program (cmd-to-shell-string args))
-            (when callback-fn
-              (funcall callback-fn output)))))
-    (progn
       (with-current-buffer (process-buffer proc)
-        (kill-buffer stderr-buffer))
-      (kill-buffer (process-buffer proc)))))
+        (let* ((code (process-exit-status proc))
+               (output))
+          (when (and throw (not (equal 0 code)))
+            (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
+
+          (when (equal stdout 'string)
+            (pushcons :stdout (buffer->string) output))
+
+          (when (equal stderr 'string)
+            (pushcons :stderr (with-current-buffer stderr-buffer
+                                (buffer->string))
+                      output))
+          (pushcons :code code output)
+
+          (message "-> Finished Async Command(%s): %s %s" code program (cmd-to-shell-string args))
+          (when callback-fn
+            (funcall callback-fn output))))
+    (with-current-buffer (process-buffer proc)
+      (kill-buffer stderr-buffer))
+    (kill-buffer (process-buffer proc))))
 
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
