@@ -27,6 +27,30 @@
 (assert (ffmpeg-is-installed) nil "Please install ffmpeg before using this module.
    Try brew or another package manager.")
 
+(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length overwrite-output)
+  (assert (file-exists-p input-file) "Input file does not exist.")
+  (assert length)
+
+  (let ((output-file (format "%s-%s.%s"
+                             (file-name-sans-extension input-file)
+                             "clip"
+                             (file-name-extension input-file)))
+        (seconds (+ seconds (or (* 60 minutes) 0))))
+    (when (and overwrite-output
+               (file-exists-p output-file))
+      (delete-file output-file t))
+
+    (do-cmd-async
+     (list "ffmpeg"
+           "-ss" (format "%s" seconds)
+           "-t"  (format "%s" length)
+           "-i" input-file
+           output-file)
+     :callback-fn (lambda (&rest foo)
+                    (message "Finished splitting %s" input-file))
+     :throw t)
+    output-file))
+
 ;;
 
 ;;  mkdir frames
@@ -39,6 +63,7 @@
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
 (cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length overwrite-output)
   (assert (file-exists-p input-file) "Input file does not exist.")
+  (assert length)
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
         (seconds (+ seconds (or (* 60 minutes) 0))))
@@ -111,6 +136,12 @@
 ;; might want a way to pass around standard options
 ;;  - like an options alist or something.
 ;;
+
+;;
+;; mkv -> mp4
+;;
+;;  ffmpeg -i input.mkv -codec copy output.mp4
+
 
 (cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length (overwrite-output t))
   "Get a slice from a video."
