@@ -1074,10 +1074,10 @@ output is passed to the callback-fn."
             (process-send-string proc (or input (slurp input-file)))
             (process-send-eof proc))
 
-          (set-process-sentinel proc #'do-cmd-finish)
+          (set-process-sentinel proc #'do-cmd-async-finish)
           proc)))))
 
-(cl-defun do-cmd-finish (proc change-desc)
+(cl-defun do-cmd-async-finish (proc change-desc)
   (unwind-protect
       (with-current-buffer (process-buffer proc)
         (let* ((code (process-exit-status proc))
