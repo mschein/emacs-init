@@ -575,6 +575,24 @@
   (let ((-aws-return-json t))
     (aws-firehose "describe-delivery-stream" "--delivery-stream-name" name)))
 
+(defun aws-kinesis-list ()
+  "Return a list of kinesis stream names, be aware this doesn't deal with
+paging yet."
+  (let ((-aws-return-json t))
+    (vector-to-list (assoc1 'StreamNames
+                            (aws-kinesis "list-streams")))))
+
+(defun aws-firehose-list ()
+  "Return a list of firehose delivery stream names, be aware this
+doesn't deal with paging yet."
+  (let ((-aws-return-json t))
+    (vector-to-list (assoc1 'DeliveryStreamNames
+                            (aws-firehose "list-delivery-streams")))))
+
+(defun aws-kinesis-describe-stream (stream-name)
+  (let ((-aws-return-json t))
+    (aws-kinesis "describe-stream" "--stream-name" stream-name)))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)
