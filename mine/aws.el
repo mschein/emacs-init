@@ -448,7 +448,7 @@
       (aws-get-task-definition-in-cluster cluster service-name))))
 
 (defun aws-get-service-container (service-name)
-  (aws-traverse '(0 containers 0)
+  (aws-traverse '(containerDefinitions 0)
                 (aws-get-task-definition-for-service service-name)))
 
 (defun aws-get-service-ecr-image (service-name)
