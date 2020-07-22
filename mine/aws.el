@@ -593,6 +593,43 @@ doesn't deal with paging yet."
   (let ((-aws-return-json t))
     (aws-kinesis "describe-stream" "--stream-name" stream-name)))
 
+(cl-defun aws-kms-create-grant (&key region key-id grantee-principal operations-list)
+  (assert (listp operations-list))
+  (apply #'aws-kms
+         "create-grant"
+         "--region" region
+         "--key-id" key-id
+         "--grantee-principal" grantee-principal
+         "--operations"
+         operations-list))
+
+(defun aws-kms-list-grants (key-id)
+  (let ((-aws-return-json t))
+    ;; I should add an decorator to do pagination.
+    ;;
+    ;; it appears paginate and --no-paginate are reversed for this command?
+    ;;
+    (assoc1 'Grants (aws-kms "list-grants" "--key-id" key-id))))
+
+(cl-defun aws-kms-get-key-policy (key-id &key (policy-name "default"))
+  (let ((-aws-return-json t))
+    (assoc1 'Policy (aws-kms "get-key-policy" "--key-id" key-id "--policy-name" policy-name))))
+
+(defun aws-iam-list-roles ()
+  (let ((-aws-return-json t))
+    (assoc1 'Roles (aws-iam "list-roles"))))
+
+(defun aws-iam-get-role (role-name)
+  (let ((-aws-return-json t))
+    (aws-iam "get-role" "--role-name" role-name)))
+
+(defun aws-iam-role-exists-p (role-name)
+  (condition-case err
+      (not (not (aws-iam-get-role role-name)))
+    (error
+     (unless (string-match "NoSuchEntity" (error-message-string err))
+       (error err)))))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)
