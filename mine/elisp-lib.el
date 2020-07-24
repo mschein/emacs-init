@@ -1820,35 +1820,35 @@ Returns a list of alists."
     `(progn
        (defun jump-to-shell (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations nil t)))
          (jump-to-abbrev #'shell-open-dir ,abbrev ',table))
        (global-set-key "\C-xg" #'jump-to-shell)
 
        (defun jump-to-dired (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations  nil t)))
          (jump-to-abbrev #'dired ,abbrev ',table))
        (global-set-key "\C-x\C-g" #'jump-to-dired)
 
        (defun jump-to-magit (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations nil t)))
          (jump-to-abbrev #'magit-status ,abbrev ',table))
        (global-set-key "\C-x\M-g" #'jump-to-magit)
        (defun jump-to-magit-branch (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations  nil t)))
          (jump-to-abbrev #'mls--magit-branch-view ,abbrev ',table))
        (global-set-key "\C-x\M-b" #'jump-to-magit-branch)
        (defun yank-abbrev-path (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations  nil t)))
          (jump-to-abbrev #'kill-new ,abbrev ',table))
        (defalias 'yap #'yank-abbrev-path)
 
        (defun insert-abbrev-path (,abbrev)
          (interactive (list
-                       (completing-read "abbrev: " ',abbreviations)))
+                       (completing-read "abbrev: " ',abbreviations  nil t)))
          (jump-to-abbrev #'insert ,abbrev ',table))
        (defalias 'iap #'insert-abbrev-path))))
 
