@@ -571,7 +571,8 @@
   (let ((-aws-return-json t))
     (aws-lambda "delete-function" "--function-name" name)))
 
-(defun aws-describe-firehose-stream (name)
+;; Fix this name
+(defun aws-firehose-describe-stream (name)
   (let ((-aws-return-json t))
     (aws-firehose "describe-delivery-stream" "--delivery-stream-name" name)))
 
@@ -592,6 +593,16 @@ doesn't deal with paging yet."
 (defun aws-kinesis-describe-stream (stream-name)
   (let ((-aws-return-json t))
     (aws-kinesis "describe-stream" "--stream-name" stream-name)))
+
+(defun aws-kinesis-stream-is-encrypted-p (stream-name)
+  (not (equal "NONE" (assoc1 '(StreamDescription EncryptionType)
+                             (aws-kinesis-describe-stream stream-name)))))
+
+(defun aws-firehose-stream-is-encrypted-p (stream-name)
+  (equal "ENABLED" (assoc1 '(DeliveryStreamDescription
+                             DeliveryStreamEncryptionConfiguration
+                             Status)
+                           (aws-firehose-describe-stream stream-name))))
 
 (cl-defun aws-kms-create-grant (&key region key-id grantee-principal operations-list)
   (assert (listp operations-list))
@@ -629,6 +640,12 @@ doesn't deal with paging yet."
     (error
      (unless (string-match "NoSuchEntity" (error-message-string err))
        (error err)))))
+
+(defun aws-elasticsearch-list-domain-names ()
+  (let ((-aws-return-json t))
+    (mapcar (fn (data)
+              (assoc1 'DomainName data))
+            (assoc1 'DomainNames (aws-es "list-domain-names")))))
 
 ;; describe-container-instances can get you the ami id.
 
