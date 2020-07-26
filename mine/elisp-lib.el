@@ -1587,8 +1587,12 @@ Note that this includes start-dir itself."
      inode-number
      device-number)))
 
-(defun file-has-size (path)
-  (> (assoc1 'size (get-file-info path) ) 0))
+(defun get-file-size (path)
+  "Return the size of the file specified by `path' in bytes."
+  (assoc1 'size (get-file-info path)))
+
+(defun file-has-size-p (path)
+  (> (get-file-size path) 0))
 
 (cl-defun du (dir &key (max-depth 2) callback-fn)
   "Call `du' and use a callback.

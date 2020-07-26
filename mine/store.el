@@ -217,7 +217,7 @@
 
   (let ((path (store-get-path store-name)))
   (and (file-exists-p path)
-       (file-has-size path))))
+       (file-has-size-p path))))
 
 (defun --confirm-delete-file (file)
   (when (and (file-exists-p file)
