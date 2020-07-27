@@ -126,7 +126,7 @@
 
 (defun* -aws (&rest args)
   (let ((resp (do-cmd (cons "aws" args) :stdout 'string :stderr 'string :throw t)))
-    (when (do-cmd-was-true resp)
+    (when (do-cmd-succeeded-p resp)
       (let ((json-result (ignore-errors
                            (json-read-from-string (assoc1 :stdout resp)))))
         (if -aws-return-json
@@ -554,6 +554,10 @@
       (cons (cons :json (ignore-errors (json-read-from-string (assoc1 :stdout res))))
             res))))
 
+(defun aws-s3-bucket-exists-p (bucket)
+  (ignore-errors
+    (do-cmd-succeeded-p (aws-s3api "head-bucket" "--bucket" bucket))))
+
 (defun aws-describe-service (service)
   (aws-ecs-describe-services (aws-find-service-cluster service) service))
 
@@ -561,7 +565,7 @@
   (aws-ssm "delete-parameter" "--name" name))
 
 (defun aws-lambda-exists (name)
-  (do-cmd-was-true (do-cmd (list "aws" "lambda" "get-function" "--function-name" name))))
+  (do-cmd-succeeded-p (do-cmd (list "aws" "lambda" "get-function" "--function-name" name))))
 
 (defun aws-lambda-get (name)
   (let ((-aws-return-json t))

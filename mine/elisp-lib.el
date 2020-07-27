@@ -939,8 +939,8 @@ each character in the string `chars'."
         (when stdout-buffer
           (kill-buffer stdout-buffer))))))
 
-(defun do-cmd-was-true (results)
-  (equal 0 (assoc1 :code results)))
+(defun do-cmd-succeeded-p (results)
+  (= 0 (assoc1 :code results)))
 
 (defun run-to-str-async (callback-fn &rest cmd-parts)
   (assert cmd-parts)
@@ -990,11 +990,11 @@ Don't expect any output."
   (assoc1 :stdout (do-cmd cmd-parts :stdout 'string :throw t :ssh host)))
 
 (defun run-is-true (&rest cmd-parts)
-  (do-cmd-was-true (do-cmd cmd-parts)))
+  (do-cmd-succeeded-p (do-cmd cmd-parts)))
 
 (defun which (executable)
   (let ((res (do-cmd (list "which" executable) :stdout 'string)))
-    (when (do-cmd-was-true res)
+    (when (do-cmd-succeeded-p res)
         (string-trim (assoc1 ':stdout res)))))
 
 ;;
@@ -1619,6 +1619,10 @@ by `do-cmd'
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO: switch to using the CSV code?
+;; TODO: also make a custom grouper, that can handle
+;;       multiple matches, etc.
 
 (defun list-all-processes ()
   "Return a list of alists for all running processes.  Each line
@@ -2527,7 +2531,7 @@ end tell
     (git-commit message)))
 
 (defun git-rev-parse-is-inside-working-tree ()
-  (do-cmd-was-true (do-cmd (list "git" "rev-parse" "--is-inside-work-tree"))))
+  (do-cmd-succeeded-p (do-cmd (list "git" "rev-parse" "--is-inside-work-tree"))))
 
 ;; TODO: rename this to indicate it's a test.  It's hard to find.
 (defun git-within-git-repo-p (&optional dir)
@@ -3044,6 +3048,20 @@ in the keyring."
       (setf import-end (point))
 
       (sort-lines nil import-start import-end))))
+
+;; (defun python-kill-pylys ()
+;;   "Sometimes you need to kill the pyls servers to get things working
+;; again.
+
+;;   It can be a bit touchy."
+;;   (interactive)
+
+;;   (dolist (proc-info (list-all-processes))
+;;     (message "cmd: %s" (assoc1 'command proc-info))
+;;     (when (string-match "pyls" (assoc1 'command proc-info))
+;;       (message "kill %d" (assoc1 'pid proc-info))))
+;;       ;; (do-cmd-async (list "kill" (number-to-string (assoc1 'pid proc-info))))
+;;       )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code for parsing large blocks of formatted text
@@ -3669,7 +3687,7 @@ rm -f ${ATTACHMENT}
                 (make-request-fn))
             (make-request-fn)))))))
 
-;; TODO(mls): make this consistent with do-cmd-was-true
+;; TODO(mls): make this consistent with do-cmd-succeeded-p
 (defun web-request-success-p (resp)
   (eq :success (assoc1 :http-status resp)))
 
