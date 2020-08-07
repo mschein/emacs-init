@@ -3410,6 +3410,7 @@ rm -f ${ATTACHMENT}
                        (method "GET")
                        params
                        auth
+                       proxy-auth
                        body
                        json
                        data
@@ -3427,7 +3428,8 @@ rm -f ${ATTACHMENT}
                        throw
                        map-fn
                        async
-                       callback-fn)
+                       callback-fn
+                       proxy)
   "Make a web request with curl.
 
    Params:
@@ -3436,8 +3438,10 @@ rm -f ${ATTACHMENT}
    Optional Params:
    `method': Which http operation/method to perform, (defaults to GET).
    `params': An alist of url parameters.  A nil value means only send the key
-   `auth': Auth can be, a user name with no colon, which will trigger a prompt for
+   `auth': Auth can be: a user name with no colon, which will trigger a prompt for
            a password, or a full curl auth string like \"user:password\".
+   `proxy-auth': Can be: a user name with no colon, which will trigger a prompt for
+                 a password, or a full curl auth string like \"user:password\".
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
    `data': An alist that will be url-encoded and sent to the server in a request body.
@@ -3457,11 +3461,13 @@ rm -f ${ATTACHMENT}
    `map-fn': Apply the function to the data before handing back to the callback.
    `async': Don't block, but also don't worry about calling a callback.
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
+   `proxy': Provide a url as an argument to --proxy.
 
    Dynamic Global Variables
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
                          testing.
    `+cache-request+': Use the url cache to save lookup time.
+   `+proxy-url+': Provide the url as an argument to --proxy
 
    Returns:
    An alist with the following information:
@@ -3501,13 +3507,16 @@ rm -f ${ATTACHMENT}
            ;; consolidate quoting and how we create values,
            ;; etc.  Make it its own function
            ;;
-           (input-file (when (or auth headers-secret)
+           (input-file (when (or auth proxy-auth headers-secret)
                          (let ((input-file-path "input-file"))
                            (touch input-file-path)
                            (chmod input-file-path #o600)
+                           ;; TODO: There's probably a nicer way to do this.
                            (barf (string-join (concatenate 'list
                                                            (when auth
                                                              (list (format "user = %s" (quote-str (web-request--handle-auth auth)))))
+                                                           (when proxy-auth
+                                                             (list (format "proxy-user = %s" (quote-str (web-request--handle-auth proxy-auth)))))
                                                            (cl-loop for (name . value) in headers-secret
                                                                     collect (format "Header = %s" (quote-str
                                                                                                    (concat name ": " value)))))
@@ -3517,6 +3526,7 @@ rm -f ${ATTACHMENT}
            (final-url (url-build url params))
            (use-caching +webrequest-cache-urls+))
 
+      (debug)
       ;; Dump out the json to a file, if needed.
       (when json
         (barf (if (typep json 'string)
@@ -3543,6 +3553,8 @@ rm -f ${ATTACHMENT}
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
+        (let ((proxy-url (or proxy +proxy-url+)))
+          (append-option proxy-url (| `("--proxy" ,proxy-url))))
 
         ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
