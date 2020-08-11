@@ -651,6 +651,14 @@ doesn't deal with paging yet."
               (assoc1 'DomainName data))
             (assoc1 'DomainNames (aws-es "list-domain-names")))))
 
+(defun aws-describe-elasticsearch (domain-name)
+  (let ((-aws-return-json t))
+    (aws-es "describe-elasticsearch-domain" "--domain-name" domain-name)))
+
+(defun aws-elasticsearch-get-vpc-endpoint (domain-name)
+  (assoc1 '(DomainStatus Endpoints vpc)
+          (aws-describe-elasticsearch domain-name)))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)

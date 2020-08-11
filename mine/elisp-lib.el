@@ -1954,7 +1954,7 @@ Returns a list of alists."
                       (diff (- new old))
                       (update (* (- 1 smoothing-constant) diff)))
                  (cons (+ old update) out-list)))
-	   (cdr nums)
+           (cdr nums)
            :initial-value (list (car nums)))))
 
 (defun url-join (&rest args)
@@ -2726,7 +2726,6 @@ python debugging session."
                         (cons path (cond
                                     ((equal (normalize-dir-path (file-name-directory path))
                                             (normalize-dir-path root-dir)) 10)
-                                    ((search "/target/" path) 5)
                                     (t 0))))
                       (directory-files-recursively root-dir "^activate$"))
               (fn (a b) (> (cdr a) (cdr b)))))))
@@ -2887,6 +2886,16 @@ in the keyring."
   "Copy the current PATH into the emacs `exec-path'."
   (setf exec-path (string-split ":" (getenv "PATH") )))
 
+(defmacro with-exec-path (new-parts &rest body)
+  (with-gensyms (old-exec-path new-exec-path)
+    `(let ((,old-exec-path (copy-list exec-path))
+           (,new-exec-path (concatenate 'list (to-list ,new-parts) exec-path)))
+       (unwind-protect
+           (progn
+             (setf exec-path ,new-exec-path)
+             ,@body)
+         (setf exec-path ,old-exec-path)))))
+
 (defun activate-virtualenv-emacs (location)
   (let ((vars (find-venv-variables location)))
     (when (not (assoc-get "VIRTUAL_ENV" vars))
@@ -2995,33 +3004,60 @@ in the keyring."
         (run "pip" "install" "python-language-server[all]==0.33.1" "yapf==0.30.0")
         (touch installation-finished-file)))))
 
+;;
+;; TODO: should I just have this return the directory?
+;; the executable name is already known.
+;;
+(defun python-find-executable (exec-name &optional required-version)
+  "Find the named executable preferably in the venv, otherwise
+in the global python env if needed.
+
+Algorithm:
+
+    is this a single script or a full python project?
+    full project: is_git or has its own venv
+      point to the custom installed one
+    else
+      use the defaults."
+  (cl-flet ((find-venv-exec-path ()
+              (let* ((project-root (python-get-project-root))
+                     (has-venv (find-virtualenv-file project-root))
+                     (output (list exec-name "/usr/")))
+                (when has-venv
+                  (with-venv project-root
+                    (which exec-name))))))
+    (if-let (venv-path (find-venv-exec-path))
+        venv-path
+      exec-name)))
+
 (defun python-lsp-get-config ()
   "Return the path to pyls and the virtualenv directory."
-  (let* ((is-git-project (git-within-git-repo-p))
-         (project-root (python-get-project-root))
-         (has-venv (find-virtualenv-file project-root))
-         (output (list "pyls" "/usr/")))
+  ;; (let* ((is-git-project (git-within-git-repo-p))
+  ;;        (project-root (python-get-project-root))
+  ;;        (has-venv (find-virtualenv-file project-root))
+  ;;        (output (list "pyls" "/usr/")))
 
-    ;;
-    ;; algorithm
-    ;;
-    ;; is this a single script or a full python project?
-    ;; full project: is_git or has its own venv
-    ;;   point to the custom installed one
-    ;; else
-    ;;   use the defaults.
-    ;;
-
-    (when (or is-git-project has-venv)
-      ;; Make sure pyls is available for this project.
-      (when has-venv
-          (with-venv project-root
-            (python-lsp-setup-project project-root)
-            (if-let (pyls-path (which "pyls"))
-                (setf output (list pyls-path (find-venv-root project-root)))
-              (error "Failed to find a pyls in this virtual-env, or venv not found.  Create one and remove the .python-lsp-installed file")))))
-      ;; default values
-      output))
+  ;;   ;;
+  ;;   ;; algorithm
+  ;;   ;;
+  ;;   ;; is this a single script or a full python project?
+  ;;   ;; full project: is_git or has its own venv
+  ;;   ;;   point to the custom installed one
+  ;;   ;; else
+  ;;   ;;   use the defaults.
+  ;;   ;;
+  ;;   (when (or is-git-project has-venv)
+  ;;     ;; Make sure pyls is available for this project.
+  ;;     (when has-venv
+  ;;         (with-venv project-root
+  ;;           (python-lsp-setup-project project-root)
+  ;;           (if-let (pyls-path (which "pyls"))
+  ;;               (setf output (list pyls-path (find-venv-root project-root)))
+  ;;             (error "Failed to find a pyls in this virtual-env, or venv not found.  Create one and remove the .python-lsp-installed file")))))
+  ;;     ;; default values
+  ;;     output)
+  (let ((pyls-path (python-find-executable "pyls")))
+    (list pyls-path (file-name-directory pyls-path))))
 
 (defun current-virtualenv ()
   (getenv "VIRTUAL_ENV"))
@@ -3397,6 +3433,7 @@ rm -f ${ATTACHMENT}
 
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
+(defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
 
 ;;
 ;; Stuff to support
@@ -3468,6 +3505,7 @@ rm -f ${ATTACHMENT}
                          testing.
    `+cache-request+': Use the url cache to save lookup time.
    `+proxy-url+': Provide the url as an argument to --proxy
+   `+proxy-auth+': Provide auth for a proxy, a la proxy user.
 
    Returns:
    An alist with the following information:
@@ -3526,7 +3564,6 @@ rm -f ${ATTACHMENT}
            (final-url (url-build url params))
            (use-caching +webrequest-cache-urls+))
 
-      (debug)
       ;; Dump out the json to a file, if needed.
       (when json
         (barf (if (typep json 'string)

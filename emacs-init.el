@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t -*-
 ;;
 ;; Copyright (C) by Michael Scheinholtz.  All Rights Reserved.
 ;;
@@ -506,7 +507,28 @@ that uses 'font-lock-warning-face'."
 (if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
 ;; pick a font.
-;; (set-face-attribute 'default nil :height 80)
+;; set fond size, etc. etc.
+;;(set-face-attribute 'default nil :height 110)
+;;
+;; hack can be downloaded from:
+;; https://sourcefoundry.org/hack/
+;;
+;; brew tap homebrew/cask-fonts
+;; brew cask install font-
+;;
+;; Interesting fonts:
+;; Hack
+;; Monaco
+;;
+;; To Try:
+;; Dejavu sans
+;;
+;;
+;;
+(let ((font "Hack"))
+  (when (member font  (font-family-list))
+    (set-frame-font font t t)))
+(set-face-attribute 'default nil :height 120)
 
 
 ;; Magit options
@@ -705,7 +727,7 @@ that uses 'font-lock-warning-face'."
       '((sequence "TODO(t!)"
                   "WORKING(w!)" "PAUSED(p!)" "QUERY(q)" "TESTING(e!)"
                   "|" "REVIEWING(r!)" "SENT(s!)" "DONE(d!)" "LATER(l!)" "FAILED(f!)" "DELAYED(a!)" "CANCELED(c!)" "DUPLICATE(u!)")
-	))
+        ))
 
 (setq org-todo-keyword-faces
       '(("TODO"  . (:foreground "red" :weight bold))
@@ -944,7 +966,17 @@ that uses 'font-lock-warning-face'."
               (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
               ;; This call here causes problems sometimes.  Is this code actually needed?
               ;; or can i rely on lsp-pyls to set itself up.
-              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))))
+              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))
+            ;;
+            ;; setup yapf mode.  Make sure we disabled it before we use our
+            ;; special version
+            ;;
+            (yapf-mode -1)
+            (lexical-let ((yapf-dir (file-name-directory (python-find-executable "yapf"))))
+              (add-hook 'before-save-hook (lambda ()
+                                            (whitespace-cleanup)
+                                            (with-exec-path yapf-dir
+                                              (yapfify-buffer)))))))
 
 (add-hook 'before-save-hook (lambda () (delete-trailing-whitespace)))
 
