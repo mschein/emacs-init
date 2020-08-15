@@ -3363,36 +3363,64 @@ Be sure to url encode the parameters.
           (push entry output))))
     (nreverse output)))
 
+(defun stream-vec (vec)
+  (lexical-let ((pos 0))
+    (fn (op)
+      (cl-case op
+        (:next (when (< pos (length vec))
+                 (prog1
+                     (aref vec pos)
+                   (incf pos))))
+        (:peek (aref vec pos))
+        ;; don't add unless we need it.
+        ;; (:prev (when (> pos 0) (decf pos)))
+        ;; (:pos pos)
+        (:empty-p (= pos (length vec)))))))
+
+(defun stream-list (lst)
+  (lexical-let ((head lst))
+    (fn (op)
+      (cl-case op
+        (:next (prog1
+                   (car head)
+                 (setf head (cdr head))))
+        (:peek (car head))
+        (:empty-p (null head))))))
+
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
 
+  ;;
   ;; TODO(mls): make this handle multiple HTTP/1.X <code> <comment> lines
   ;;
   ;; With that i can get rid of -f and also get :form to work.
   ;;
+  ;; Also, I need to make it check for multiple http stuff.
+  ;;
+  ;; what's the best way to do it?
+  ;;
   (let ((status-line)
-        (headers)
-        (301-response))
-
+        (headers))
     (dolist (line (mapcar (| string-left-trim-regex "< *" %)
                           (remove-if-not (| string-starts-with "<" %)
                                          (string->list curl-header-block "\r*\n+"))))
-      (cond
-       ;; Save the header.
-       (status-line (unless (string-nil-or-empty-p line)
-                      (push (parse-http-header line) headers)))
-       (301-response
-        ;; skip until we find a new header
-        (when (string-nil-or-empty-p line)
-          (setf 301-response nil)))
-       (t
-        (let* ((status (parse-http-status-line line))
-               (status-code (assoc1 :status-code status)))
-          (cond
-           ;; it's a continue, so skip it.
-           ((equal "100" status-code) t)
-           ((equal "301" status-code) (setf 301-response t))
-           (t (setf status-line status)))))))
+      (message "line: %s" line)
+      (let* ((line-info (or (when-let (parsed (ignore-errors (parse-http-header line)))
+                              (cons 'header parsed))
+                            (when-let (parsed (ignore-errors (parse-http-status-line line)))
+                              (cons 'status parsed))))
+             (line-type (car line-info))
+             (parsed-line (cdr line-info)))
+
+        (message "Line info: %s" line-info)
+        ;; idea: once you find a real header,
+        ;; the last status line is the one you go with.
+        (case line-type
+          (header
+           (push parsed-line headers))
+          (status
+           (assert (not headers) t "You shouldn't have a status line after you start looking at headers")
+           (setf status-line parsed-line)))))
     `((:status-line . ,status-line)
       (:headers . ,(coalesce-alist headers)))))
 
@@ -3405,7 +3433,7 @@ Be sure to url encode the parameters.
 (defun web-request--handle-auth (auth)
   (if (search ":" auth)
       auth
-    (concat auth ":" (read-user-password (format "Password(%s): " auth) auth))))
+    (concat auth ":" (read-user-password (format "Password for (%s): " auth) auth))))
 
 (defconst *webrequest-http-error-msg-len* 256)
 
@@ -3434,6 +3462,7 @@ rm -f ${ATTACHMENT}
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 (defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
+(defvar +proxy-auth+ nil "The auth to use with the proxy to use for making web requests.")
 
 ;;
 ;; Stuff to support
@@ -3540,6 +3569,7 @@ rm -f ${ATTACHMENT}
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
+           (proxy-auth (or proxy-auth +proxy-auth+))
            ;;
            ;; I should probably clean this up...
            ;; consolidate quoting and how we create values,
