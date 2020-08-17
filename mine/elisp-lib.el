@@ -3032,30 +3032,16 @@ Algorithm:
 
 (defun python-lsp-get-config ()
   "Return the path to pyls and the virtualenv directory."
-  ;; (let* ((is-git-project (git-within-git-repo-p))
-  ;;        (project-root (python-get-project-root))
-  ;;        (has-venv (find-virtualenv-file project-root))
-  ;;        (output (list "pyls" "/usr/")))
 
-  ;;   ;;
-  ;;   ;; algorithm
-  ;;   ;;
-  ;;   ;; is this a single script or a full python project?
-  ;;   ;; full project: is_git or has its own venv
-  ;;   ;;   point to the custom installed one
-  ;;   ;; else
-  ;;   ;;   use the defaults.
-  ;;   ;;
-  ;;   (when (or is-git-project has-venv)
-  ;;     ;; Make sure pyls is available for this project.
-  ;;     (when has-venv
-  ;;         (with-venv project-root
-  ;;           (python-lsp-setup-project project-root)
-  ;;           (if-let (pyls-path (which "pyls"))
-  ;;               (setf output (list pyls-path (find-venv-root project-root)))
-  ;;             (error "Failed to find a pyls in this virtual-env, or venv not found.  Create one and remove the .python-lsp-installed file")))))
-  ;;     ;; default values
-  ;;     output)
+  ;; make sure everything is installed
+  ;;
+  ;; This is a little gross, as it is also required to make
+  ;; yapf work.
+  ;;
+  (when (git-within-git-repo-p)
+    (when-let (project-root (python-get-project-root))
+      (python-lsp-setup-project project-root)))
+
   (let ((pyls-path (python-find-executable "pyls")))
     (list pyls-path (file-name-directory pyls-path))))
 

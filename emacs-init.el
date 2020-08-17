@@ -951,6 +951,8 @@ that uses 'font-lock-warning-face'."
 (global-set-key [f10] 'flymake-goto-prev-error)
 (global-set-key [f11] 'flymake-goto-next-error)
 
+(yapf-mode -1)
+
 ;; Automatically delete trailing whitespace when saving files
 ;; while you are in python major mode.
 ;; Also, only use spaces, no tabs.
@@ -973,12 +975,16 @@ that uses 'font-lock-warning-face'."
             ;;
             (yapf-mode -1)
             (lexical-let ((yapf-dir (file-name-directory (python-find-executable "yapf"))))
-              (add-hook 'before-save-hook (lambda ()
-                                            (whitespace-cleanup)
-                                            (with-exec-path yapf-dir
-                                              (yapfify-buffer)))))))
+              (cl-flet ((python-before-save-hook ()
+                          (message "start python save hook")
+                          (whitespace-cleanup)
+                          (message "start yapf %s" yapf-dir)
+                          (with-exec-path yapf-dir
+                            (message "yapf buffer %s" yapf-dir)
+                            (yapfify-buffer))))
+                (add-hook 'before-save-hook #'python-before-save-hook nil t)))))
 
-(add-hook 'before-save-hook (lambda () (delete-trailing-whitespace)))
+(add-hook 'before-save-hook #'delete-trailing-whitespace)
 
 ;; Try out jinja2 mode.
 (require 'jinja2-mode)
