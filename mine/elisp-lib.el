@@ -3404,7 +3404,6 @@ Be sure to url encode the parameters.
     (dolist (line (mapcar (| string-left-trim-regex "< *" %)
                           (remove-if-not (| string-starts-with "<" %)
                                          (string->list curl-header-block "\r*\n+"))))
-      (message "line: %s" line)
       (let* ((line-info (or (when-let (parsed (ignore-errors (parse-http-header line)))
                               (cons 'header parsed))
                             (when-let (parsed (ignore-errors (parse-http-status-line line)))
@@ -3412,7 +3411,6 @@ Be sure to url encode the parameters.
              (line-type (car line-info))
              (parsed-line (cdr line-info)))
 
-        (message "Line info: %s" line-info)
         ;; idea: once you find a real header,
         ;; the last status line is the one you go with.
         (case line-type
@@ -3459,6 +3457,7 @@ rm -f ${ATTACHMENT}
 
 ")
 
+;; webrequest dynamic variables.
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 (defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
