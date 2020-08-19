@@ -141,7 +141,7 @@
 ;; mkv -> mp4
 ;;
 ;;  ffmpeg -i input.mkv -codec copy output.mp4
-
+;;
 
 (cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length (overwrite-output t))
   "Get a slice from a video."
@@ -163,12 +163,34 @@
      :throw t)
     output-file))
 
+(cl-defun ffmpeg-remove-segment (path &key start end)
+  )
+
 (defun ffmpeg-get-movie-metadata (path)
   (run-to-json "ffprobe" "-v" "quiet" "-print_format" "json" "-show_format" path))
 
 (defun ffmpeg-movie-length (path)
   (string-to-number (assoc1 '(format duration) (ffmpeg-get-movie-metadata path))))
 
+(cl-defun ffmpeg-reduce-size (path &key (switch-codec t) (replace t))
+  ;;
+  ;; keep this simple and hard coded for now.
+  ;;
+  ;; ffmpeg -i input.mp4 -vcodec libx265 -crf 28 -b 800k output.mp4
+  ;;
+  ;; also:
+  ;;
+  ;; lower the bit rate.
+  ;; ffmpeg -i input.mp4 -b 800k output.mp4
+  ;;
+  (let ((length (ffmpeg-movie-length path))
+        (size (get-file-size (get-file-size path)))
+        (output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file))))
+    (do-cmd-async `("ffmpeg"
+                    "-i" ,path
+                    ,@(when switch-codec
+                          (list "-vcodec" "libx265"))
+                    ,output-file))))
 
 ;;
 ;; extract metadata
