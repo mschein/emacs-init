@@ -183,11 +183,13 @@
   ;; lower the bit rate.
   ;; ffmpeg -i input.mp4 -b 800k output.mp4
   ;;
-  (let ((length (ffmpeg-movie-length path))
-        (size (get-file-size (get-file-size path)))
-        (output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file))))
+  (let (;; (length (ffmpeg-movie-length path))
+        ;; (size (get-file-size path))
+        (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
     (do-cmd-async `("ffmpeg"
                     "-i" ,path
+                    "-crf" "28"
+                    "-b" "850k"
                     ,@(when switch-codec
                           (list "-vcodec" "libx265"))
                     ,output-file))))
