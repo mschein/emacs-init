@@ -399,13 +399,6 @@
 
 (autoload 'javascript-mode "javascript" nil t)
 
-(defun js-type-hooks ()
-  "Any commands we want to run when editing js style files (jsx etc.)"
-  (subword-mode))
-
-(add-hook 'js-mode-hook 'js-type-hooks)
-(add-hook 'web-mode-hook 'js-type-hooks)
-
 ;; flymake stuff is done later.
 (let ((js-basic-offset 2))
   (setq js2-basic-offset js-basic-offset)
@@ -419,6 +412,92 @@
 ;; Allow these functions.
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
+
+;; Enable flymake
+(require 'flymake)
+(if (>= emacs-major-version 26)
+    (eval-after-load 'flymake
+      (progn
+        (require 'flymake-diagnostic-at-point)
+        (setq flymake-diagnostic-at-point-timer-delay 0.3)
+        (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
+  (require 'flymake-cursor))
+
+;;
+;; Turn on a jslint flymake
+;;
+;; to setup on a new osx system:
+;; - brew install npm
+;; - npm install -g jshint
+;; - npm install -g eslint eslint-plugin-react babel-eslint
+;;
+;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
+;;
+;; TODO: I should make a function to simplify these declarations.
+;;
+
+(defun flymake-proc-jshint-init ()
+  (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
+                     'flymake-proc-create-temp-inplace))
+         (local-file (file-relative-name
+                      temp-file
+                      (file-name-directory buffer-file-name))))
+    (list "jshint" (list "--reporter=unix" local-file))))
+
+(defun flymake-proc-eslist-init ()
+  (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
+                     'flymake-proc-create-temp-inplace))
+         (local-file (file-relative-name
+                      temp-file
+                      (file-name-directory buffer-file-name))))
+    (list "eslint" (list "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix" local-file))))
+
+(when (which "jshint")
+  (if (< emacs-major-version 26)
+      (progn
+        (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
+        (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
+
+        (when (load "flymake" t)
+          (add-to-list 'flymake-allowed-file-name-masks
+                       '("\\.jsx\\'" flymake-eslint-checker))
+          (add-to-list 'flymake-allowed-file-name-masks
+                       '("\\.js\\'" flymake-js-checker)))
+        ;;
+        ;; Turn off flymake for xml/html since I can't get it to work
+        ;;
+        (setf flymake-allowed-file-name-masks (remove-if
+                                               (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
+                                               flymake-allowed-file-name-masks)))
+    (progn
+      (setq flymake-proc-allowed-file-name-masks
+           (cons '("\\.js\\'"
+                   flymake-proc-jshint-init
+                   flymake-proc-simple-cleanup
+                   flymake-proc-get-real-file-name)
+                 flymake-proc-allowed-file-name-masks))
+      (setq flymake-proc-err-line-patterns
+           (cons '("^\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\): \\(.+\\)$"
+                   1 2 3 4)
+                 flymake-proc-err-line-patterns))
+
+      (setq flymake-proc-allowed-file-name-masks
+            (cons '("\\.jsx\\'"
+                    flymake-proc-eslint-init
+                    flymake-proc-simple-cleanup
+                    flymake-proc-get-real-file-name)
+                  flymake-proc-allowed-file-name-masks)))))
+
+(defun js-type-hooks ()
+  "Any commands we want to run when editing js style files (jsx etc.)"
+  (subword-mode)
+  (when (and (which "jshint")
+             (>= emacs-major-version 26))
+    (flymake-mode t)))
+
+(add-hook 'js-mode-hook 'js-type-hooks)
+(add-hook 'web-mode-hook 'js-type-hooks)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Shell Mode options
@@ -879,16 +958,6 @@ that uses 'font-lock-warning-face'."
 
 ;; Turn on flymake with pylink et al.
 
-;; Move flymake errors to the mini-buffer
-(if (>= emacs-major-version 26)
-    (eval-after-load 'flymake
-      (progn
-        (require 'flymake-diagnostic-at-point)
-        (setq flymake-diagnostic-at-point-timer-delay 0.3)
-        (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode)))
-  (require 'flymake-cursor))
-
-
 (if (< emacs-major-version 26)
     (progn
       (defmacro define-flymake-checker (func cmd &rest args)
@@ -1010,37 +1079,6 @@ that uses 'font-lock-warning-face'."
 ;; (require 'pymacs)
 ;; (pymacs-load "ropemacs" "rope-")
 ;; (setq ropemacs-enable-autoimport t)
-
-;;
-;; Turn on a jslint flymake
-;;
-;; to setup on a new osx system:
-;; - brew install npm
-;; - npm install -g jshint
-;; - npm install -g eslint eslint-plugin-react babel-eslint
-;;
-;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
-;;
-;; TODO: I should make a function to simplify these declarations.
-;;
-
-(when (< emacs-major-version 26)
-  (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
-  (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
-
-  (when (load "flymake" t)
-    (add-to-list 'flymake-allowed-file-name-masks
-                 '("\\.jsx\\'" flymake-eslint-checker))
-    (add-to-list 'flymake-allowed-file-name-masks
-                 '("\\.js\\'" flymake-js-checker)))
-
-
-  ;;
-  ;; Turn off flymake for xml/html since I can't get it to work
-  ;;
-  (setf flymake-allowed-file-name-masks (remove-if
-                                         (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
-                                         flymake-allowed-file-name-masks)))
 
 (add-hook 'html-mode-hook
           (lambda ()
