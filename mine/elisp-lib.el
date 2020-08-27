@@ -2992,7 +2992,7 @@ in the keyring."
 (defun python-lsp-setup-project (project-root)
   ;; TODO: should this auto-create a venv?
 
-  (message "+++ Setup lsp project in %s" project-root)
+  (message "+++ Check lsp project in %s" project-root)
   (with-venv project-root
     (message "This is a git project, so activate the virtualenv if possible")
     (message "Install any needed dependencies in the virtualenv %s" (getenv "VIRTUAL_ENV"))
@@ -3522,8 +3522,9 @@ rm -f ${ATTACHMENT}
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
                          testing.
    `+cache-request+': Use the url cache to save lookup time.
-   `+proxy-url+': Provide the url as an argument to --proxy
-   `+proxy-auth+': Provide auth for a proxy, a la proxy user.
+   `+proxy-url+': Provide the url as an argument to --proxy.  Can also be a function which will
+                  be called with the url as its argument.
+   `+proxy-auth+': Provide auth for a proxy, a la proxy user.  Can also be a function.
 
    Returns:
    An alist with the following information:
@@ -3609,8 +3610,6 @@ rm -f ${ATTACHMENT}
         (append-option user-agent (| `("-A" ,user-agent)))
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
-        (let ((proxy-url (or proxy +proxy-url+)))
-          (append-option proxy-url (| `("--proxy" ,proxy-url))))
 
         ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
@@ -3638,6 +3637,9 @@ rm -f ${ATTACHMENT}
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
 
+        (let ((proxy-url (or proxy +proxy-url+)))
+          (append-option proxy-url (| `("--proxy" ,proxy-url))))
+
         (if +preserve-request+
             (progn
               (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
@@ -3648,7 +3650,6 @@ rm -f ${ATTACHMENT}
                               (string-join cmd " "))
                       output-file)
                 (chmod output-file #o700))))
-
         ;;
         ;; This gets complicated because we've elected to support async, sync, and caching
         ;; in the same function.
@@ -3761,6 +3762,10 @@ rm -f ${ATTACHMENT}
 
 (defun web-request-for-status (&rest args)
   (web-request-success-p (apply #'web-request args)))
+
+(defun web-request-reset-proxy-password (proxy-user)
+  "If you need remove the cached proxy password for `web-request' run this."
+  (password-cache-remove proxy-user))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))

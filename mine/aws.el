@@ -645,6 +645,10 @@ doesn't deal with paging yet."
      (unless (string-match "NoSuchEntity" (error-message-string err))
        (error err)))))
 
+(defun aws-assume-role (role-arn role-session-name)
+  (let ((-aws-return-json t))
+    (aws-sts "assume-role" "--role-arn" role-arn "--role-session-name" role-session-name)))
+
 (defun aws-elasticsearch-list-domain-names ()
   (let ((-aws-return-json t))
     (mapcar (fn (data)
@@ -655,9 +659,12 @@ doesn't deal with paging yet."
   (let ((-aws-return-json t))
     (aws-es "describe-elasticsearch-domain" "--domain-name" domain-name)))
 
-(defun aws-elasticsearch-get-vpc-endpoint (domain-name)
-  (assoc1 '(DomainStatus Endpoints vpc)
-          (aws-elasticsearch-describe domain-name)))
+(defun aws-elasticsearch-get-endpoint (domain-name)
+  (let ((ds  (assoc1 'DomainStatus (aws-elasticsearch-describe domain-name))))
+    (if-let (end-point (assoc-get 'Endpoint ds))
+        end-point
+      (assoc1 '(Endpoints vpc) ds))))
+
 
 (defun aws-elasticsearch-is-encrypted-p (domain-name)
   (not (eql :json-false
