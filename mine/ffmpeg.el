@@ -106,7 +106,7 @@
 (cl-defun ffmpeg-to-audio-dir (dir &key match)
   ;; I know this is lame, but it's just a place holder.
   (pushd dir
-    (message "Star processing %s" dir)
+    (message "Start processing %s" dir)
     (cl-loop for file in (list-directory-entries dir :match match)
              do (progn
                   (message "Process file %s" file)
