@@ -671,6 +671,13 @@ doesn't deal with paging yet."
             (assoc1 '(DomainStatus EncryptionAtRestOptions Enabled)
                     (aws-elasticsearch-describe domain-name)))))
 
+(defun aws-sqs-list-queues (&optional prefix)
+  (let ((-aws-return-json t))
+    (assoc1 'QueueUrls
+            (apply #'aws-sqs `("list-queues"
+                               ,@(when prefix
+                                   (list "--queue-name-prefix" prefix)))))))
+
 ;; describe-container-instances can get you the ami id.
 
 (provide 'aws)
