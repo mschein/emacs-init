@@ -1,0 +1,25 @@
+# -*- coding: utf-8 -*-
+# name: startm
+# contributor: Mike Scheinholtz
+# --
+#!/usr/bin/env python
+"""
+
+"""
+
+import os
+import sys
+import click
+
+######################################################################
+# Script Start
+######################################################################
+
+
+@click.group()
+def cli():
+    pass
+
+
+if __name__ == '__main__':
+    main()
