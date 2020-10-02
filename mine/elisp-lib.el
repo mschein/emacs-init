@@ -73,16 +73,16 @@ the setter work."
   (cdr (apply #'--assoc1-common args)))
 
 (defun rassoc1 (value list)
-  "Lookup a key in an alist and raise an error if its not there.
+  "Lookup a key in an alist matching the cdr and raise an error if its not there.
 
-   Returns the value (The cdr of the element).
+   Returns the value (The car of the element).
    Values can be nil and it will still work.
    `key': The key to lookup
    `list': The associated list to check.
   "
 
   (if-let (answer (rassoc value list))
-      (cdr answer)
+      (car answer)
     (error "Value \'%s\' not found" value)))
 
 ;; Note, this only works in emacs 26
