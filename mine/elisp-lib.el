@@ -3339,7 +3339,7 @@ Be sure to url encode the parameters.
   (if-let (result (string-find "^HTTP/\\([0-9.]+\\) \\([0-9]+\\)\\(.*\\)$" line))
       (destructuring-bind (version code message) result
         `((:http-version . ,version)
-          (:status-code . ,code)
+          (:status-code . ,(string-to-number code))
           (:message . ,(string-trim message))))
     (error "Unable to parse http status line: %s" line)))
 
@@ -3380,17 +3380,9 @@ Be sure to url encode the parameters.
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
 
-  ;;
-  ;; TODO(mls): make this handle multiple HTTP/1.X <code> <comment> lines
-  ;;
-  ;; With that i can get rid of -f and also get :form to work.
-  ;;
-  ;; Also, I need to make it check for multiple http stuff.
-  ;;
-  ;; what's the best way to do it?
-  ;;
   (let ((status-line)
-        (headers))
+        (headers)
+        (found-real-status))
     (dolist (line (mapcar (| string-left-trim-regex "< *" %)
                           (remove-if-not (| string-starts-with "<" %)
                                          (string->list curl-header-block "\r*\n+"))))
@@ -3403,12 +3395,19 @@ Be sure to url encode the parameters.
 
         ;; idea: once you find a real header,
         ;; the last status line is the one you go with.
-        (case line-type
-          (header
-           (push parsed-line headers))
-          (status
-           (assert (not headers) t "You shouldn't have a status line after you start looking at headers")
-           (setf status-line parsed-line)))))
+        (cond
+         ((and (eql line-type 'header) found-real-status)
+          (message "Save header")
+          (push parsed-line headers))
+         ((eql line-type 'status)
+          ;;
+          ;; Assume that once we get through the redirects, the first status is
+          ;; the start of something legit.
+          ;;
+          (unless (http-code-is-redirect-p (assoc1 :status-code parsed-line))
+              (assert (not headers) t "You shouldn't have a status line after you start looking at headers")
+              (setf status-line parsed-line)
+              (setf found-real-status t))))))
     `((:status-line . ,status-line)
       (:headers . ,(coalesce-alist headers)))))
 
@@ -3425,9 +3424,14 @@ Be sure to url encode the parameters.
 
 (defconst *webrequest-http-error-msg-len* 256)
 
+(defun http-code-is-redirect-p (code)
+  "Return true of `code' represents an http redirect"
+  (<= 300 code 399))
+
 (defun http-classify-status-code (code)
   (cond
    ((< code 0) :unknown-error)
+   ((<= 300 code 399) :redirect)
    ((<= 400 code 499) :client-error)
    ((<= 500 code 599) :server-error)
    (t :success)))
@@ -3680,7 +3684,7 @@ rm -f ${ATTACHMENT}
                              (status-line (assoc1 :status-line resp-block))
                              (curl-code (assoc1 :code resp))
                              (http-code (if (= curl-code 0)
-                                            (string-to-number (assoc1 :status-code status-line))
+                                            (assoc1 :status-code status-line)
                                           -1))
                              (http-error-type (http-classify-status-code http-code))
                              (headers (assoc1 :headers resp-block))
