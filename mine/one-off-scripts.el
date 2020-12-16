@@ -329,7 +329,8 @@ Specify license
   :version \"0.0.1\"
   :serial t
   :depends-on (${deps})
-  :components ((:file \"package\")
+  :components ((:file \"mu\")
+               (:file \"package\")
                (:file \"${name}\")))
 ")
 
@@ -360,13 +361,13 @@ Specify license
           (sb-ext:posix-environ)))
 
 ;; Pretty print a hash table
-(defmethod print-object ((object hash-table) stream)
-  (format stream \"#HASH{~{~{(~a : ~a)~}~^ ~}}\"
-          (loop for key being the hash-keys of object
-                using (hash-value value)
-                collect (list key value))))
+;; (defmethod print-object ((object hash-table) stream)
+;;   (format stream \"#HASH{~{~{(~a : ~a)~}~^ ~}}\"
+;;           (loop for key being the hash-keys of object
+;;                 using (hash-value value)
+;;                 collect (list key value))))
 
-;; https://github.com/libre-man/unix-opts
+;; Use our cli-args code
 (defun main ()
   (format t \"argv: ~A~%\" sb-ext:*posix-argv*)
   (format t \"env: ~A~%\" (environment->alist)))
@@ -431,10 +432,11 @@ Specify license
 ")
 
 (defconst *common-lisp-standard-projects* '(("lib" . ())
-                                            ;; adopt may be worth looking at.
-                                            ("cli" . ("command-line-arguments"))
+                                            ("cli" . ())
                                             ("web" . ("drakma"
-                                                      "hunchentoot"))))
+                                                      "hunchentoot"
+                                                      "easy-routes"
+                                                      "sqlite"))))
 
 (defun padding (length)
   ;; There's probably a smarter way to do this.
@@ -447,13 +449,12 @@ Specify license
                         "closer-mop"
                         "let-plus"
                         "prove"
+                        "serapeum"
                         "rutils"
                         "rutilsx"
                         "split-sequence"
-                        "trivia"
-                        "trivial-types"
                         "uiop"
-                        "unix-opts"))
+                        ))
         (padding (padding (length "  :depends-on ("))))
 
     (string-join (mapcar (| format "#:%s" %) (concatenate 'list default-deps
