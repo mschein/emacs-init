@@ -115,6 +115,28 @@
   "A list of aws cli subcommands."
   )
 
+(defconst aws-region-table '((us-east-2 . ohio)
+                             (us-east-1 . n-virginia)
+                             (us-west-1 . n-california)
+                             (us-west-2 . oregon)
+                             (af-south-1 . cape-town)
+                             (ap-east-1 . hong-kong)
+                             (ap-south-1 . mumbai)
+                             (ap-northeast-3 . osaka-local)
+                             (ap-northeast-2 . seoul)
+                             (ap-southeast-1 . singapore)
+                             (ap-southeast-2 . sydney)
+                             (ap-northeast-1 . tokyo)
+                             (ca-central-1 . central)
+                             (eu-central-1 . frankfurt)
+                             (eu-west-1 . ireland)
+                             (eu-west-2 . london)
+                             (eu-south-1 . milan)
+                             (eu-west-3 . paris)
+                             (eu-north-1 . stockholm)
+                             (me-south-1 . bahrain)
+                             (sa-east-1 . sao-paulo)))
+
 ;; Need to make this take do-cmd's arguments?
 (defvar -aws-return-json nil "Control what the -aws function returns")
 
@@ -257,6 +279,14 @@
         (volume-ids (to-list volume-ids)))
     (data-to-buffer (apply #'aws-ec2 "describe-volumes" "--volume-ids" volume-ids)
                     "+volume-data-for-%s-+" (string-join volume-ids "-"))))
+
+(defun aws-list-regions ()
+  (let ((-aws-return-json t))
+    (assoc1 'Regions (aws-ec2 "describe-regions"))))
+
+(defun aws-list-region-names ()
+  (cl-loop for region across (aws-list-regions)
+           collect (assoc1 'RegionName region)))
 
 ;; XXX Fix filters vs filter elsewhere.
 (cl-defun aws-ec2-describe-instances (&key instance-ids filters)
@@ -447,6 +477,27 @@
     (let ((cluster (aws-find-service-cluster service-name)))
       (aws-get-task-definition-in-cluster cluster service-name))))
 
+(defun aws-list-task-definitions (family-prefix)
+  (let ((-aws-return-json t))
+    (assoc1 'taskDefinitionArns
+            (aws-ecs "list-task-definitions" "--family-prefix" family-prefix))))
+
+(defun aws-latest-task-definition (family-prefix)
+  (when-let ((task-defs (aws-list-task-definitions family-prefix)))
+    (aref task-defs (1- (length task-defs)))))
+
+(cl-defun aws-run-task (task-definition &key cluster cmd container)
+  (when cmd
+    (assert container))
+
+  (assert cluster)
+
+  (let ((args (list "--task-definition" task-definition)))
+    (when cluster
+      (append! args (list "--cluster" cluster)))
+    (let ((-aws-return-json t))
+      (apply #'aws-ecs "run-task" args))))
+
 (defun aws-get-service-container (service-name)
   (aws-traverse '(containerDefinitions 0)
                 (aws-get-task-definition-for-service service-name)))
@@ -456,10 +507,7 @@
 
 (defun aws-get-container-for-service (cluster service)
   (let ((-aws-return-json t))
-    (assoc1 'containerDefinitions aws-get-task-definition-for-service)
-    ))
-
-
+    (assoc1 'containerDefinitions aws-get-task-definition-for-service)))
 
 (defun aws-ecs-get-ips (service-name)
   (let ((-aws-return-json t))
@@ -504,6 +552,12 @@
   (let ((cluster (aws-find-service-cluster service-name)))
     (assert cluster)
     (aws-ecs-list-tasks cluster service-name)))
+
+
+(defun aws-find-task-cluster (task-name)
+  )
+(defun aws-find-task (task-name)
+  )
 
 (cl-defun aws-ecs-collect-services (service-pattern)
   (let ((aws-access-key (aws-current-access-key-id)))
@@ -671,12 +725,28 @@ doesn't deal with paging yet."
             (assoc1 '(DomainStatus EncryptionAtRestOptions Enabled)
                     (aws-elasticsearch-describe domain-name)))))
 
+(defun aws-sqs-attributes (queue-url)
+  (let ((-aws-return-json t))
+    (assoc1 'Attributes
+            (aws-sqs "get-queue-attributes" "--queue-url" queue-url "--attribute-names" "All"))))
+
 (defun aws-sqs-list-queues (&optional prefix)
   (let ((-aws-return-json t))
-    (assoc1 'QueueUrls
-            (apply #'aws-sqs `("list-queues"
-                               ,@(when prefix
-                                   (list "--queue-name-prefix" prefix)))))))
+    (assoc-get 'QueueUrls
+               (apply #'aws-sqs `("list-queues"
+                                  ,@(when prefix
+                                      (list "--queue-name-prefix" prefix))))
+               [])))
+
+(defun aws-list-groups ()
+  (let ((-aws-return-json t))
+    (assoc1 'Groups
+            (aws-iam "list-groups"))))
+
+(defun aws-cloudfront-get-distribution (id)
+  (let ((-aws-return-json t))
+    (assoc1 'Distribution
+            (aws-cloudfront "get-distribution" "--id" id))))
 
 ;; describe-container-instances can get you the ami id.
 

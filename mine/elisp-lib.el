@@ -1341,7 +1341,7 @@ Use this likely in leu of `buffer-string'."
 
 (defun usec->time (usec)
   (seconds-to-time (/ usec 1000000)))
-
+'
 ;; XXX Should also make this run in the buffer (take the last N digits until someting not a number.
 (defun usec->date (usec)
   (interactive "dusec: ")
@@ -3005,7 +3005,7 @@ in the keyring."
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
-        (run "pip" "install" "python-language-server[all]==0.33.1" "yapf==0.30.0")
+        (run "pip" "install" "python-language-server[all]==0.33.1" "yapf==0.30.0" "ujson==3.2.0")
         (touch installation-finished-file)))))
 
 ;;

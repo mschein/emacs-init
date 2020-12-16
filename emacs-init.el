@@ -342,6 +342,9 @@
 (setq column-number-mode 1)
 (show-paren-mode 1)
 
+;; Make it so you can read my long buffer names
+(setq Buffer-menu-name-width 50)
+
 ;; OSX key bindings
 (when (eq system-type 'darwin) ;; mac specific settings
   (setq mac-option-modifier 'alt)
@@ -988,28 +991,29 @@ that uses 'font-lock-warning-face'."
         (when (eql 'python-mode major-mode)
           (update-flymake-mask "." checker)))
 
-      (defun setup-python3-mode ()
-        (interactive)
-        (setup-python-mode-common "python3" #'flymake-flake83-checker)
-        (message "Set python3 mode"))
+      ;; (defun setup-python3-mode ()
+      ;;   (interactive)
+      ;;   (setup-python-mode-common "python3" #'flymake-flake83-checker)
+      ;;   (message "Set python3 mode"))
 
-      (defun setup-python2-mode ()
-        (interactive)
-        (setup-python-mode-common "python" #'flymake-flake8-checker)
-        (message "Set python2 mode"))
+      ;; (defun setup-python2-mode ()
+      ;;   (interactive)
+      ;;   (setup-python-mode-common "python" #'flymake-flake8-checker)
+      ;;   (message "Set python2 mode"))
 
 
-      (when (load "flymake" t)
-        ;; Do I need this, if I call this during the mode hook?
-        (setup-python3-mode))
+      ;; (when (load "flymake" t)
+      ;;   ;; Do I need this, if I call this during the mode hook?
+      ;;   (setup-python3-mode))
 
       ;; If we're in python mode, make sure flymake comes on.
-      (add-hook 'python-mode-hook (lambda ()
-                                    ;; enable flymake-python for files with no '.py' extension
-                                    (make-local-variable 'flymake-allowed-file-name-masks)
-                                    (if (guess-python-version-3)
-                                        (setup-python3-mode)
-                                      (setup-python2-mode)))))
+      ;; (add-hook 'python-mode-hook (lambda ()
+      ;;                               ;; enable flymake-python for files with no '.py' extension
+      ;;                               (make-local-variable 'flymake-allowed-file-name-masks)
+      ;;                               (if (guess-python-version-3)
+      ;;                                   (setup-python3-mode)
+      ;;                                 (setup-python2-mode))))
+      )
   ;; emacs 26 version
   (progn
     (add-hook 'python-mode-hook (lambda ()
@@ -1155,7 +1159,7 @@ that uses 'font-lock-warning-face'."
  '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
  '(package-selected-packages
    (quote
-    (lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))))
+    (company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
