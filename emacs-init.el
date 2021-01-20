@@ -192,7 +192,11 @@
 ;; Toggle readonly c-x c-q
 ;;
 ;; Debugging:
-;; M-X check-parens to find unbalanced stuff.
+;; M-x check-parens to find unbalanced stuff.
+;;
+;; Compile a common lisp function with debugging enabled.
+;; : C-u C-c C-k
+;;
 ;;
 ;; Fix font... I am not using the anti-aliased fonts.
 ;;
@@ -201,11 +205,10 @@
 ;; c-x c-k l:Turn the last 100 commands into a macro
 ;;
 ;; More emacs key strokes.
-;; http://www.cs.rutgers.edu/LCSR-Computing/some-docs/emacs-chart.html
+;;   http://www.cs.rutgers.edu/LCSR-Computing/some-docs/emacs-chart.html
 ;;
 ;; Mastering eshell:
-;;  http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/
-;;
+;;   http://www.masteringemacs.org/articles/2010/12/13/complete-guide-mastering-eshell/
 ;;
 ;; Recursively search files.
 ;; M-x find-name-dired: you will be prompted for a root directory and a filename pattern.

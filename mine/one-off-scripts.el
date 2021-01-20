@@ -329,8 +329,7 @@ Specify license
   :version \"0.0.1\"
   :serial t
   :depends-on (${deps})
-  :components ((:file \"mu\")
-               (:file \"package\")
+  :components ((:file \"package\")
                (:file \"${name}\")))
 ")
 
@@ -354,11 +353,11 @@ Specify license
 ;;
 (in-package #:${name})
 
-(defun environment->alist ()
-  (mapcar (lambda (elm)
-            (destructuring-bind (key &optional value) (cl-ppcre:split \"=\" elm)
-              (cons key value)))
-          (sb-ext:posix-environ)))
+;; (defun environment->alist ()
+;;   (mapcar (lambda (elm)
+;;             (destructuring-bind (key &optional value) (cl-ppcre:split \"=\" elm)
+;;               (cons key value)))
+;;           (sb-ext:posix-environ)))
 
 ;; Pretty print a hash table
 ;; (defmethod print-object ((object hash-table) stream)
@@ -367,10 +366,12 @@ Specify license
 ;;                 using (hash-value value)
 ;;                 collect (list key value))))
 
-;; Use our cli-args code
+(defvar *cli-args*
+  '(:start))
+
 (defun main ()
-  (format t \"argv: ~A~%\" sb-ext:*posix-argv*)
-  (format t \"env: ~A~%\" (environment->alist)))
+  (cli-args:main-handler *cli-args*))
+
 ")
 
 (defconst *cl-build-cli-sh* "#!/bin/bash -ev
@@ -382,6 +383,10 @@ rm -f ${name}
 sbcl --no-sysinit \\
      --no-userinit \\
      --load build-cli.lisp
+
+# install ./${name} ~/bin/
+# cp ./${name} /Volumes/Documents/software/binaries/
+
 ")
 
 (defconst *cl-build-cli-lisp* "(declaim (optimize (speed 3) (space 3) (debug 0)))
@@ -428,11 +433,11 @@ Specify license
 (defconst *cl-package* ";;;; package.lisp
 
 (defpackage #:${name}
-  (:use #:cl))
+  (:use #:cl #:mu))
 ")
 
 (defconst *common-lisp-standard-projects* '(("lib" . ())
-                                            ("cli" . ())
+                                            ("cli" . ("cli-args"))
                                             ("web" . ("drakma"
                                                       "hunchentoot"
                                                       "easy-routes"
@@ -454,6 +459,7 @@ Specify license
                         "rutilsx"
                         "split-sequence"
                         "uiop"
+                        "mu"
                         ))
         (padding (padding (length "  :depends-on ("))))
 
