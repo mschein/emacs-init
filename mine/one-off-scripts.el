@@ -436,6 +436,9 @@ Specify license
   (:use #:cl #:mu))
 ")
 
+(defconst *cl-gitignore* "*.fasl
+${name}")
+
 (defconst *common-lisp-standard-projects* '(("lib" . ())
                                             ("cli" . ("cli-args"))
                                             ("web" . ("drakma"
@@ -489,6 +492,7 @@ Specify license
       (cl-loop for (file template) in `(("README.md" ,(if is-cli
                                                           *cl-cli-readme*
                                                         *cl-readme*))
+                                        (".gitignore" ,*cl-gitignore*)
                                         (,(format "%s.asd" name) ,*cl-asd*)
                                         (,(format "%s.lisp" name) ,(if is-cli
                                                                        *cl-cli-main*
