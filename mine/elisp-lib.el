@@ -1895,18 +1895,20 @@ Returns a list of alists."
     (assert (or (symbolp u) (stringp u))))
 
   (ht-set! m-bookmark-table name url)
-  `(defun ,name ()
-    ,(format "The `%s' function opens up the %s url.%s" name url
-             (if (> (length urls) 1)
-                 (format "  And %d others." (length urls))
-               ""))
-    (interactive)
-    (browse-url ,url t)
-    (sleep-for 1)
-    ,@(mapcar (lambda (u)
-                ;; You must pass nil, so it doesn't use the default
-                ;; value for browse-url-new-window-flag
-                `(browse-url ,u nil)) urls)))
+  (with-gensyms (u)
+    `(defun ,name ()
+       ,(format "The `%s' function opens up the %s url.%s" name url
+                (if (> (length urls) 1)
+                    (format "  And %d others." (length urls))
+                  ""))
+       (interactive)
+       (browse-url ,url t)
+       (sleep-for 1)
+       (dolist (,u ',urls)
+         ;; You must pass nil, so it doesn't use the default
+         ;; value for browse-url-new-window-flag
+         (browse-url ,u nil)
+         (sleep-for .3)))))
 
 (defun show-web-bookmark-data ()
   (interactive)
@@ -2819,6 +2821,18 @@ python debugging session."
   (run "python3" "-m" "venv" ".venv/")
   (run "ln" "-s" ".venv/bin/activate" "activate"))
 
+(defun python-reset-venv ()
+  (interactive)
+  (when (y-or-n-p (format "Reset virtual env in %s" default-directory))
+    (message "Resetting virtual env in %s" default-directory)
+    (let* ((venv-dir ".venv/")
+           (activate-file "activate"))
+      (run "rm" "-rf" venv-dir)
+      (run "rm" "-f" activate-file)
+      (run "rm" "-f" ".python-lsp-installed")
+      (run "python3" "-m" "venv" venv-dir)
+      (make-symbolic-link (path-join venv-dir "bin/activate") activate-file))))
+
 (defun yank-to-pytest-fn ()
   "Generate a pytest string for a particular python test fuction, and store it
 in the keyring."
@@ -3005,7 +3019,7 @@ in the keyring."
       (unless (and (file-exists-p installation-finished-file)
                    (which "pyls"))
         ;; Note: Don't install the project "pyls", that is something else.
-        (run "pip" "install" "python-language-server[all]==0.33.1" "yapf==0.30.0" "ujson==3.2.0")
+        (run "pip" "install" "python-language-server[all]==0.36.2")
         (touch installation-finished-file)))))
 
 ;;

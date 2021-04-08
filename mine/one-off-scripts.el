@@ -249,6 +249,13 @@ setup(name=package,
 (defconst *python-init-file* "# empty module file
 ")
 
+(defconst *python-git-ignore-file* ".venv/
+activate
+.python-lsp-installed
+__pycache__
+db.sqlite3
+*.pyc")
+
 (defun python-init-basic-dir (dir)
   (pushd dir
     (message "setup git module")
@@ -256,7 +263,13 @@ setup(name=package,
     (let ((venv-dir ".venv"))
       (message "create virtualenv")
       (run "python3" "-m" "venv" venv-dir)
-      (make-symbolic-link ".venv/bin/activate" "activate"))))
+      (make-symbolic-link ".venv/bin/activate" "activate")
+      ;;
+      ;; Add a git ignore file
+      ;;
+      (barf *python-git-ignore-file* ".gitignore")
+
+      )))
 
 (defun python-create-project (dir)
   (interactive "Fdir: ")
@@ -298,15 +311,45 @@ setup(name=package,
     (pushd dir
       (python-init-basic-dir dir))))
 
+(defconst *django-readme-file* "# This is a django project.
+
+# Some basic commands:
+- Start server:
+  $ python manage.py runserver
+  You can also give it a port or ip <runserver 0:8080, etc.>
+
+- Create an app inside your project:
+  $ python manage.py startapp <project>
+
+  A core app is created by default.
+")
+
 (defun python-create-django-project (dir)
   (interactive "Fdir: ")
   (python-create-bare-project dir)
 
+  ;;
+  ;; Don't forget django has the concept of
+  ;;
+  ;; projects and then apps within that project.
+  ;; so you may want to be careful and have the caller pick
+  ;; two names.
+  ;;
+
   (with-venv dir
-    ;; Add a docker file?
-    (message "Install django")
-    (run "pip3" "install" "Django")
-    (run "django-admin" "startproject" (basename dir))))
+    (pushd dir
+      ;; Add a docker file?
+      (message "Install django")
+      (run "pip3" "install" "Django")
+      (message "Django version installed: %s" (run-to-str "python" "-m" "django" "--version"))
+      (run "django-admin" "startproject" (basename dir) ".")
+      (barf *django-readme-file* "README.md")
+      (when (y-or-n-p "Create a 'core' app? ")
+        (run "python" "manage.py" "startapp" "core")
+
+        ;; Might want to add the url plumbing code from main -> core -> a basic
+        ;; index
+        ))))
 
 ;; May want to add more metadata to these.
 (defconst *cl-readme* "# ${name}
