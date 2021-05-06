@@ -206,7 +206,7 @@ the setter work."
 ;; I want (string-find "\\([0-9+\\)" "1 2 3 4 5") to
 ;; find all numbers and put them in a list.
 ;;
-(defun* string-find (regex str &optional (start 0))
+(cl-defun string-find (regex str &optional (start 0))
   (if (string-match regex str start)
       (let ((i 1)
             (out '())
