@@ -1,14 +1,14 @@
 #name : header template for my elisp files.
 #contributor : Michael Scheinholtz
 # --
-;; 
+;;
 ;; Copyright (C) by Michael Scheinholtz 2010.  All Rights Reserved.
 ;;
 ;; Descrption:
 ;; Enter description here.
 ;;
 
-(require 'cl)
+(require 'cl-lib)
 
 
 (provide '`(buffer-name-no-extn)`)
