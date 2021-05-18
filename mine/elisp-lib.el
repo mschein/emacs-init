@@ -230,7 +230,7 @@ the setter work."
          (setq index (length str))))
     out))
 
-(defmacro* m-when-let ((name test) &rest body)
+(cl-defmacro m-when-let ((name test) &rest body)
   "Provides a (when) macro with a let binding.
 When-let binds a name to the result of the a test for use inside the BODY.
 
