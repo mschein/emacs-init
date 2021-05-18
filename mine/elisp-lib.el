@@ -585,7 +585,7 @@ result of fun."
              (setf out (concat out str)))
     out))
 
-(defun* partition (n list &key (step n) (pad nil))
+(cl-defun partition (n list &key (step n) (pad nil))
   "A grouping function.
   Split a list into sublists of length n.  A step value is optional.
 
@@ -795,7 +795,7 @@ each character in the string `chars'."
   `(,fun (format ,str ,@args)))
 
 ;; TODO(scheinholtz): Use the async I/O for this.
-(defun* doit-shell (doit-str silent fmt &rest args)
+(cl-defun doit-shell (doit-str silent fmt &rest args)
   (let ((cmd (apply #'format fmt args))
         (doit (string= "yes" doit-str)))
     (when (or (not doit) (not silent))
@@ -1366,7 +1366,7 @@ Use this likely in leu of `buffer-string'."
 (defun current-time->usec ()
   (-> (current-time) time-to-seconds  sec->usec))
 
-(defun* conv-time (time &key (seconds 0) (minutes 0) (hours 0) (days 0) (months 0) (years 0))
+(cl-defun conv-time (time &key (seconds 0) (minutes 0) (hours 0) (days 0) (months 0) (years 0))
   (let* ((oplist (list seconds minutes hours days months years))
          (split-time (take (length oplist) (decode-time time))))
     (apply #'encode-time (mapcar* '+ split-time oplist))))
@@ -1479,7 +1479,7 @@ Use this likely in leu of `buffer-string'."
              (string= ".." name)))))
 
 ;; find-lisp makes this uneeded.. .keeping for poseterity.
-(defun* traverse-directories (cb_fn start_dir &key (file_match nil) (max_depth 500))
+(cl-defun traverse-directories (cb_fn start_dir &key (file_match nil) (max_depth 500))
   (mapc (lambda (file)
           (if (or (not file_match) (string-match file_match (file-name-nondirectory file)))
               (funcall cb_fn file))
