@@ -243,23 +243,29 @@ test.  If the test returned nil, then the body will not execute."
   `(let ((,name ,test))
      (when ,name ,@body)))
 
-(unless (fboundp 'if-let)
-  (defmacro if-let (test-binding &rest forms)
-    "Provides an if macro that binds a value a la let.
+;; (unless (fboundp 'assert)
+;;   (defalias 'assert #'cl-assert))
 
-Example:
- (if-let (res (fetch-string))
-   (convert-to-something res)
-   (error \"failed to fetch string\"))
-Here res is the name, and (fetch-string) is the
-test clause.  If fetch-string returns nil, the
-error case is executed, otherwise the success
-case is executed.  res is bount to the result
-of the test."
-    (declare (indent 2))
-    (destructuring-bind (name test) test-binding
-      `(let ((,name ,test))
-         (if ,name ,@forms)))))
+;; (unless (fboundp 'destructuring-bind)
+;;   (defalias 'destructuring-bind #'cl-destructuring-bind))
+
+;; (unless (fboundp 'loop)
+;;   (defalias 'loop #'cl-loop))
+
+;; (unless (fboundp 'reduce)
+;;   (defalias 'reduce #'cl-reduce))
+
+;; (unless (fboundp 'remove-if)
+;;   (defalias 'remove-if #'remove-if))
+
+;; Keep some of the (require 'cl) functions
+(cl-loop for (sym cl-sym) in '((assert cl-assert)
+                               (destructuring-bind cl-destructuring-bind)
+                               (loop cl-loop)
+                               (reduce cl-reduce)
+                               (remove-if cl-remove-if))
+         do (unless (fboundp sym)
+              (defalias sym cl-sym)))
 
 (unless (fboundp 'if-let)
   (defmacro if-let (test-binding &rest forms)
@@ -284,23 +290,23 @@ of the test."
 
     ;; build up a chain of if-lets, with the false case always the same.
     (destructuring-bind (pos &rest neg) forms
-      (reduce (fn (prev-bindings binding)
-                `(if-let ,binding
-                     ,prev-bindings
-                   ,@neg))
-              (reverse test-bindings)
-              :initial-value pos))))
+      (cl-reduce (fn (prev-bindings binding)
+                   `(if-let ,binding
+                        ,prev-bindings
+                      ,@neg))
+                 (reverse test-bindings)
+                 :initial-value pos))))
 
 (defmacro when-let* (test-bindings &rest forms)
   ;; Would it be better to do this with a regular loop, to get rid of the
   ;; "car"
   (declare (indent defun))
   (car
-   (reduce (fn (prev-bindings binding)
-               `((m-when-let ,binding
-                   ,@prev-bindings)))
-           (reverse test-bindings)
-           :initial-value forms)))
+   (cl-reduce (fn (prev-bindings binding)
+                `((m-when-let ,binding
+                      ,@prev-bindings)))
+              (reverse test-bindings)
+              :initial-value forms)))
 
 (defmacro acond (&rest clauses)
   "An anaphoric cond.  Each test binds its result to it
@@ -499,15 +505,15 @@ of the test."
                     args)))
     `(lambda ,arg-list
        ;; Build nested destructuring binds.
-       ,@(reduce (lambda (forms bind-info)
-                   ;; Hackey.  I want the first form to not be a list
-                   ;; but the rest of the destructuring-binds should keep
-                   ;; their parens.  So I use ,@ and double up the parens
-                   ;; on the destruct.
-                   `((destructuring-bind ,(car bind-info) ,(cdr bind-info)
-                      ,@forms)))
-                 destruct-list
-                 :initial-value forms))))
+       ,@(cl-reduce (lambda (forms bind-info)
+                      ;; Hackey.  I want the first form to not be a list
+                      ;; but the rest of the destructuring-binds should keep
+                      ;; their parens.  So I use ,@ and double up the parens
+                      ;; on the destruct.
+                      `((destructuring-bind ,(car bind-info) ,(cdr bind-info)
+                          ,@forms)))
+                    destruct-list
+                    :initial-value forms))))
 
 (defmacro -> (val &rest forms)
   "From Clojure.  Take val and fill it in as the first argument to
@@ -518,12 +524,12 @@ Example: (-> \"   foo   \" string-trim (concat \"bar\"))
          -> \"foobar\"
 
 The macro expansion is: (concat (string-trim \"  foo  \") \"bar\")"
-  (reduce (lambda (accum form)
-            (destructuring-bind (head &rest rest) (to-list form)
-              (if rest
-                  `(,head ,accum ,@rest)
-               `(,head ,accum))))
-          forms :initial-value val))
+  (cl-reduce (lambda (accum form)
+               (destructuring-bind (head &rest rest) (to-list form)
+                 (if rest
+                     `(,head ,accum ,@rest)
+                   `(,head ,accum))))
+             forms :initial-value val))
 
 (defmacro ->> (val &rest forms)
   "From Clojure.  Like -> except it fills in the last argument
@@ -533,12 +539,12 @@ Example: (->> \"   foo   \" string-trim (concat \"bar\"))
 
 The macro expansion is: (concat \"bar\" (string-trim \"  foo  \"))"
 
-  (reduce (lambda (accum form)
-            (destructuring-bind (head &rest rest) (to-list form)
-              (if rest
-                  `(,head ,@rest ,accum )
-               `(,head ,accum))))
-          forms :initial-value val))
+  (cl-reduce (lambda (accum form)
+               (destructuring-bind (head &rest rest) (to-list form)
+                 (if rest
+                     `(,head ,@rest ,accum )
+                   `(,head ,accum))))
+             forms :initial-value val))
 
 
 (defun code-walker (in-fun forms)
@@ -611,12 +617,12 @@ Example:
 (defun all-true (list)
   "Is this entire sequence true values?"
   ;; Note, since or is a macro, we can't do 'or
-  (reduce (| and %1 %2) list))
+  (cl-reduce (| and %1 %2) list))
 
 (defun any-true (list)
   "Are any members of this list true?"
   ;; Note, since or is a macro, we can't do 'or
-  (reduce (| or %1 %2) list))
+  (cl-reduce (| or %1 %2) list))
 
 (defun append-if-true (&rest elements)
   "Join the elements into a string if they aren't null
@@ -1955,13 +1961,13 @@ Returns a list of alists."
 
 (defun exponential-moving-avg (smoothing-constant nums)
   (reverse
-   (reduce (fn (out-list new)
-               (let* ((old (car out-list))
-                      (diff (- new old))
-                      (update (* (- 1 smoothing-constant) diff)))
-                 (cons (+ old update) out-list)))
-           (cdr nums)
-           :initial-value (list (car nums)))))
+   (cl-reduce (fn (out-list new)
+                (let* ((old (car out-list))
+                       (diff (- new old))
+                       (update (* (- 1 smoothing-constant) diff)))
+                  (cons (+ old update) out-list)))
+              (cdr nums)
+              :initial-value (list (car nums)))))
 
 (defun url-join (&rest args)
   (cl-flet ((clean-element (elm)
@@ -3156,15 +3162,15 @@ and dirty parsing of command output."
 (defun ldif-unwrap-lines (lines)
   "Given a list of lines, unwrap any that start with a space, as in ldif:
 https://www.ietf.org/rfc/rfc2849.txt."
-  (nreverse (reduce (fn (current next)
-                      (let ((space-regex "^ +"))
-                        (if (string-match space-regex next)
-                            (progn
-                              (setcar current (concat (car current) (string-replace space-regex "" next)))
-                              current)
-                          (cons next current))))
-                    lines
-                    :initial-value (list))))
+  (nreverse (cl-reduce (fn (current next)
+                         (let ((space-regex "^ +"))
+                           (if (string-match space-regex next)
+                               (progn
+                                 (setcar current (concat (car current) (string-replace space-regex "" next)))
+                                 current)
+                             (cons next current))))
+                       lines
+                       :initial-value (list))))
 
 (defun ldif-split-text (text)
   "Do a simple conversion of ldif to an assoc list."

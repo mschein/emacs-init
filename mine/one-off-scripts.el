@@ -38,7 +38,7 @@
 
 
 ;; Not sure how useful this is, so I'll leave it here.
-(defun* new-file-contents (path new-contents)
+(cl-defun new-file-contents (path new-contents)
   (find-file path)
   (erase-buffer)
   (goto-char 0)
@@ -405,7 +405,7 @@ Specify license
 ;; Pretty print a hash table
 ;; (defmethod print-object ((object hash-table) stream)
 ;;   (format stream \"#HASH{~{~{(~a : ~a)~}~^ ~}}\"
-;;           (loop for key being the hash-keys of object
+;;           (cl-loop for key being the hash-keys of object
 ;;                 using (hash-value value)
 ;;                 collect (list key value))))
 
