@@ -111,7 +111,7 @@ preferred."
            'string)
          (uuidgen--string-to-octets id)))
 
-(defun uuidgen--fixnum (bigbnum)
+(defun uuidgen--fixnum (bignum)
   "Compatibility layer to convert a bignum to fixnum.
 Emacs supports native bignum starting from version 27. For older
 version will use calc for bignum calculation."
