@@ -98,7 +98,15 @@
           (kv--select-statement store-name "SELECT * from kv;")))
 
 (defun kv-list-json (store-name)
-  (mapcar (| cons (car %) (json-read-from-string (cdr %)))
+  (mapcar (fn (item)
+            ;;
+            ;; Is this needed?  Or does it just clutter up the code.
+            ;;
+            ;; (when (or (not item)
+            ;;         (not (car item))
+            ;;         (not (cdr item)))
+            ;;     (error "key-value item is null or corrupt or contains null values: %s" item))
+            (cons (car item) (json-read-from-string (cdr item))))
           (kv-list store-name)))
 
 (defun kv-list-keys (store-name)
