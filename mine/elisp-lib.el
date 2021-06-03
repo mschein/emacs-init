@@ -645,6 +645,29 @@ Example:
   (pp obj)
   nil)
 
+(cl-defun find-thing-at-point (start-regex &key max-len end-regex (thing-name "thing"))
+  "Use regexes to extract a piece of the buffer, and return it to a callback.
+
+This should be used to write find-x-at-point functions.
+
+`start-regex': used with re-search-backward to find the start of a thing.
+`end-regex': optional re-search-forward to find the end of a thing, otherwise uses `start-regex'.
+`max-len': optional arg to constrain the length.
+"
+  (save-excursion
+    (let* ((start (1+ (save-excursion (re-search-backward start-regex))))
+           (end (1- (save-excursion (re-search-forward (or end-regex start-regex)))))
+           (len (- end start))
+           (thing (if (< 0 len)
+                       (buffer-substring-no-properties start end)
+                     nil)))
+
+      (if (and thing
+               (or (not max-len)
+                   (< len max-len)))
+          thing
+        (error "Unable to find valid %s.  Start: %d End: %d Len: %d" thing-name start end len)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3204,13 +3227,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
 (defun docker-run-image-at-point ()
   (interactive)
 
-  (save-excursion
-    (let* ((whitespace-re "[ \t\n]")
-           (end (1- (save-excursion (re-search-forward whitespace-re))))
-           (start (1+ (save-excursion (re-search-backward whitespace-re)))))
-      (if (< start end)
-          (docker-run-image (buffer-substring-no-properties start end))
-        (error "Unable to find image id.")))))
+  (docker-run-image (find-thing-at-point "[ \t\n]" :thing-name "Docker Image")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template commands.
@@ -3247,7 +3264,6 @@ https://www.ietf.org/rfc/rfc2849.txt."
              do (setf template (string-replace "${[a-zA-Z0-9]+}" #'sub-fn template)))
     template))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Other Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3258,19 +3274,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
    It takes the current point and opens a url with it
    as if it was a jira ticket."
 
-  (save-excursion
-    (let* ((max-ticket-len 15)
-           (negative-ticket-re "[^A-Za-z0-9-]")
-           (end (1- (save-excursion (re-search-forward negative-ticket-re))))
-           (start (1+ (save-excursion (re-search-backward negative-ticket-re))))
-           (ticket (if (< start end)
-                       (buffer-substring-no-properties start end)
-                     nil)))
-      (if (and ticket
-               (< (- end start) max-ticket-len)
-               (funcall ticket-valid-fn ticket))
-          (browse-url (path-join url "browse" ticket))
-        (error "Invalid JIRA ticket '%s' found from %s to %s" ticket start end)))))
+  (browse-url (path-join url "browse" (find-thing-at-point "[^A-Za-z0-9-]" :thing-name "Jira Ticket"))))
 
 (defun insert-date ()
   (interactive)
