@@ -199,4 +199,23 @@
 ;; ffmpeg -i <some-movie>.mkv -f ffmetadata metadata
 ;;
 
+
+;; Convert VOB to mp4
+;; ffmpeg -i weighing.VOB -vcodec libx264 -acodec aac weighing.mp4
+
+(cl-defun ffmpeg-vob-to-mp4 (path &key overwrite-output)
+  (let ((output-file (format "%s.mp4" (file-name-sans-extension path))))
+    (when (and (not overwrite-output)
+               (file-exists-p output-file))
+      (error "Output file %s exists already." output-file))
+
+    (do-cmd-async (list "ffmpeg"
+                        "-i" path
+                        "-vcodec" "libx264"
+                        "-acodec" "aac"
+                        output-file)
+                  :throw t
+                  :callback-fn (lambda (&rest results)
+                                 (message "Finished processing %s: %s" path results)))))
+
 (provide 'ffmpeg)
