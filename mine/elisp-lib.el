@@ -3494,6 +3494,7 @@ rm -f ${ATTACHMENT}
                        params
                        auth
                        proxy-auth
+                       token-auth
                        body
                        json
                        data
@@ -3525,6 +3526,7 @@ rm -f ${ATTACHMENT}
            a password, or a full curl auth string like \"user:password\".
    `proxy-auth': Can be: a user name with no colon, which will trigger a prompt for
                  a password, or a full curl auth string like \"user:password\".
+   `token-auth': an api token string, for use in the Authorization header.
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
    `data': An alist that will be url-encoded and sent to the server in a request body.
@@ -3579,6 +3581,12 @@ rm -f ${ATTACHMENT}
   (when +webrequest-cache-urls+
     (require 'm-url-cache)
     (m-url-cache-init))
+
+  (when token-auth
+    (assert (stringp token-auth))
+    (assert (not (assoc-get "Authorization" headers-secret)))
+    (push (cons "Authorization" (format "Token %s" token-auth))
+          headers-secret))
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
