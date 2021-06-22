@@ -36,6 +36,12 @@
       (cl-loop for elm across elms sum elm)
     (cl-loop for elm in elms sum elm)))
 
+(unless (fboundp 'gensym)
+  (let ((my-gensym-counter 0))
+    (defun gensym ()
+      "Return an uninterned symbol."
+      (make-symbol (format "G%d" (incf my-gensym-counter))))))
+
 (defmacro with-gensyms (syms &rest body)
   (declare (indent defun))
   `(let ,(mapcar (| list % '(gensym)) syms)
