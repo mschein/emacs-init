@@ -3596,9 +3596,6 @@ rm -f ${ATTACHMENT}
     (push (cons "Authorization" (format "Token %s" token-auth))
           headers-secret))
 
-  (when content-type
-    (assert (not json)))
-
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
   (with-tempdir (:root-dir "/tmp")
@@ -3677,11 +3674,18 @@ rm -f ${ATTACHMENT}
         (cl-loop for (name . value) in headers do
                  (append-option t (| `("-H" ,(format "%s: %s" name value)))))
 
-        (append-option json (| `("-H" "Content-Type:application/json"
-                                 "--data" ,(concat "@" json-file))))
-        (append-option data (| `("-H" "Content-Type:application/x-www-form-urlencoded"
-                                 "--data" ,(concat "@" data-file))))
-        (append-option content-type (| `("-H" ,(format "Content-Type:%s" content-type))))
+        ;; Is there a nicer way to do this?
+        (when (or json data content-type)
+          (append-option t
+                         (fn ()
+                           (list "-H"
+                                 (format "Content-Type:%s"
+                                         (or content-type
+                                             (if json
+                                                 "application/json"
+                                               "application/x-www-form-urlencoded")))))))
+        (append-option json (| `("--data" ,(concat "@" json-file))))
+        (append-option data (| `("--data" ,(concat "@" data-file))))
         (append-option file (| `("--data-binary" ,(concat "@" file))))
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
