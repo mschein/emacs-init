@@ -3508,6 +3508,7 @@ rm -f ${ATTACHMENT}
                        file
                        headers
                        headers-secret
+                       content-type
                        no-redirect
                        timeout
                        insecure
@@ -3538,6 +3539,7 @@ rm -f ${ATTACHMENT}
    `data': An alist that will be url-encoded and sent to the server in a request body.
    `form': An alist that will be sent as a multi-part form body.
    `headers': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
+   `content-type': A string, set the content-type header to this value.
    `headers-secret': An alist of headers you don't want shown in the *messages* buffer.
    `no-redirect': Don't follow redirects for this request.
    `file': A file to upload to the server.
@@ -3593,6 +3595,9 @@ rm -f ${ATTACHMENT}
     (assert (not (assoc-get "Authorization" headers-secret)))
     (push (cons "Authorization" (format "Token %s" token-auth))
           headers-secret))
+
+  (when content-type
+    (assert (not json)))
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
@@ -3669,12 +3674,14 @@ rm -f ${ATTACHMENT}
 
               (append! cmd (list "-F" (format "%s=@%s" name filename))))))
         (append-option body (| `("--data-raw" ,body)))
-        (cl-loop for (name . value)  in headers do
+        (cl-loop for (name . value) in headers do
                  (append-option t (| `("-H" ,(format "%s: %s" name value)))))
+
         (append-option json (| `("-H" "Content-Type:application/json"
                                  "--data" ,(concat "@" json-file))))
         (append-option data (| `("-H" "Content-Type:application/x-www-form-urlencoded"
                                  "--data" ,(concat "@" data-file))))
+        (append-option content-type (| `("-H" ,(format "Content-Type:%s" content-type))))
         (append-option file (| `("--data-binary" ,(concat "@" file))))
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))

@@ -824,6 +824,7 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\C-ca" 'org-agenda)
 (global-set-key "\C-cb" 'org-iswitchb)
 (global-set-key "\C-c o" 'org-open-at-point-global)
+(defalias 'osl 'org-store-link)
 
 (setq org-todo-keywords
       '((sequence "TODO(t!)"
@@ -845,6 +846,11 @@ that uses 'font-lock-warning-face'."
         ("FAILED"  . (:foreground "DarkOrange3" :weight bold))
         ("CANCELED"  . shadow)
         ("DUPLICATE"  . shadow)))
+
+;;
+;; Try to make it harder to invisibly mess up your org doc.
+;;
+(setq org-catch-invisible-edits 'smart)
 
 ;; turn off _ meaning <sub> etc.  If I really want this feature
 ;; it's possible to do:
