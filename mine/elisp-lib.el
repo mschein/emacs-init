@@ -4029,6 +4029,18 @@ rm -f ${ATTACHMENT}
 
 ;; Can I unify this with `read-user-password'?
 (defun osx-security-get-cached-password (password-name user)
+  "Cache a password from the osx 'security' command.
+
+   This may cause osx to prompt the caller to unlock the password.
+   Once the caller has allowed access, emacs will store it in the password-cache
+   for a user controlled amount of time.
+
+   Args:
+   `password-name': The name used when the password was created in the keychain.
+   `user': the user id associated with the `password-name'.
+
+   returns: the password string.
+"
   (if (password-in-cache-p password-name)
       (password-read-from-cache password-name)
     (progn
