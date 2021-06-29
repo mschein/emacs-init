@@ -4006,4 +4006,34 @@ rm -f ${ATTACHMENT}
                                    "-y" pw-file
                                    (ldap-query-to-string query))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Security Functions.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; I could move these to their own module at some point.
+
+(defun osx-security-get-password (password-name user)
+  "Use the osx 'security' command to get a password from the keychain.
+
+   This may cause osx to prompt the caller to unlock the password.
+
+   Args:
+   `password-name': The name used when the password was created in the keychain.
+   `user': the user id associated with the `password-name'.
+
+   returns: the password string.
+"
+  ;; Don't use passwords
+  (string-trim (run-to-str "security" "find-generic-password" "-w" "-s" password-name "-a" user)
+               nil "\n"))
+
+;; Can I unify this with `read-user-password'?
+(defun osx-security-get-cached-password (password-name user)
+  (if (password-in-cache-p password-name)
+      (password-read-from-cache password-name)
+    (progn
+      (let ((password (osx-security-get-password password-name user)))
+        (password-cache-add password-name password)
+        password))))
+
 (provide 'elisp-lib)
