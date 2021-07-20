@@ -2006,6 +2006,10 @@ Returns a list of alists."
                trimmed))))
     (string-join (mapcar #'clean-element args) "/")))
 
+(defun url-basename (url)
+  "Return the base component of the path of the given `url'."
+  (basename (car (url-path-and-query (url-generic-parse-url url)))))
+
 (defun url-join-list (elm)
   (apply #'url-join elm))
 
