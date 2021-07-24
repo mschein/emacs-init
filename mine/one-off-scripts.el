@@ -679,6 +679,18 @@ ${name}")
   (interactive)
   (run "xcode-select" "--install"))
 
+(defun osx-install-emacs-sqlite3 ()
+  (interactive)
+  (let ((install-dir (expand-file-name "~/src/contrib/"))
+        (emacs-sqlite-dir "emacs-sqlite3-api"))
+    (pushd install-dir
+      (unless (file-exists-p emacs-sqlite-dir)
+        (git-clone "https://github.com/pekingduck/emacs-sqlite3-api.git"))
+      (with-env-vars '(("HOMEBREW" . "1"))
+        (with-current-buffer (shell-open-dir emacs-sqlite-dir)
+          (insert "make clean; make module; cp sqlite3-api.so ~/emacs-init/dynamic-modules")
+          )))))
+
 ;;(defun jenv-list-versions ()
 ;;  ())
 
