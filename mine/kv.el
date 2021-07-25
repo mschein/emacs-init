@@ -31,8 +31,9 @@
   (with-store store-name
     (with-mysqlite3-stmt db kv-upsert-string
       (sqlite3-bind-multi stmt key value)
-      (unless (= sqlite-done (sqlite3-step stmt))
-        (error "Store %s unable to set %s" store-name key))))
+      (let ((result (sqlite3-step stmt)))
+        (unless (eql sqlite-done result)
+          (error "Store %s unable to set %s" store-name key)))))
   key)
 
 (defun kv-add-key-values (store-name kvs)
@@ -98,7 +99,7 @@
           (kv--select-statement store-name "SELECT * from kv;")))
 
 (defun kv-list-json (store-name)
-  (mapcar (fn (item)
+  (mapcar (fn ((key . value))
             ;;
             ;; Is this needed?  Or does it just clutter up the code.
             ;;
@@ -106,7 +107,8 @@
             ;;         (not (car item))
             ;;         (not (cdr item)))
             ;;     (error "key-value item is null or corrupt or contains null values: %s" item))
-            (cons (car item) (json-read-from-string (cdr item))))
+            (cons key (when value
+                        (json-read-from-string value))))
           (kv-list store-name)))
 
 (defun kv-list-keys (store-name)

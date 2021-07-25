@@ -42,8 +42,10 @@
 ;;
 
 (cl-defun mysqlite3-open (db-path &key readonly)
-  (let ((flag (if readonly sqlite-open-readonly sqlite-open-readwrite)))
-    (sqlite3-open db-path flag sqlite-open-create)))
+  (let ((flags (if readonly
+                   (list sqlite-open-readonly)
+                 (list sqlite-open-readwrite sqlite-open-create))))
+    (apply #'sqlite3-open db-path flags)))
 
 (defmacro with-mysqlite3 (open-args &rest body)
   (declare (indent defun))
