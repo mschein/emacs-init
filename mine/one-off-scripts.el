@@ -555,6 +555,11 @@ ${name}")
                         ;; have extra arguments witih the template strings.
                         (when (equal "sh" (file-name-extension file))
                           (chmod file #o755)))))
+      ;; Create any directories needed
+      (when (equal "web" type)
+        (ensure-makedirs "static")
+        (touch (format "static/%s.css" name)))
+
       (message "Setup git repo in %s" target)
       (git-init-repo "."))))
 

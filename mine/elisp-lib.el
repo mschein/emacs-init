@@ -1924,8 +1924,13 @@ Returns a list of alists."
   (ht-to-alist m-bookmark-table))
 
 (defmacro make-bookmark (name url &rest urls)
+  (message "Define bookmark %s" name)
   (assert (symbolp name))
+  ;; Make sure this isn't going to smash anything.
+  (assert (not (and (boundp name) (fboundp name))))
+
   (assert (or (symbolp url) (stringp url)))
+
   (dolist (u urls)
     (assert (or (symbolp u) (stringp u))))
 
@@ -3431,7 +3436,6 @@ Be sure to url encode the parameters.
         ;; the last status line is the one you go with.
         (cond
          ((and (eql line-type 'header) found-real-status)
-          (message "Save header")
           (push parsed-line headers))
          ((eql line-type 'status)
           ;;
