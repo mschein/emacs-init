@@ -1920,6 +1920,17 @@ Returns a list of alists."
 
 (defvar m-bookmark-table (ht))
 
+(defun open-url-tabs (urls)
+  "Open a list of `urls' in one window with tabs."
+  (destructuring-bind (first &rest rest) urls
+    (browse-url first t)
+    (sleep-for .5)
+    (dolist (url rest)
+      ;; You must pass nil, so it doesn't use the default
+      ;; value for browse-url-new-window-flag
+      (browse-url url nil)
+      (sleep-for .2))))
+
 (defun list-bookmark-data ()
   (ht-to-alist m-bookmark-table))
 
@@ -1942,13 +1953,7 @@ Returns a list of alists."
                     (format "  And %d others." (length urls))
                   ""))
        (interactive)
-       (browse-url ,url t)
-       (sleep-for 1)
-       (dolist (,u ',urls)
-         ;; You must pass nil, so it doesn't use the default
-         ;; value for browse-url-new-window-flag
-         (browse-url ,u nil)
-         (sleep-for .3)))))
+       (open-url-tabs '(,url ,@urls)))))
 
 (defun show-web-bookmark-data ()
   (interactive)
