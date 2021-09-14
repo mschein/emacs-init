@@ -2785,10 +2785,6 @@ python debugging session."
                       (directory-files-recursively root-dir "^activate$"))
               (fn (a b) (> (cdr a) (cdr b)))))))
 
-(defun activate-virtualenv (location)
-  (interactive (list (completing-read "location: " (mapcar #'first oe-project-table) nil t)))
-  (insertf "source %s" (find-virtualenv-file (assoc1 location oe-project-table))))
-
 (defun parse-env-var (line)
   (string-find "^\\([^=]+\\)=\\(.+\\|\\)$" line))
 
@@ -4064,5 +4060,13 @@ rm -f ${ATTACHMENT}
       (let ((password (osx-security-get-password password-name user)))
         (password-cache-add password-name password)
         password))))
+
+(defun common-lisp-insert-debug ()
+  (interactive)
+  ;;
+  ;; Note: Works best inside a function declaration, and then use
+  ;; C-M-x function.
+  ;;
+  (insertf "(declare (optimize (speed 0) (space 0) (debug 3)))"))
 
 (provide 'elisp-lib)
