@@ -34,7 +34,7 @@
 
 (defun show-font ()
   (interactive)
-  (format-wrap shell-command "xfd -fn \'%s\'" (current-line)))
+  (format-wrap shell-command "xfd -fn \'%s\'" (get-current-line)))
 
 
 ;; Not sure how useful this is, so I'll leave it here.

@@ -1310,7 +1310,7 @@ Use this likely in leu of `buffer-string'."
 (defmacro insertf (fmt &rest args)
   `(with-fmt insert ,fmt ,@args))
 
-(defun current-line ()
+(defun get-current-line ()
   "Return the line under the cursor, with properties."
   (string-trim-right (thing-at-point 'line)))
 
@@ -1326,10 +1326,11 @@ Use this likely in leu of `buffer-string'."
 
 (defun duplicate-line ()
   (interactive)
-  (end-of-line)
-  (open-line 1)
+  (save-excursion
+    (end-of-line)
+    (open-line 1))
   (beginning-of-line)
-  (let ((line (current-line)))
+  (let ((line (get-current-line)))
     (next-line)
     (insert line)
     (end-of-line)))
@@ -1751,6 +1752,36 @@ Returns a list of alists."
 (defun osx-port-in-use (port)
   (assoc-get port (osx-list-ports-in-use)))
 
+(defun ip-addr-to-list (ip-addr)
+  (mapcar #'string-to-number (split-string ip-addr "\\.")))
+
+
+;;
+;; Work on these later.
+;;
+;; (defun ipal-to-decimal (ipal)
+;;   (loop for x ))
+
+;; (defun ipal-to-hexidecimal (ipal))
+
+;; (defun cidr-addr-info-32bit (ip-addr)
+;;   "Return some info about a CIDR address."
+
+;;   (let ((total-addr-bits 32))
+;;     (destructuring-bind (prefix netmask-bits)
+;;         (string-find "\\([\\.0-9-]+\\)/\\([0-9]+\\)" ip-addr)
+;;       (let ((host-bits (- total-addr-bits netmask-bits)))
+;;         ;; Break a 32 bit number into an ip address
+
+
+
+;;         `((:cidr-range . ,ip-addr)
+;;           (:netmask . )
+;;           (:wildcard-bits . )
+;;           (:first-ip . )
+;;           (:last-ip . )
+;;           (:total-hosts . ,(expr 2 host-bits)))
+;;       ))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Google Search
