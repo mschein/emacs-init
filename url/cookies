@@ -1,16 +1,0 @@
-;; Emacs-W3 HTTP cookies file
-;; Automatically generated file!!! DO NOT EDIT!!!
-
-(setq url-cookie-storage
- '((".myspace.com"
-  [cookie "MSCulture" "IP=216.239.45.4&IPCulture=en-US&PreferredCulture=en-US&PreferredCulturePending=&Country=VVM=&ForcedExpiration=0&timeZone=0&myStuffDma=&myStuffMarket=&USRLOC=QXJlYUNvZGU9NjUwJkNpdHk9TW91bnRhaW4gVmlldyZDb3VudHJ5Q29kZT1VUyZDb3VudHJ5TmFtZT1Vbml0ZWQgU3RhdGVzJkRtYUNvZGU9ODA3JkxhdGl0dWRlPTM3LjQxOTImTG9uZ2l0dWRlPS0xMjIuMDU3NCZQb3N0YWxDb2RlPTk0MDQzJlJlZ2lvbk5hbWU9Q0EmTG9jYXRpb25JZD0w" "26-Aug-2010 17:34:39.00 GMT" "/" ".myspace.com" nil]
-  [cookie "SessionDDF2" "9xtip4eWHPvM5jZsmU+x7trsXAVPzev2TlMK/ySV16knK4MRGUs3nYCgZxrsx58NRQqiTniFYbLRGjL+57dS3Q==" "19-Aug-2030 17:34:39.00 GMT" "/" ".myspace.com" nil]
-  [cookie "CMSCAP" "CDATE=634178108799082235&633553696460632722_ct=1&633553696460632722_exp=634204028799082235&633553704238913972_ct=1&633553704238913972_exp=634204028799082235" "19-Aug-2030 17:34:40.00 GMT" "/" ".myspace.com" nil]))
-)
-(setq url-cookie-secure-storage
- 'nil)
-
-;; Local Variables:
-;; version-control: never
-;; no-byte-compile: t
-;; End:
