@@ -3,4 +3,6 @@ local/
 dynamic-modules/
 emacs-packages/gnupg/
 tmp/
+/local
+/tmp
 *.elc
