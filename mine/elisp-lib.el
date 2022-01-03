@@ -792,6 +792,22 @@ each character in the string `chars'."
           (filter (fn (env-key) (string-starts-with env-key s)) list)
           (fn (e1 e2) (> (length e1) (length e2))))))
 
+(defun string-find-named (regex str match-names)
+  "Return an alist of matching captures.
+
+  `regex': Regex with \((\)) captures
+  `str': string to match
+  `match-names': a list of strings or symbols in order of the groups in the regex.
+
+  returns: nil on failed match
+           an alist on success
+"
+  (when-let (result (string-find regex str))
+    (cl-loop for name in match-names
+             for data in result
+             collect (cons name data))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Symbol functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -820,6 +836,19 @@ each character in the string `chars'."
 
 (defun string-to-keyword (str)
   (intern (concat ":" str)))
+
+(defmacro string-cl-case (expr &rest clauses)
+  "A string version of `cl-case'."
+  (declare (indent 1) (debug (form &rest (sexp body))))
+  (with-gensyms (gexpr-result)
+    `(let ((,gexpr-result ,expr))
+       (cond
+        ,@(mapcar (fn ((str &rest body))
+                    (if (equal str 't)
+                        `(t ,@body)
+                      `((equal ,gexpr-result ,str) ,@body)))
+                  clauses)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs utils
@@ -1136,6 +1165,35 @@ output is passed to the callback-fn."
       (kill-buffer stderr-buffer))
     (kill-buffer (process-buffer proc))))
 
+;;;
+;;; Some functions for dealing with arguments
+;;;
+
+(defun make-argument-builder ()
+  ;;
+  ;; (:opt name value)
+  ;; (:arg value)
+  ;; (:flag <name> value)
+  ;;
+  ;; (:args)
+  ;;
+  (let ((cli-args))
+    (lambda (cmd &rest options)
+      (cl-flet ((extend-args (&rest new-args)
+                  (setf cli-args (concatenate 'list cli-args new-args))))
+        (ecase cmd
+          (:opt (destructuring-bind (name value) options
+                  (when value
+                    (extend-args name value))))
+          (:arg (destructuring-bind (value) options
+                    (when value
+                      (extend-args value))))
+          (:flag (destructuring-bind (name value) options
+                   (when value
+                     (extend-args name))))
+          (:cli-args cli-args))))))
+
+
 ;; TODO(scheinholtz): Unify buffer sections.
 (defun string->list (str &optional regex)
   (mapcar #'string-trim (split-string str (or regex "\n") t)))
@@ -1428,7 +1486,6 @@ Use this likely in leu of `buffer-string'."
                          (assoc1 day-of-week week-days)))
     (do ((i 1 (+ i 1)))
         ((>= i 8))
-      (print i)
       (let ((before (conv-time time :days (- i))))
         ;; The sixth spot is the day of the week.
         (if (= day-of-week (nth 6 (decode-time before)))
@@ -1448,11 +1505,17 @@ Use this likely in leu of `buffer-string'."
 (defun current-time-split ()
   (time-split (current-time)))
 
+(defun current-time-dow ()
+  (assoc1 :dow (current-time-split)))
+
 (defun current-day-of-week ()
-  (if-let (rec (rassoc (assoc1 :dow (current-time-split)) week-days))
+  (if-let (rec (rassoc (current-time-dow) week-days))
       (car rec)
     (error "Unable to find day of week")))
 
+;; Maybe don't split the time, just use format-time-string
+(defun other-day-of-this-week (day)
+  (time-split (time-current-minus-days (- (current-time-dow) day))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; File/Path utils.
@@ -1608,6 +1671,10 @@ Note that this includes start-dir itself."
 
 (defun get-file-info (path)
   "Return the file system information for a given path."
+
+  (unless (file-exists-p path)
+    (error "File %s does not exist" path))
+
   (list-to-alist
    (file-attributes path)
    '(type
@@ -1628,7 +1695,8 @@ Note that this includes start-dir itself."
   (assoc1 'size (get-file-info path)))
 
 (defun file-has-size-p (path)
-  (> (get-file-size path) 0))
+  (when (file-exists-p path)
+    (> (get-file-size path) 0)))
 
 (cl-defun du (dir &key (max-depth 2) callback-fn)
   "Call `du' and use a callback.
@@ -1653,6 +1721,14 @@ by `do-cmd'
                                        :split-regex "[\t ]+"
                                        :has-header-line nil
                                        :field-names '("size" "path"))))))
+
+(defun assert-program-exists (name &optional error-message)
+  "Assert that a program specified by `name' is in the path.
+
+   If it is, do nothing, if not, throw an error with the relevant
+   `error-message'"
+
+  (assert (which name) nil (or error-message (format "Program %s is not in the PATH." name))))
 
 ;;(defun find-and-grep )
 
@@ -1716,6 +1792,23 @@ supplied by the command."
     (if (> (length split-name) 1)
         (string-join (butlast split-name 1) ".")
       (car split-name))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Org-mode / outline-mode utils
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun mls-org-get-section-body-at-point ()
+  (save-excursion
+    (outline-back-to-heading t)
+    (org-end-of-meta-data)
+
+    ;; Skip any log lines.
+    (while (org-in-item-p)
+      (message "point is %s" (point))
+      (next-line))
+
+    (buffer-substring-no-properties (point)
+                                    (progn (outline-next-preface) (point)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Network Utils
@@ -2408,10 +2501,10 @@ end tell
     (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
     (linux "google-chrome")))
 
-(defun browse-url-chrome (url)
+(defun browse-url-chrome (url &optional new-window)
   (interactive "surl: ")
   (let ((browse-url-generic-program "/opt/google/chrome/google-chrome"))
-    (browse-url-generic url)))
+    (browse-url-generic url new-window)))
 
 (defun browse-url-chrome-osx (url &optional new-window)
   "A `browse-url' function for Chrome on OSX.  Normally we end up with
@@ -2536,6 +2629,13 @@ end tell
 (defun git-push-sha (sha &optional branch)
   (let ((branch (or branch "master")))
     (run "git" "push" "-u" "origin" (format "%s:refs/heads/%s" sha branch))))
+
+(defun git-repo-exists-p (path)
+  (when (and (file-exists-p path)
+             (file-exists-p (path-join path ".git")))
+    (pushd path
+      ;; Will this check be to slow on large repos?
+      (run-is-true "git" "status" "."))))
 
 (defun git-push-current-branch ()
   ""
@@ -2706,6 +2806,22 @@ conflict with dir/subdir/project.")
                         (do-cmd "git" "push" "origin" "--force" "--all")))
        :throw t))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Groovy Commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun open-groovy-shell (&optional dir)
+  (interactive)
+
+  (assert (which "groovysh"))
+
+  (let ((target-dir (or dir default-directory)))
+    (shell-open-run-command target-dir (list "groovysh"))
+
+    (rename-buffer (generate-new-buffer-name (format "*groovy-shell-%s-groovy-shell*"
+                                                     (file-relative-name target-dir (expand-file-name "~")))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Python commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2802,11 +2918,30 @@ python debugging session."
               (remove-if (| equal file-pattern (first %))
                          flymake-allowed-file-name-masks))))
 
-(defun find-virtualenv-file (root-dir)
+(defun is-py-activation-p (path)
+  (not (not (string-match "deactivate.+().+{" (slurp path)))))
+
+(cl-defun find-py-activate-file (root-dir)
+  "Search for an `activate' file in the current directory or above."
+
+  (do ((check-dir root-dir (expand-file-name (path-join check-dir "..")))
+       (activate-file))
+      ((equal "/" check-dir))
+    (setf activate-file (path-join check-dir "activate"))
+    (when (and (file-exists-p activate-file)
+               (is-py-activation-p activate-file))
+      (cl-return-from find-py-activate-file activate-file))))
+
+;; TODO: I should rename this
+(cl-defun find-virtualenv-file (root-dir)
   "Search a Python repo for the most like venv \'activate\' file.
 
   `root-dir' is where to start the search."
-  ;; Does activate exist somewhere.
+
+  ;;
+  ;; Only search this way if we know this is a git repo...
+  ;; otherwise it might match stuff it shouldn't
+  ;;
   (car (first
         (sort (mapcar (fn (path)
                         (cons path (cond
@@ -2828,7 +2963,9 @@ python debugging session."
 (defconst venv-required-vars '("VIRTUAL_ENV" "PATH"))
 
 (defun find-venv-variables (root-dir)
-  (if-let (activate-file (find-virtualenv-file root-dir))
+  ;; TODO: share this code better.
+  (if-let (activate-file (or (find-py-activate-file root-dir)
+                              (find-virtualenv-file root-dir)))
       (with-tempdir (:root-dir "/tmp")
         (let ((input-path "find-python-script"))
           (barf (format "source %s; env" (cmd-to-shell-string (list activate-file)))
@@ -2928,23 +3065,25 @@ in the keyring."
 (defun open-shell-dir-venv (&optional dir)
   "Start a virtual env in the current repo."
   (interactive)
-  (switch-to-buffer (shell-open-dir (or dir default-directory)))
 
-  (let* ((repo-root (git-project-root))
-         (repo-name (basename repo-root))
-         (activate-link (find-virtualenv-file repo-root)))
-    (rename-buffer (generate-new-buffer-name (format "*venv-%s-%s-venv*" repo-name (buffer-name))))
+  (pushd (or dir default-directory)
+    (switch-to-buffer (shell-open-dir default-directory))
 
-    (message "Default directory: %s repo root: %s" default-directory repo-root)
-    (assert activate-link)
-    ;; Issue a command to setup the virualenv
-    (goto-char (point-max))
-    (insertf "source %s" activate-link)
-    (comint-send-input nil t)
-    (comint-clear-buffer)
+    (let ((activate-link (or (find-py-activate-file default-directory)
+                             (find-virtualenv-file (basename (git-project-root))))))
+      (unless activate-link
+        (error "Unable to locate an activate link from directory %s" default-directory))
 
-    ;; We want to be sure to return the buffer we created.
-    (current-buffer)))
+      (rename-buffer (generate-new-buffer-name (format "*venv-%s-%s-venv*" (basename default-directory) (buffer-name))))
+
+      ;; Issue a command to setup the virualenv
+      (goto-char (point-max))
+      (insertf "source %s" activate-link)
+      (comint-send-input nil t)
+      (comint-clear-buffer)
+
+      ;; We want to be sure to return the buffer we created.
+      (current-buffer))))
 
 (defun yank-venv-link (&optional dir)
   (interactive)
@@ -3059,7 +3198,7 @@ in the keyring."
          (setf process-environment ,old-env)))))
 
 (defun run-eval-python (python-code &rest do-cmd-args)
-  (apply #'do-cmd (list "python" "-c" python-code) do-cmd-args))
+  (apply #'do-cmd (list "python3" "-c" python-code) do-cmd-args))
 
 (defun run-python-pipe (input python-code)
   (assoc1 :stdout (run-eval-python python-code :input input :stdout 'string :throw t)))
@@ -3220,7 +3359,7 @@ and dirty parsing of command output."
   ;; figure out the headers
   (assert alist)
 
-  (let* ((separator ",")
+  (let* ((separator "\t")
          (headers (mapcar (| format "%s" %) (assoc-keys (first alist))))
          (header-string (string-join headers separator)))
     (string-join
@@ -3276,6 +3415,11 @@ https://www.ietf.org/rfc/rfc2849.txt."
 
   (docker-run-image (find-thing-at-point "[ \t\n]" :thing-name "Docker Image")))
 
+;;
+;; You can use tramp to edit stuff inside of docker:
+;; https://willschenk.com/articles/2020/tramp_tricks/
+;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Template commands.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3315,7 +3459,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
 ;; Other Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun find-in-jira-at-point-internal (url ticket-valid-fn)
+(defun find-in-jira-at-point-internal (url)
   "This is meant to be wrapped by another function.
 
    It takes the current point and opens a url with it
@@ -3407,6 +3551,7 @@ Be sure to url encode the parameters.
 ;; HTTP/1.1 401
 ;;
 (defun parse-http-status-line (line)
+  ;; Could this be replaced with something like (string-find-named)
   (if-let (result (string-find "^HTTP/\\([0-9.]+\\) \\([0-9]+\\)\\(.*\\)$" line))
       (destructuring-bind (version code message) result
         `((:http-version . ,version)
@@ -3524,6 +3669,7 @@ rm -f ${ATTACHMENT}
 ;; webrequest dynamic variables.
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
+(defvar +debug-request+ nil "Enter the debugger before the request is sent.")
 (defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
 (defvar +proxy-auth+ nil "The auth to use with the proxy to use for making web requests.")
 
@@ -3540,6 +3686,7 @@ rm -f ${ATTACHMENT}
                        params
                        auth
                        proxy-auth
+                       bearer-auth
                        token-auth
                        body
                        json
@@ -3574,7 +3721,8 @@ rm -f ${ATTACHMENT}
            a password, or a full curl auth string like \"user:password\".
    `proxy-auth': Can be: a user name with no colon, which will trigger a prompt for
                  a password, or a full curl auth string like \"user:password\".
-   `token-auth': an api token string, for use in the Authorization header.
+   `bearer-auth': An api token string for use in the Authorization header as Bearer.
+   `token-auth': An api token string, for use in the Authorization header as Token.
    `body': A string that will be sent as a data body to the server.  Uses --data-raw.
    `json': An alist that will be converted to json and sent to the server.
    `data': An alist that will be url-encoded and sent to the server in a request body.
@@ -3601,6 +3749,7 @@ rm -f ${ATTACHMENT}
    Dynamic Global Variables
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
                          testing.
+   `+debug-request+': Enter the debugger before sending the request.
    `+cache-request+': Use the url cache to save lookup time.
    `+proxy-url+': Provide the url as an argument to --proxy.  Can also be a function which will
                   be called with the url as its argument.
@@ -3632,10 +3781,17 @@ rm -f ${ATTACHMENT}
     (require 'm-url-cache)
     (m-url-cache-init))
 
+  ;; Maybe combine these two
   (when token-auth
     (assert (stringp token-auth))
     (assert (not (assoc-get "Authorization" headers-secret)))
     (push (cons "Authorization" (format "Token %s" token-auth))
+          headers-secret))
+
+  (when bearer-auth
+    (assert (stringp bearer-auth))
+    (assert (not (assoc-get "Authorization" headers-secret)))
+    (push (cons "Authorization" (format "Bearer %s" bearer-auth))
           headers-secret))
 
   ;; Build up the command list.  Use a tmpdir to
@@ -3736,16 +3892,18 @@ rm -f ${ATTACHMENT}
         (let ((proxy-url (or proxy +proxy-url+)))
           (append-option proxy-url (| `("--proxy" ,proxy-url))))
 
-        (if +preserve-request+
-            (progn
-              (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
-                (message "Preserve request here: %s" output-file)
+        (when +preserve-request+
+          (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
+            (message "Preserve request here: %s" output-file)
 
-                (barf (format web-request-shell-script-template
-                              (slurp json-file)
-                              (string-join cmd " "))
-                      output-file)
-                (chmod output-file #o700))))
+            (barf (format web-request-shell-script-template
+                          (slurp json-file)
+                          (string-join cmd " "))
+                  output-file)
+            (chmod output-file #o700)))
+        (when +debug-request+
+          (debug))
+
         ;;
         ;; This gets complicated because we've elected to support async, sync, and caching
         ;; in the same function.
@@ -3898,7 +4056,7 @@ rm -f ${ATTACHMENT}
 ;; Should read ips from your ssh file.
 (defun open-host (host-or-ip user)
   (interactive "shost-or-ip: \nsuser: ")
-  (shell-open-dir "/ssh:%s:/" (host-info-to-login host-or-ip user)))
+  (shell-open-dir (format "/ssh:%s:/" (host-info-to-login host-or-ip user))))
 
 ;;
 ;; this is supposed to be for matching lists of alists.

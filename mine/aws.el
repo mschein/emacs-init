@@ -173,6 +173,34 @@
 
 (aws-define-aws-sub-commands)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Tag Funcions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun aws-ec2-individual-tags (tags)
+  "`tags' is a list of cons cells, with car = key and cdr = value."
+  (string-join (mapcar (lambda (tag)
+                         (format "{Key=%s,Value=%s}" (car tag) (cdr tag)))
+                       tags)
+               ","))
+
+(defun aws-ec2-make-tag-string (tag-list)
+  "`tags' should be a list of:
+
+   '((resource-type . <instance|volume|...>)
+     (tags . ((<key> . <value>)))"
+
+  (mapcar (lambda (tags)
+            (format "ResourceType=%s,Tags=[%s]"
+                    (assoc1 'resource-type tags)
+                    (aws-ec2-individual-tags (assoc1 'tags tags))))
+          tag-list))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ECR Functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 (defun aws-ecr-login ()
   "Login to Amazon ECR based on the current environment."
   (aws-ecr "get-login" "--no-include-email"))
@@ -246,6 +274,102 @@
     (sort res (| time-less-p
                  (safe-date-to-time (assoc1 'time %2))
                  (safe-date-to-time (assoc1 'time %1))))))
+
+(cl-defun aws-ec2-describe-key-pairs (&key key-names)
+  (let ((-aws-return-json t))
+    (assoc1 'KeyPairs (apply #'aws-ec2 "describe-key-pairs" (when key-names (list "--key-name" key-names))))))
+
+(cl-defun aws-ec2-create-key-pair (name)
+  (let ((-aws-return-json t))
+    (aws-ec2 "create-key-pair" "--key-name" name)))
+
+(cl-defun aws-ec2-delete-key-pair (&key key-name key-pair-id)
+  (let ((-aws-return-json t)
+        (arg-builder (make-argument-builder)))
+
+    (funcall arg-builder :opt "--key-name" key-name)
+    (funcall arg-builder :opt "--key-pair-id" key-pair-id)
+
+    (when (y-or-n-p "Are you sure you want to delete %s" (or key-name key-pair-id))
+      (apply #'aws-ec2 "delete-key-pair" (funcall arg-builder :cli-args)))))
+
+;;(cl-defun aws-ec2-create-volume ())
+
+;;
+;; tags can be an alist with:
+;;  (resource-type . value)
+;;  (tags . ((key . value)
+;;           (key . value))
+;;
+;;
+(cl-defun aws-ec2-create-or-run-instance (&key image-id
+                                               instance-type
+                                               key-name
+                                               security-group-ids
+                                               volume-size-gb
+                                               block-device-mappings
+                                               subnet-id
+                                               (count 1)
+                                               associate-public-ip-address
+                                               name
+                                               instance-tags ;; alist
+                                               )
+  "`block-device-mappings' is a list of cons cells for key value pairs.
+
+`instance-tags' is a list of cons cells for key value pairs for tags for
+the instance.
+
+See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
+"
+  (let ((-aws-return-json t)
+        (arg-builder (make-argument-builder)))
+
+    (assert (xor (not volume-size-gb) (not block-device-mappings)) nil
+            "Dont set both volume-size-gb and block-device-mappings at the same time.")
+
+    ;; Is there a slicker way to do this?
+    (cl-flet ((args (&rest args)
+                    (apply arg-builder args)))
+      (args :opt "--image-id" image-id)
+      (args :opt "--instance-type" instance-type)
+      (args :opt "--key-name" key-name)
+      (args :opt "--security-group-ids" security-group-ids)
+      (args :opt "--subnet-id" subnet-id)
+      (args :opt "--count" (number-to-string count))
+      (args :flag "--associate-public-ip-address" associate-public-ip-address)
+
+      (when volume-size-gb
+        ;; This is annoying.  The json serializer expects the keywords to be symbols
+        ;; and won't accept it if they are strings.
+        (args :opt "--block-device-mappings" (json-serialize `((DeviceName . "/dev/sda1")
+                                                               (Ebs . ((DeleteOnTermination . t)
+                                                                       (VolumeSize . ,volume-size-gb)
+                                                                       (VolumeType . "gp2")
+                                                                       (Encrypted . t)))))))
+      (when block-device-mappings
+        (args :opt "--block-device-mappings" (json-serialize block-device-mappings)))
+
+      ;;
+      ;; You can only specify one set of flags.
+      ;;
+      (when name
+        (push (cons "Name" name) instance-tags))
+
+      (when instance-tags
+        (args :opt "--tag-specifications" (first (aws-ec2-make-tag-string `(((resource-type . "instance")
+                                                                             (tags . ,instance-tags)))))))
+      (apply #'aws-ec2 "run-instances"
+             (args :cli-args)))))
+
+(cl-defun aws-ec2-stop-instance (instance-ids)
+  (when (y-or-n-p (format "Are you sure you want to stop %s? " instance-ids))
+    (let ((-aws-return-json t))
+      (aws-ec2 "stop-instances" "--instance-ids" instance-ids))))
+
+(cl-defun aws-ec2-terminate-instance (instance-ids)
+  (when (y-or-n-p (format "Are you sure you want to TERMIANTE %s? " instance-ids))
+    (let ((-aws-return-json t))
+      (aws-ec2 "terminate-instances" "--instance-ids" instance-ids))))
 
 ;; Replace with something like with-overwrite-buffer-pp
 (defun data-to-buffer (data fmt &rest args)

@@ -697,6 +697,31 @@ ${name}")
         (with-current-buffer (shell-open-dir emacs-sqlite-dir)
           (insertf "make clean; make module; cp sqlite3-api.so %s" dynamic-module-dir))))))
 
+(defconst ssh-agent-config-template
+"Host *
+    AddKeysToAgent yes
+    UseKeychain yes
+    IdentityFile %s
+")
+
+
+(defun setup-ssh-directory ()
+  (interactive)
+  (assert-program-exists "ssh-keygen")
+
+  (let* ((ssh-dir "~/.ssh/")
+         (config-file-path (expand-file-name (path-join ssh-dir "config")))
+         (private-key-path (path-join ssh-dir "id_ed25519")))
+
+    ;; I want to retain the ~ in the private-key-path
+    (assert (file-has-size-p (expand-file-name private-key-path)) "Make sure your private id_ed22519 key is created with ssh-keygen first.")
+
+    (unless (file-has-size-p config-file-path)
+      (barf (format ssh-agent-config-template private-key-path)
+            config-file-path))
+
+    (message "Add ssh key %s to the ssh-agent: ssh-add -K %s" private-key-path private-key-path)))
+
 ;;(defun jenv-list-versions ()
 ;;  ())
 
