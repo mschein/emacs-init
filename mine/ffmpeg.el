@@ -229,9 +229,9 @@
 ;; Convert VOB to mp4
 ;; ffmpeg -i weighing.VOB -vcodec libx264 -acodec aac weighing.mp4
 
-(cl-defun ffmpeg-dir-to-mp4 (path &key replace-file (extension-pattern "\.mkv$"))
+(cl-defun ffmpeg-dir-to-mp4 (path &key (extension-pattern "\.mkv$"))
   (do-list-async (list-directory-entries path :full t :match extension-pattern)
                  :fn (lambda (entry call-next-fn)
-                       (ffmpeg-video-to-mp4 entry call-next-fn))))
+                       (ffmpeg-video-to-mp4 entry :cb-fn call-next-fn))))
 
 (provide 'ffmpeg)
