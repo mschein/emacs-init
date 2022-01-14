@@ -183,13 +183,13 @@
                                ffmpeg-args
                                (list output-file))
                   :throw t
-                  :callbackfn (lambda (resp)
-                                (when replace
-                                  (osx-move-to-trash path)
-                                  (rename-file output-file path))
-                                (message "Finished processing file %s" path)
-                                (when cb-fn
-                                  (funcall cb-fn path))))))
+                  :callback-fn (lambda (resp)
+                                 (when replace
+                                   (osx-move-to-trash path)
+                                   (rename-file output-file path))
+                                 (message "Finished processing file %s" path)
+                                 (when cb-fn
+                                   (funcall cb-fn path))))))
 
 ;;
 ;; Make a general "async and update/replace file" function.
