@@ -2496,6 +2496,15 @@ end tell
                                  (format "set current time to %d" start-time-sec)
                                ""))))
 
+(defun osx-move-to-trash (files)
+  (do-cmd-succeeded-p (run-osascript (format "tell app \"Finder\" to move {%s} to trash"
+                         (string-join
+                          (mapcar (fn (path)
+                                    (format "the POSIX file %s"
+                                            (quote-str path)))
+                                  (to-list files))
+                          ", ")))))
+
 (defun get-chrome-path ()
   (ecase system-type
     (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
@@ -2596,7 +2605,7 @@ end tell
 ;; Async Utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun do-list-async (list fn cb)
+(cl-defun do-list-async (list &key fn cb)
   "A helper/wrapper for when you want to do work on a list with a function that takes a callback.
 
 
@@ -2605,7 +2614,8 @@ end tell
 "
   (when list
     (cl-labels ((handler-fn (&rest args)
-                  (apply cb args)
+                  (when cb
+                    (apply cb args))
                   (when list
                     (funcall fn (pop list) #'handler-fn))))
     (funcall fn (pop list) #'handler-fn))))

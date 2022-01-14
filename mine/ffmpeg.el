@@ -172,7 +172,29 @@
 (defun ffmpeg-movie-length (path)
   (string-to-number (assoc1 '(format duration) (ffmpeg-get-movie-metadata path))))
 
-(cl-defun ffmpeg-reduce-size (path &key (switch-codec t) (replace t))
+(cl-defun ffmpeg-async-file-modifier (path ffmpeg-args &key cb-fn (replace t))
+  (let* ((path (if (file-name-absolute-p path)
+                   path
+                 (path-join default-directory path)))
+         (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
+    (do-cmd-async (concatenate 'list
+                               (list "ffmpeg"
+                                     "-i" path)
+                               ffmpeg-args
+                               (list output-file))
+                  :throw t
+                  :callbackfn (lambda (resp)
+                                (when replace
+                                  (osx-move-to-trash path)
+                                  (rename-file output-file path))
+                                (message "Finished processing file %s" path)
+                                (when cb-fn
+                                  (funcall cb-fn path))))))
+
+;;
+;; Make a general "async and update/replace file" function.
+;;
+(cl-defun ffmpeg-reduce-size (path &key (switch-codec t) (replace t) cb-fn)
   ;;
   ;; keep this simple and hard coded for now.
   ;;
@@ -183,16 +205,20 @@
   ;; lower the bit rate.
   ;; ffmpeg -i input.mp4 -b 800k output.mp4
   ;;
-  (let (;; (length (ffmpeg-movie-length path))
-        ;; (size (get-file-size path))
-        (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
-    (do-cmd-async `("ffmpeg"
-                    "-i" ,path
-                    "-crf" "28"
-                    "-b" "850k"
-                    ,@(when switch-codec
-                          (list "-vcodec" "libx265"))
-                    ,output-file))))
+  (ffmpeg-async-file-modifier path
+                              `("-crf" "28"
+                                "-b" "850k"
+                                ,@(when switch-codec
+                                    (list "-vcodec" "libx264")))
+                              :replace replace
+                              :cb-fn cb-fn))
+
+(cl-defun ffmpeg-conv-video-file-type (file-to-convert &key (codec "aac") (replace t) cb-fn)
+  (ffmpeg-async-file-modifier file-to-convert
+                              (list "-vcodec" "libx264"
+                                    "-acodec" codec)
+                              :replace replace
+                              :callback-fn cb-fn))
 
 ;;
 ;; extract metadata
@@ -203,19 +229,9 @@
 ;; Convert VOB to mp4
 ;; ffmpeg -i weighing.VOB -vcodec libx264 -acodec aac weighing.mp4
 
-(cl-defun ffmpeg-vob-to-mp4 (path &key overwrite-output)
-  (let ((output-file (format "%s.mp4" (file-name-sans-extension path))))
-    (when (and (not overwrite-output)
-               (file-exists-p output-file))
-      (error "Output file %s exists already." output-file))
-
-    (do-cmd-async (list "ffmpeg"
-                        "-i" path
-                        "-vcodec" "libx264"
-                        "-acodec" "aac"
-                        output-file)
-                  :throw t
-                  :callback-fn (lambda (&rest results)
-                                 (message "Finished processing %s: %s" path results)))))
+(cl-defun ffmpeg-dir-to-mp4 (path &key replace-file (extension-pattern "\.mkv$"))
+  (do-list-async (list-directory-entries path :full t :match extension-pattern)
+                 :fn (lambda (entry call-next-fn)
+                       (ffmpeg-video-to-mp4 entry call-next-fn))))
 
 (provide 'ffmpeg)
