@@ -2464,6 +2464,9 @@ Returns a list of alists."
       (barf script script-path)
       (do-cmd (append (list "osascript" script-path) args) :throw t))))
 
+(defun osascript-quote-str (str)
+  (concat "\"" (escape-string str "\"\\") "\""))
+
 (defconst +osx-path-to-firefox+ "/Applications/Firefox.app/Contents/MacOS/firefox")
 
 (defun init-quicktime-movie (path)
@@ -2501,7 +2504,10 @@ end tell
                          (string-join
                           (mapcar (fn (path)
                                     (format "the POSIX file %s"
-                                            (quote-str path)))
+                                            (osascript-quote-str
+                                             (if (file-name-absolute-p path)
+                                                 path
+                                               (path-join default-directory path)))))
                                   (to-list files))
                           ", ")))))
 
