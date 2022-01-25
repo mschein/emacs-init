@@ -27,7 +27,7 @@
 (assert (ffmpeg-is-installed) nil "Please install ffmpeg before using this module.
    Try brew or another package manager.")
 
-(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length overwrite-output)
+(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length overwrite)
   (assert (file-exists-p input-file) "Input file does not exist.")
   (assert length)
 
@@ -36,9 +36,9 @@
                              "clip"
                              (file-name-extension input-file)))
         (seconds (+ seconds (or (* 60 minutes) 0))))
-    (when (and overwrite-output
+    (when (and overwrite
                (file-exists-p output-file))
-      (delete-file output-file t))
+      (osx-move-to-trash output-file))
 
     (do-cmd-async
      (list "ffmpeg"
@@ -61,15 +61,15 @@
 ;;  convert -loop 0 frames/ffout*.png output.gif
 
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
-(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length overwrite-output)
+(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length (overwrite t))
   (assert (file-exists-p input-file) "Input file does not exist.")
   (assert length)
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
         (seconds (+ seconds (or (* 60 minutes) 0))))
-    (when (and overwrite-output
+    (when (and overwrite
                (file-exists-p output-file))
-      (delete-file output-file t))
+      (osx-move-to-trash output-file))
 
     (do-cmd-async
      (list "ffmpeg"
@@ -194,7 +194,7 @@
 ;;
 ;; Make a general "async and update/replace file" function.
 ;;
-(cl-defun ffmpeg-reduce-size (path &key (switch-codec t) (replace t) cb-fn)
+(cl-defun ffmpeg-reduce-size (path &key (frame-rate 28) (switch-codec t) (bit-rate "850k") (replace t) cb-fn)
   ;;
   ;; keep this simple and hard coded for now.
   ;;
@@ -206,12 +206,18 @@
   ;; ffmpeg -i input.mp4 -b 800k output.mp4
   ;;
   (ffmpeg-async-file-modifier path
-                              `("-crf" "28"
-                                "-b" "850k"
+                              `("-crf" ,(number-to-string frame-rate)
+                                "-b" ,bit-rate
                                 ,@(when switch-codec
                                     (list "-vcodec" "libx264")))
                               :replace replace
                               :cb-fn cb-fn))
+
+(cl-defun ffmpeg-reduce-size-list (list &rest ffmpeg-args)
+  (do-list-async list
+                 :fn (lambda (entry call-next-fn)
+                       (apply #'ffmpeg-reduce-size entry :cb-fn call-next-fn
+                              ffmpeg-args))))
 
 (cl-defun ffmpeg-conv-video-file-type (file-to-convert &key (codec "aac") (replace t) cb-fn)
   (ffmpeg-async-file-modifier file-to-convert
