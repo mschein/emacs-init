@@ -3430,9 +3430,20 @@ https://www.ietf.org/rfc/rfc2849.txt."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun docker-list-processes ()
+  (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+"))
+
+(defun docker-list-images ()
+  (csv-split-text (run-to-str "docker" "images") :split-regex "[ \t][ \t]+"))
+
+(defun docker-list-processes-pp ()
   (interactive)
   (with-overwrite-buffer-pp "+docker-ps+"
-    (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+")))
+    (docker-list-processes)))
+
+(defun docker-list-images-pp ()
+  (interactive)
+  (with-overwrite-buffer-pp "+docker-images+"
+    (docker-list-images)))
 
 (defun docker-run-image (image-id)
   (with-shell-buffer "~" (format "*sh-docker-container-%s" image-id)
@@ -3449,6 +3460,16 @@ https://www.ietf.org/rfc/rfc2849.txt."
 
   (docker-run-image (find-thing-at-point "[ \t\n]" :thing-name "Docker Image")))
 
+(defun docker-run-latest-image ()
+  (interactive)
+  (if-let (image-id (assoc1 "IMAGE ID" (car (docker-list-images))))
+      (docker-run-image image-id)
+    (error "Could not find an image to run")))
+
+(defun docker-image-prune ()
+  (interactive))
+
+;  docker image prune
 ;;
 ;; You can use tramp to edit stuff inside of docker:
 ;; https://willschenk.com/articles/2020/tramp_tricks/
