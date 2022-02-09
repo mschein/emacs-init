@@ -143,6 +143,7 @@
 ;;  ffmpeg -i input.mkv -codec copy output.mp4
 ;;
 
+;; Add an optional end time instead of length
 (cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length (overwrite-output t))
   "Get a slice from a video."
   (let ((output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file)))
@@ -169,6 +170,15 @@
 (defun ffmpeg-get-movie-metadata (path)
   (run-to-json "ffprobe" "-v" "quiet" "-print_format" "json" "-show_format" path))
 
+(defun ffmpeg-get-movie-dimensions (path)
+  (elt (assoc1 'streams (run-to-json "ffprobe" "-v" "error"
+                                    "-select_streams" "v"
+                                    "-show_entries"
+                                    "stream=width,height"
+                                    "-of" "json=compact=1"
+                                    path))
+       0))
+
 (defun ffmpeg-movie-length (path)
   (string-to-number (assoc1 '(format duration) (ffmpeg-get-movie-metadata path))))
 
@@ -177,6 +187,7 @@
                    path
                  (path-join default-directory path)))
          (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
+    (assert (not (file-exists-p output-file)))
     (do-cmd-async (concatenate 'list
                                (list "ffmpeg"
                                      "-i" path)
@@ -194,7 +205,7 @@
 ;;
 ;; Make a general "async and update/replace file" function.
 ;;
-(cl-defun ffmpeg-reduce-size (path &key (frame-rate 28) (switch-codec t) (bit-rate "850k") (replace t) cb-fn)
+(cl-defun ffmpeg-reduce-size (path &key (frame-rate 28) (switch-codec t) bit-rate (replace t) (scale-width -1) cb-fn)
   ;;
   ;; keep this simple and hard coded for now.
   ;;
@@ -205,9 +216,13 @@
   ;; lower the bit rate.
   ;; ffmpeg -i input.mp4 -b 800k output.mp4
   ;;
+
   (ffmpeg-async-file-modifier path
                               `("-crf" ,(number-to-string frame-rate)
-                                "-b" ,bit-rate
+                                ,@(when bit-rate
+                                    (list "-b" bit-rate))
+                                ,@(when (< 0 scale-width)
+                                    (list "-vf" (format "scale=%d:h=-1,setsar=1:1" scale-width)))
                                 ,@(when switch-codec
                                     (list "-vcodec" "libx264")))
                               :replace replace
