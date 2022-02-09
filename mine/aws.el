@@ -808,6 +808,15 @@ doesn't deal with paging yet."
   (let ((-aws-return-json t))
     (assoc1 'Policy (aws-kms "get-key-policy" "--key-id" key-id "--policy-name" policy-name))))
 
+(defun aws-acm-get-certificate (arn)
+  (let ((-aws-return-json t))
+    (aws-acm "get-certificate" "--certificate-arn" arn)))
+
+(defun aws-acm-list-certificates ()
+  (let ((-aws-return-json t))
+    (assoc1 'CertificateSummaryList
+            (aws-acm "list-certificates"))))
+
 (defun aws-iam-list-roles ()
   (let ((-aws-return-json t))
     (assoc1 'Roles (aws-iam "list-roles"))))

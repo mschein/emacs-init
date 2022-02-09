@@ -4113,6 +4113,9 @@ rm -f ${ATTACHMENT}
   (interactive "shost-or-ip: \nsuser: ")
   (shell-open-dir (format "/ssh:%s:/" (host-info-to-login host-or-ip user))))
 
+(defun tar-dir (output-file dir)
+  (run "tar" "cfz" output-file dir))
+
 ;;
 ;; this is supposed to be for matching lists of alists.
 ;; I need to have a way to specify what data is returned.
