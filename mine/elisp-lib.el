@@ -1075,7 +1075,7 @@ Don't expect any output."
 ;; FYI, I learned that timers aren't really reliable.  I'm going to
 ;; try set-process-sentinel.
 ;;
-(cl-defun do-cmd-async (cmd &key callback-fn input input-file stdout stderr throw)
+(cl-defun do-cmd-async (cmd &key callback-fn input input-file stdout stderr throw cwd)
   "Use Emacs's make-process function to run a command in async fashion.
 
 The goal is to do work in the background without locking Emacs until
@@ -1094,6 +1094,7 @@ The arguments are:
 6. `stderr': Include stderr in the response object.
 7. `throw': Raise an error on failure.
             Currently won't call the callback fn.
+8. `cwd': Set the default-directory for running the command
 
 output: (list
          (:code . <int>) ; Did it succeed or fail
@@ -1125,21 +1126,27 @@ output is passed to the callback-fn."
         (setq-local throw throw)
         (setq-local program program)
         (setq-local callback-fn callback-fn)
+        ;;
+        ;; I don't know that I need to set both buffer local and the global default diretory
+        ;; I'm possibly being overly paranoid.
+        ;;
+        (let ((default-directory (or cwd default-directory)))
+          (setq-local default-directory default-directory)
 
-        (message "Start async command: %s %s -> " program (cmd-to-shell-string args))
+          (message "Start async command: %s %s in %s -> " program (cmd-to-shell-string args) default-directory)
 
-        (let ((proc (make-process :name program
-                                  :buffer stdout-buffer
-                                  :stderr stderr-buffer
-                                  :command (cons program args)
-                                  :connection-type 'pipe
-                                  :sentinel #'ignore)))
-          (when (or input input-file)
-            (process-send-string proc (or input (slurp input-file)))
-            (process-send-eof proc))
+          (let ((proc (make-process :name program
+                                    :buffer stdout-buffer
+                                    :stderr stderr-buffer
+                                    :command (cons program args)
+                                    :connection-type 'pipe
+                                    :sentinel #'ignore)))
+            (when (or input input-file)
+              (process-send-string proc (or input (slurp input-file)))
+              (process-send-eof proc))
 
-          (set-process-sentinel proc #'do-cmd-async-finish)
-          proc)))))
+            (set-process-sentinel proc #'do-cmd-async-finish)
+            proc))))))
 
 (cl-defun do-cmd-async-finish (proc change-desc)
   (unwind-protect
@@ -1164,6 +1171,15 @@ output is passed to the callback-fn."
     (with-current-buffer (process-buffer proc)
       (kill-buffer stderr-buffer))
     (kill-buffer (process-buffer proc))))
+
+(cl-defun run-async (cmd &key cwd)
+  (do-cmd-async cmd
+                :callback-fn (lambda (result)
+                               (message "Result from %s: %s" cmd result)
+                               (assert (do-cmd-succeeded-p result)))
+                :stdout 'string
+                :stderr 'string
+                :cwd cwd))
 
 ;;;
 ;;; Some functions for dealing with arguments
@@ -3440,6 +3456,8 @@ https://www.ietf.org/rfc/rfc2849.txt."
   (with-overwrite-buffer-pp "+docker-ps+"
     (docker-list-processes)))
 
+(defalias 'docker-ps #'docker-list-processes-pp)
+
 (defun docker-list-images-pp ()
   (interactive)
   (with-overwrite-buffer-pp "+docker-images+"
@@ -4112,6 +4130,28 @@ rm -f ${ATTACHMENT}
 (defun open-host (host-or-ip user)
   (interactive "shost-or-ip: \nsuser: ")
   (shell-open-dir (format "/ssh:%s:/" (host-info-to-login host-or-ip user))))
+
+;; ssh -L [LOCAL_IP:]LOCAL_PORT:DESTINATION:DESTINATION_PORT [USER@]SSH_SERVER
+(cl-defun ssh-open-tunnel (ssh-server local-port destination-port &key (destination-server "127.0.0.1") user local-ip)
+
+  (let ((cmd "ssh -L "))
+    (cl-labels ((force-str (atom)
+                  (cl-case (type-of atom)
+                    (integer (number-to-string atom))
+                    (t atom)))
+                (add-to-cmd (&rest strings)
+                  (setf cmd (apply #'concat cmd (mapcar #'force-str strings)))))
+      (when local-ip
+        (add-to-cmd local-ip ":"))
+      ;; This isn't accounting for just 2 unix domain sockets.
+      (add-to-cmd local-port ":" destination-server ":" destination-port " ")
+
+      (when user
+        (add-to-cmd user "@"))
+      (add-to-cmd ssh-server)
+
+      ;; should I use split-string-and-unquote more?
+      (shell-open-run-command "/tmp" (split-string-and-unquote cmd) "*ssh-tunnel-ssh*"))))
 
 (defun tar-dir (output-file dir)
   (run "tar" "cfz" output-file dir))

@@ -182,11 +182,12 @@
 (defun ffmpeg-movie-length (path)
   (string-to-number (assoc1 '(format duration) (ffmpeg-get-movie-metadata path))))
 
-(cl-defun ffmpeg-async-file-modifier (path ffmpeg-args &key cb-fn (replace t))
+(cl-defun ffmpeg-async-file-modifier (path ffmpeg-args &key output-file cb-fn (replace t))
   (let* ((path (if (file-name-absolute-p path)
                    path
                  (path-join default-directory path)))
-         (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
+         (output-file (or output-file
+                          (concat (file-name-sans-extension path) "-out." (file-name-extension path)))))
     (assert (not (file-exists-p output-file)))
     (do-cmd-async (concatenate 'list
                                (list "ffmpeg"
@@ -234,12 +235,13 @@
                        (apply #'ffmpeg-reduce-size entry :cb-fn call-next-fn
                               ffmpeg-args))))
 
-(cl-defun ffmpeg-conv-video-file-type (file-to-convert &key (codec "aac") (replace t) cb-fn)
+(cl-defun ffmpeg-conv-video-to-mp4 (file-to-convert &key cb-fn)
   (ffmpeg-async-file-modifier file-to-convert
-                              (list "-vcodec" "libx264"
-                                    "-acodec" codec)
-                              :replace replace
-                              :callback-fn cb-fn))
+                              '("-vcodec" "libx264" "-acodec" "aac")
+                              :output-file (concat (file-name-sans-extension file-to-convert)
+                                                   ".mp4")
+                              :replace nil
+                              :cb-fn cb-fn))
 
 ;;
 ;; extract metadata
@@ -253,6 +255,6 @@
 (cl-defun ffmpeg-dir-to-mp4 (path &key (extension-pattern "\.mkv$"))
   (do-list-async (list-directory-entries path :full t :match extension-pattern)
                  :fn (lambda (entry call-next-fn)
-                       (ffmpeg-video-to-mp4 entry :cb-fn call-next-fn))))
+                       (ffmpeg-conv-video-to-mp4 entry :cb-fn call-next-fn))))
 
 (provide 'ffmpeg)
