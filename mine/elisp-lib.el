@@ -1172,11 +1172,13 @@ output is passed to the callback-fn."
       (kill-buffer stderr-buffer))
     (kill-buffer (process-buffer proc))))
 
-(cl-defun run-async (cmd &key cwd)
+(cl-defun run-async (cmd &key cwd cb)
   (do-cmd-async cmd
                 :callback-fn (lambda (result)
                                (message "Result from %s: %s" cmd result)
-                               (assert (do-cmd-succeeded-p result)))
+                               (assert (do-cmd-succeeded-p result))
+                               (when cb
+                                 (funcall cb result)))
                 :stdout 'string
                 :stderr 'string
                 :cwd cwd))
