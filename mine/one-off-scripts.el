@@ -558,7 +558,8 @@ ${name}")
       ;; Create any directories needed
       (when (equal "web" type)
         (ensure-makedirs "static")
-        (touch (format "static/%s.css" name)))
+        (touch (format "static/%s.css" name))
+        (touch (format "static/%s.js" name)))
 
       (message "Setup git repo in %s" target)
       (git-init-repo "."))))
