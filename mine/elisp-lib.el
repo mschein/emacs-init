@@ -3993,7 +3993,6 @@ rm -f ${ATTACHMENT}
                       "Handle a `resp' response structure either from the url cache or from do-cmd/do-cmd-async"
 
                       ;; Try to share the cache updating code between sync and async mode
-                      (message "web->handle-response-fn code: %s" (assoc1 :code resp))
                       (when use-caching
                         (message "web->handle-response-fn cache url %s code %s" final-url
                                  (assoc1 :code resp))
@@ -4022,8 +4021,8 @@ rm -f ${ATTACHMENT}
                                           (ignore-errors
                                             (parse-html-string output)))))
 
-                        (message "web-request: curl code: %s http code: %s, status-line: %s"
-                                 curl-code http-code status-line)
+                        (message "web-request: curl code: %s http code: %s"
+                                 curl-code http-code)
 
                         ;;
                         ;; Check to see if we're supposed to throw an error
@@ -4059,8 +4058,6 @@ rm -f ${ATTACHMENT}
                                (output (if map-fn
                                            (funcall map-fn output)
                                          output)))
-                          (message "web->handle-response-fn finish")
-
                           (if (is-async)
                               (funcall callback-fn output)
                             output))))
@@ -4075,7 +4072,7 @@ rm -f ${ATTACHMENT}
           ;; Actually make the web request, either async or not
           ;; caching the output if needed.
           ;;
-          (message "web-request: start request for %s" final-url)
+          (message "web-request: start %s request for %s" method final-url)
 
           (if use-caching
               (if-let (resp (m-url-cache-get final-url))
