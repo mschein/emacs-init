@@ -3256,7 +3256,7 @@ in the keyring."
   (assoc1 :stdout (run-eval-python python-code :input input :stdout 'string :throw t)))
 
 (defun parse-yaml-file (path)
-  (json-read-from-string (run-python-pipe path "import sys, json, yaml; print(json.dumps(yaml.load(sys.stdin)))")))
+  (json-read-from-string (run-python-pipe path "import sys, json, yaml; print(json.dumps(yaml.load(sys.stdin, Loader=yaml.FullLoader)))")))
 
 (defun pip-install (&rest library-options)
   (apply #'run "pip" "install" library-options))
