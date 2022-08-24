@@ -3777,6 +3777,7 @@ rm -f ${ATTACHMENT}
                        user-agent
                        cookie-jar
                        output-file
+                       referer
                        retry
                        retry-delay-sec
                        throw
@@ -3812,6 +3813,7 @@ rm -f ${ATTACHMENT}
    `user-agent': Set the user agent string.
    `cookie-jar': A place to send and receive cookies.
    `output-file': Dump the output to this file instead of stdout.
+   `referer': Set the referer header for the request.
    `retry': Number of times to attempt the command
    `retry-delay-sec': Time to wait betwey retries in seconds.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
@@ -3928,6 +3930,7 @@ rm -f ${ATTACHMENT}
         (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
         (append-option insecure (| `("--insecure")))
         (append-option output-file (| list "--output" output-file))
+        (append-option referer (| list "--referer" referer))
 
         ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
