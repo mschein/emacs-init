@@ -1075,6 +1075,11 @@ Don't expect any output."
 ;; FYI, I learned that timers aren't really reliable.  I'm going to
 ;; try set-process-sentinel.
 ;;
+(let ((do-cmd-async-counter (make-counter)))
+  (defun next-do-cmd-id ()
+    "Return the next command id `do-cmd-async' should use for logging."
+    (funcall do-cmd-async-counter)))
+
 (cl-defun do-cmd-async (cmd &key callback-fn input input-file stdout stderr throw cwd)
   "Use Emacs's make-process function to run a command in async fashion.
 
@@ -1116,7 +1121,8 @@ output is passed to the callback-fn."
 
     (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output" program)))
           (stderr-buffer (when (equal 'string stderr)
-                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output" program)))))
+                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output" program))))
+          (do-cmd-id (next-do-cmd-id)))
 
       (with-current-buffer stdout-buffer
         (setq-local args args)
@@ -1126,6 +1132,8 @@ output is passed to the callback-fn."
         (setq-local throw throw)
         (setq-local program program)
         (setq-local callback-fn callback-fn)
+        (setq-local do-cmd-id do-cmd-id)
+
         ;;
         ;; I don't know that I need to set both buffer local and the global default diretory
         ;; I'm possibly being overly paranoid.
@@ -1133,7 +1141,8 @@ output is passed to the callback-fn."
         (let ((default-directory (or cwd default-directory)))
           (setq-local default-directory default-directory)
 
-          (message "Start async command: %s %s in %s -> " program (cmd-to-shell-string args) default-directory)
+          (message "do-cmd-async[%d]: %s %s in %s -> " do-cmd-id program
+                   (cmd-to-shell-string args) default-directory)
 
           (let ((proc (make-process :name program
                                     :buffer stdout-buffer
@@ -1165,7 +1174,7 @@ output is passed to the callback-fn."
                       output))
           (pushcons :code code output)
 
-          (message "-> Finished Async Command(%s): %s %s" code program (cmd-to-shell-string args))
+          (message "do-cmd-async[%s]: -> finished :(%s): %s %s" do-cmd-id code program (cmd-to-shell-string args))
           (when callback-fn
             (funcall callback-fn output))))
     (with-current-buffer (process-buffer proc)
@@ -3748,6 +3757,11 @@ rm -f ${ATTACHMENT}
 (defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
 (defvar +proxy-auth+ nil "The auth to use with the proxy to use for making web requests.")
 
+(let ((web-request-async-counter (make-counter)))
+  (defun next-web-request-id ()
+    "Return the next command id `web-request' should use for logging."
+    (funcall web-request-async-counter)))
+
 ;;
 ;; Stuff to support
 ;;
@@ -3879,6 +3893,7 @@ rm -f ${ATTACHMENT}
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
            (proxy-auth (or proxy-auth +proxy-auth+))
+           (web-request-id (next-web-request-id))
            ;;
            ;; I should probably clean this up...
            ;; consolidate quoting and how we create values,
@@ -3934,7 +3949,7 @@ rm -f ${ATTACHMENT}
 
         ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
-          (cl-loop for (name .  value) in form
+          (cl-loop for (name . value) in form
                    for i from 0
                    do
             (let ((filename (format "form-file-%s" i)))
@@ -3972,7 +3987,7 @@ rm -f ${ATTACHMENT}
 
         (when +preserve-request+
           (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
-            (message "Preserve request here: %s" output-file)
+            (message "web-req[%d]: Preserve request here: %s" web-request-id output-file)
 
             (barf (format web-request-shell-script-template
                           (slurp json-file)
@@ -3997,7 +4012,7 @@ rm -f ${ATTACHMENT}
 
                       ;; Try to share the cache updating code between sync and async mode
                       (when use-caching
-                        (message "web->handle-response-fn cache url %s code %s" final-url
+                        (message "web-req[%d]: handle-response cache url %s code %s" web-request-id final-url
                                  (assoc1 :code resp))
                         (m-url-cache-set final-url resp
                                          (if (equal use-caching :forever)
@@ -4024,8 +4039,8 @@ rm -f ${ATTACHMENT}
                                           (ignore-errors
                                             (parse-html-string output)))))
 
-                        (message "web-request: curl code: %s http code: %s"
-                                 curl-code http-code)
+                        (message "web-req[%d]: finished: curl code: %s http code: %s"
+                                 web-request-id curl-code http-code)
 
                         ;;
                         ;; Check to see if we're supposed to throw an error
@@ -4037,7 +4052,7 @@ rm -f ${ATTACHMENT}
                                    (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
                                            http-code (assoc1 :message status-line)
                                            (string-truncate output *webrequest-http-error-msg-len*))))
-                              (message error-message)
+                              (message "web-req[%d]: %s" web-request-id error-message)
                               (error error-message))))
 
                         ;; If the alist gets so large it's annoying in ielm,
@@ -4075,13 +4090,13 @@ rm -f ${ATTACHMENT}
           ;; Actually make the web request, either async or not
           ;; caching the output if needed.
           ;;
-          (message "web-request: start %s request for %s" method final-url)
+          (message "web-req[%d]: start %s request for %s" web-request-id method final-url)
 
           (if use-caching
               (if-let (resp (m-url-cache-get final-url))
                   ;; We already have the cached response from the url cache.
                   (progn
-                    (message "web-request: cache hit on %s" final-url)
+                    (message "web-req[%d]: cache hit on %s" web-request-id final-url)
                     (handle-response-fn resp))
                 (make-request-fn))
             (make-request-fn)))))))
