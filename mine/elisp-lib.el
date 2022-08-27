@@ -674,6 +674,12 @@ This should be used to write find-x-at-point functions.
           thing
         (error "Unable to find valid %s.  Start: %d End: %d Len: %d" thing-name start end len)))))
 
+(cl-defun make-counter (&optional (start 0) (inc 1))
+  "Create a stateful counter."
+  (let ((amount start))
+    (fn ()
+        (incf amount inc))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3654,7 +3660,7 @@ Be sure to url encode the parameters.
     (nreverse output)))
 
 (defun stream-vec (vec)
-  (lexical-let ((pos 0))
+  (let ((pos 0))
     (fn (op)
       (cl-case op
         (:next (when (< pos (length vec))
@@ -3668,7 +3674,7 @@ Be sure to url encode the parameters.
         (:empty-p (= pos (length vec)))))))
 
 (defun stream-list (lst)
-  (lexical-let ((head lst))
+  (let ((head lst))
     (fn (op)
       (cl-case op
         (:next (prog1
@@ -4120,11 +4126,6 @@ rm -f ${ATTACHMENT}
            for x from 0
            collect (cons x elm)))
 
-(cl-defun make-counter (&optional (start 0) (inc 1))
-  (lexical-let ((amount start))
-    (fn ()
-        (incf amount inc))))
-
 (defun open-custom-terminal (input-script name)
   "Open a terminal and insert `input-script'.
 
@@ -4193,7 +4194,7 @@ rm -f ${ATTACHMENT}
     (first (remove-if-not (| match-query query %) alist))))
 
 (defun memoize (fn &optional timeout-sec)
-  (lexical-let ((ht (ht))
+  (let ((ht (ht))
                 (fn fn)
                 (timeout-sec timeout-sec))
     (fn (&rest args)
@@ -4220,7 +4221,7 @@ rm -f ${ATTACHMENT}
 (defmacro memoize-fn (func &optional timeout-sec name)
   (let ((memoized-fn (gensym)))
     ;; Only use ,timeout-sec once!
-    `(lexical-let ((,memoized-fn (memoize #',func ,timeout-sec)))
+    `(let ((,memoized-fn (memoize #',func ,timeout-sec)))
        (defun ,(or name (symbol-rename func (| concat % "-cached"))) (&rest args)
          (apply ,memoized-fn args)))))
 
