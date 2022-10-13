@@ -9,13 +9,11 @@
 ;;
 ;; a tutorial: http://dranger.com/ffmpeg/tutorial01.html
 ;;
-;;
-;;
 
 (require 'elisp-lib)
 
 ;;
-;; add code to use brew or something else to instal ffmpeg
+;; add code to use brew or something else to install ffmpeg
 ;;
 
 (defun ffmpeg-binary-path ()
@@ -27,15 +25,22 @@
 (assert (ffmpeg-is-installed) nil "Please install ffmpeg before using this module.
    Try brew or another package manager.")
 
-(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length overwrite)
-  (assert (file-exists-p input-file) "Input file does not exist.")
-  (assert length)
+(defun ffmpeg--clip-time-to-seconds (time)
+  (cl-loop for num in (reverse (mapcar #'string-to-number
+                                       (split-string time ":")))
+           for operand = 1 then (* operand 60)
+           sum (* num operand)))
 
-  (let ((output-file (format "%s-%s.%s"
-                             (file-name-sans-extension input-file)
-                             "clip"
-                             (file-name-extension input-file)))
-        (seconds (+ seconds (or (* 60 minutes) 0))))
+(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length end-time overwrite)
+  (assert (file-exists-p input-file) "Input file does not exist.")
+  (assert (or length end-time))
+
+  (let* ((output-file (format "%s-%s.%s"
+                              (file-name-sans-extension input-file)
+                              "clip"
+                              (file-name-extension input-file)))
+         (seconds (+ seconds (or (* 60 minutes) 0)))
+         (length (or length (ffmpeg--clip-time-to-seconds end-time ))))
     (when (and overwrite
                (file-exists-p output-file))
       (osx-move-to-trash output-file))
@@ -111,8 +116,6 @@
              do (progn
                   (message "Process file %s" file)
                   (ffmpeg-to-audio file)))))
-
-
 ;;
 ;; Audio to single image movie.
 ;;
@@ -170,11 +173,15 @@
 (defun ffmpeg-get-movie-metadata (path)
   (run-to-json "ffprobe" "-v" "quiet" "-print_format" "json" "-show_format" path))
 
+;; combine this stuff
+(defun ffmpeg-get-video-metadata (path)
+  (assoc1 'streams (run-to-json "ffprobe" "-show_streams" "-print_format" "json" path)))
+
 (defun ffmpeg-get-movie-dimensions (path)
   (elt (assoc1 'streams (run-to-json "ffprobe" "-v" "error"
                                     "-select_streams" "v"
                                     "-show_entries"
-                                    "stream=width,height"
+                                    "stream=width,height,bit_rate,avg_frame_rate"
                                     "-of" "json=compact=1"
                                     path))
        0))
@@ -186,9 +193,9 @@
   (let* ((path (if (file-name-absolute-p path)
                    path
                  (path-join default-directory path)))
-         (output-file (or output-file
-                          (concat (file-name-sans-extension path) "-out." (file-name-extension path)))))
-    (assert (not (file-exists-p output-file)))
+         (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
+    (when (file-exists-p output-file)
+      (osx-move-to-trash output-file))
     (do-cmd-async (concatenate 'list
                                (list "ffmpeg"
                                      "-i" path)
@@ -203,14 +210,32 @@
                                  (when cb-fn
                                    (funcall cb-fn path))))))
 
+(defun ffmpeg-find-lower-scale-options (width height)
+  (destructuring-bind (bigger smaller) (if (> width height)
+                                           (list width height)
+                                         (list height width))
+      (cl-loop for bn from (1- bigger) above 1
+               ;; cl-round returns a list with the integer and
+               ;; the remainder.
+               for sn-list = (cl-round (/ (* (float bn) smaller) bigger))
+               ;; Make our rounding behavior match ffmpeg.
+               for sn = (if (eql (second sn-list) .5)
+                            (1+ (first sn-list))
+                          (first sn-list))
+               when (and (= (mod bn 2) 0)
+                         (= (mod sn 2) 0))
+                  collect (list bn sn))))
+
 ;;
 ;; Make a general "async and update/replace file" function.
 ;;
-(cl-defun ffmpeg-reduce-size (path &key (frame-rate 28) (switch-codec t) bit-rate (replace t) (scale-width -1) cb-fn)
+(cl-defun ffmpeg-reduce-size (path &key frame-rate (switch-codec t) bit-rate (replace t) (scale-width -1) cb-fn)
   ;;
   ;; keep this simple and hard coded for now.
   ;;
   ;; ffmpeg -i input.mp4 -vcodec libx265 -crf 28 -b 800k output.mp4
+  ;;
+  ;; 30 is a good default framerate.
   ;;
   ;; also:
   ;;
@@ -219,9 +244,11 @@
   ;;
 
   (ffmpeg-async-file-modifier path
-                              `("-crf" ,(number-to-string frame-rate)
+                              `(
+                                ,@(when frame-rate
+                                    (list "-crf" (number-to-string frame-rate)))
                                 ,@(when bit-rate
-                                    (list "-b" bit-rate))
+                                    (list "-b:v" (number-to-string bit-rate)))
                                 ,@(when (< 0 scale-width)
                                     (list "-vf" (format "scale=%d:h=-1,setsar=1:1" scale-width)))
                                 ,@(when switch-codec
@@ -234,6 +261,45 @@
                  :fn (lambda (entry call-next-fn)
                        (apply #'ffmpeg-reduce-size entry :cb-fn call-next-fn
                               ffmpeg-args))))
+
+(defun ffmpeg-frame-rate-to-num (frame-rate-str)
+  (destructuring-bind (l r)
+      (mapcar #'string-to-number (split-string frame-rate-str "/"))
+    (if (<= r 0)
+        100000000
+      (/ l r))))
+
+(cl-defun ffmpeg-find-closest-width (desired-width current-width height)
+  (dolist (candidate (cons (list current-width height)
+                           (ffmpeg-find-lower-scale-options current-width height)))
+    (destructuring-bind (w h) candidate
+      (if (<= w desired-width)
+          (cl-return-from ffmpeg-find-closest-width w)))))
+
+(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate max-width max-frame-rate)
+  (do-list-async list
+                 :fn (lambda (entry call-next-fn)
+                       ;; Calc the best values for new video parameters
+                       (let* ((video-metadata (ffmpeg-get-movie-dimensions entry))
+                              (movie-bit-rate (string-to-number (assoc-get 'bit_rate video-metadata "100000000")))
+                              (bit-rate (min max-bit-rate movie-bit-rate))
+
+                              (movie-frame-rate (ffmpeg-frame-rate-to-num (assoc1 'avg_frame_rate video-metadata)))
+                              (frame-rate (min max-frame-rate movie-frame-rate))
+
+                              (movie-width (assoc1 'width video-metadata))
+                              (scale-width (ffmpeg-find-closest-width max-width
+                                                                      movie-width
+                                                                      (assoc1 'height video-metadata))))
+
+                         (message "Reduce(%s) -> (width %s to %s) (bit-rate %s to %s) (frame-rate %s to %s)"
+                                  entry movie-width scale-width movie-bit-rate bit-rate movie-frame-rate frame-rate)
+
+                         (ffmpeg-reduce-size entry
+                                             :cb-fn call-next-fn
+                                             :scale-width scale-width
+                                             :bit-rate bit-rate
+                                             :frame-rate frame-rate)))))
 
 (cl-defun ffmpeg-conv-video-to-mp4 (file-to-convert &key cb-fn)
   (ffmpeg-async-file-modifier file-to-convert

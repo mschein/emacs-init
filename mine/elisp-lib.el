@@ -4372,6 +4372,6 @@ rm -f ${ATTACHMENT}
   ;; Note: Works best inside a function declaration, and then use
   ;; C-M-x function.
   ;;
-  (insertf "(declare (optimize (speed 0) (space 0) (debug 3)))"))
+  (insertf "(declaim (optimize (speed 0) (space 0) (safety 3) (debug 3)))"))
 
 (provide 'elisp-lib)
