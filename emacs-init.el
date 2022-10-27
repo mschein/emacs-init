@@ -1103,29 +1103,16 @@ that uses 'font-lock-warning-face'."
             (set (make-local-variable 'sgml-basic-offset) 4)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Autopair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Electic Auto Pair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Autopair mode
+;; Enable globally, but disable a few things.
 ;;
-;; NOTE: wrong argument characterp issues are usually autopair's fault.
-;;
-(require 'autopair)
+(electric-pair-mode 1)
 
 ;; Don't add autopair in certain modes
 (dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
   (add-hook mode (lambda ()
-                   (setq autopair-dont-activate t)
-                   (autopair-mode -1))))
-;;
-;; enable autopair in all buffers
-;; TODO(mls): I may want to move this into mode hooks, to improve
-;; performance.
-;;
-(autopair-global-mode)
-
-;; Special changes for autopair behavior
-(add-hook 'html-mode-hook (lambda ()
-                            (setq autopair-dont-pair (plist-put autopair-dont-pair :never (list ?')))))
+                   (electric-pair-local-mode -1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;(require 'psvn)
@@ -1172,7 +1159,7 @@ that uses 'font-lock-warning-face'."
  '(dosbox-games "/Applications/DosBox/games/")
  '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
  '(package-selected-packages
-   '(terraform-mode with-editor company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider)))
+   '(terraform-mode company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-ispell ac-python ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl f flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -1194,7 +1181,7 @@ that uses 'font-lock-warning-face'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Turn on an equivalent of proced on OSX ;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Emacs's proced doesn't work on OSX.
-(require 'vkill)
+;; (require 'vkill)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
 
