@@ -723,6 +723,31 @@ ${name}")
 
     (message "Add ssh key %s to the ssh-agent: ssh-add -K %s" private-key-path private-key-path)))
 
+(defcustom open-xcom-src-dir nil
+  "Local path to the open xcom source code.")
+
+(defcustom xcom-original-game-dir nil
+  "Local path to the open xcom assets")
+
+(defun build-open-xcom ()
+  (interactive)
+  (with-shell-buffer open-xcom-src-dir "+build-open-xcom+"
+    (when (y-or-n-p "Rebuild brew dependencies?")
+      (run-shell-command "brew install cmake yaml-cpp sdl sdl_gfx sdl_image sdl_mixer"))
+    (run-shell-command "cmake -DCMAKE_BUILD_TYPE=Debug -B build .")
+
+    ;; copy assets from the real game into a shared location.
+    ;;
+    ;; (dolist (subdir '("maps" "terrain"))
+    ;;   (assert (file-exists-p (path-join xcom-original-game-dir subdir))))
+
+    ;; (copy-directory xcom-original-game-dir (path-join ))
+
+
+    (run-shell-command "cmake --build build -j2")
+
+    ))
+
 ;;(defun jenv-list-versions ()
 ;;  ())
 
