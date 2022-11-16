@@ -737,11 +737,6 @@ This should be used to write find-x-at-point functions.
                    for i below max-len
                    collect s)))
 
-;; TODO(scheinholtz): Do more with this?
-(defalias 'string-replace 'replace-regexp-in-string)
-
-(defalias 'string-replace-region 'replace-regex-region)
-
 (cl-defun escape-string (str escape-chars &optional (escaper "\\"))
   "Escape a the string `str', that is put an `escape-char' in front of
 each character in the string `chars'."
@@ -1555,7 +1550,7 @@ Use this likely in leu of `buffer-string'."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun string-remove (pattern str)
-  (string-replace pattern "" str))
+  (replace-regexp-in-string pattern "" str))
 
 ;; Is this needed?
 (defun remove-if-in-set (set seq)
@@ -2145,7 +2140,7 @@ Returns a list of alists."
   (interactive "r")
   (let ((case-fold-search nil))
     (replace-string-in-region begin end
-      (string-replace
+      (replace-regexp-in-string
         "\\([A-Z]\\)"
         (| concat "_" (downcase %))
         (buffer-substring-no-properties begin end)))))
@@ -3442,7 +3437,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
                          (let ((space-regex "^ +"))
                            (if (string-match space-regex next)
                                (progn
-                                 (setcar current (concat (car current) (string-replace space-regex "" next)))
+                                 (setcar current (concat (car current) (replace-regexp-in-string space-regex "" next)))
                                  current)
                              (cons next current))))
                        lines
@@ -3542,7 +3537,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
                       (message "Substitute key %s" key)
                       (assoc1 key vars))))
     (cl-loop for (k . v) in vars
-             do (setf template (string-replace "${[a-zA-Z0-9]+}" #'sub-fn template)))
+             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9]+}" #'sub-fn template)))
     template))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

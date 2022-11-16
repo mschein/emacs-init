@@ -205,6 +205,10 @@
   "Login to Amazon ECR based on the current environment."
   (aws-ecr "get-login" "--no-include-email"))
 
+(defun aws-ecr-get-login-password (&optional region)
+  "Get the ecr login password"
+  (apply #'aws-ecr "get-login-password" `(,@(if region (list "--region" region)))))
+
 (defun aws-ecr-list-images (&rest args)
   "Return an array of all of the images ids specified by
    running the aws ecr list-images command"
