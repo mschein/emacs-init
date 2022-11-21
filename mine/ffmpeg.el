@@ -103,10 +103,12 @@
    )
 
 (cl-defun ffmpeg-to-audio (input-file &optional output-file)
-  (let ((output-file (or output-file
-                         (concat (file-name-base input-file) ".aac"))))
-    (do-cmd (list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" output-file)
-            )))
+  (let ((audio-suffix ".aac"))
+    (when output-file
+      (assert (string-ends-with audio-suffix output-file)))
+    (let ((output-file (or output-file
+                           (concat (file-name-base input-file) audio-suffix))))
+      (do-cmd (list "ffmpeg" "-i" input-file "-vn" "-acodec" "copy" output-file)))))
 
 (cl-defun ffmpeg-to-audio-dir (dir &key match)
   ;; I know this is lame, but it's just a place holder.
