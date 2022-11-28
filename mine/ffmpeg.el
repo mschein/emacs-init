@@ -9,6 +9,8 @@
 ;;
 ;; a tutorial: http://dranger.com/ffmpeg/tutorial01.html
 ;;
+;; A guide: https://img.ly/blog/ultimate-guide-to-ffmpeg/
+;;
 
 (require 'elisp-lib)
 
