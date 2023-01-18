@@ -3132,6 +3132,7 @@ in the keyring."
     (switch-to-buffer (shell-open-dir default-directory))
 
     (let ((activate-link (or (find-py-activate-file default-directory)
+                             ;; Why am I using (basename) here?
                              (find-virtualenv-file (basename (git-project-root))))))
       (unless activate-link
         (error "Unable to locate an activate link from directory %s" default-directory))

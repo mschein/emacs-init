@@ -42,6 +42,7 @@
     "ecr"
     "ecs"
     "efs"
+    "eks"
     "elasticache"
     "elasticbeanstalk"
     "elastictranscoder"
@@ -884,6 +885,18 @@ doesn't deal with paging yet."
   (let ((-aws-return-json t))
     (assoc1 'Distribution
             (aws-cloudfront "get-distribution" "--id" id))))
+
+(defun aws-eks-describe-cluster (name)
+  "Return info about the eks cluster"
+  (let ((-aws-return-json t))
+    (aws-eks "describe-cluster" "--name" name)))
+
+(defun aws-eks-kubectl-info (name)
+  "Get the certificate and "
+  (let ((-aws-return-json t))
+    (aws-eks "describe-cluster" "--name" name
+             "--query" "cluster.{endpoint:endpoint,certificateAuthority:certificateAuthority}")))
+
 
 ;; describe-container-instances can get you the ami id.
 
