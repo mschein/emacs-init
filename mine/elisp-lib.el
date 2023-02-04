@@ -19,19 +19,18 @@
 (require 'cl-lib)
 (require 'subr-x)
 (require 'json)
-(require 's)
-(require 'f)
-(require 'uuidgen)
 ;; (require 'dash)
-(require 'ht)
-(require 'anaphora)
 
-(setf directory-sep "/")
+(defconst directory-sep "/")
 
 (defalias 'filter #'remove-if-not)
 
+(defmacro pushcons (key value alist)
+  "Push a new key value pair onto an alist."
+  `(push (cons ,key ,value) ,alist))
+
 (defun sum (elms)
-  "Sum a sequence"
+  "Sum a sequence named `ELMS'."
   (if (vectorp elms)
       (cl-loop for elm across elms sum elm)
     (cl-loop for elm in elms sum elm)))
@@ -51,7 +50,7 @@
   "Don't call this directly usually.  It's here to make
 the setter work."
   (let ((keys (to-list keys))
-        out '())
+        out)
     (cl-flet ((as (key al)
                   (if-let (answer (assoc key al))
                       (cdr (setf out answer))
@@ -124,7 +123,8 @@ the setter work."
    The caller can specify an integer for the array/list index,
    a string/symbol for an alist, and a function for anything else needed.
 
-   Example: (aws-traverse '(Reservations 0 Instances (fn) 0) (aws-ec2-describe-instances instance-ids))"
+   Example: (aws-traverse '(Reservations 0 Instances (fn) 0)
+                           (aws-ec2-describe-instances instance-ids))"
 
   (cl-loop for step in steps
            with data = data do
@@ -169,7 +169,7 @@ the setter work."
                "\n"))
 
 (defun assoc-group-dups (alist)
-  (let ((out))
+  (let (out)
     (cl-loop for (k . v) in alist
              do (if-let (cel (assoc k out))
                     (setcdr cel (cons v (to-list (cdr cel))))
@@ -196,10 +196,6 @@ the setter work."
 ;;     `(let ((,value ,form))
 ;;        (assert ,value ,@args)
 ;;        ,value)))
-
-(defmacro pushcons (key value alist)
-  "Push a new key value pair onto an alist."
-  `(push (cons ,key ,value) ,alist))
 
 ;; Why doesn't this exist?
 (defun printf (fmt &rest args)
