@@ -37,10 +37,8 @@
 
 
 ;;
-;; To use this do: c-u - M-x slime
-;; the - is key
+;; To use this do: M - M-x slime
 ;;
-
 (setq slime-lisp-implementations
       '((sbcl ("sbcl" "--dynamic-space-size" "20480"))
         (ccl ("ccl64" "--quiet"))
