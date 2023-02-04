@@ -1,4 +1,4 @@
-;;; ht-autoloads.el --- automatically extracted autoloads
+;;; s-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -6,10 +6,10 @@
                          (or (file-name-directory #$) (car load-path))))
 
 
-;;;### (autoloads nil "ht" "ht.el" (0 0 0 0))
-;;; Generated autoloads from ht.el
+;;;### (autoloads nil "s" "s.el" (0 0 0 0))
+;;; Generated autoloads from s.el
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "ht" 'nil))
+(register-definition-prefixes "s" '("s-"))
 
 ;;;***
 
@@ -19,4 +19,4 @@
 ;; no-update-autoloads: t
 ;; coding: utf-8
 ;; End:
-;;; ht-autoloads.el ends here
+;;; s-autoloads.el ends here

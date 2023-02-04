@@ -1,4 +1,4 @@
-;;; uuidgen-autoloads.el --- automatically extracted autoloads
+;;; uuidgen-autoloads.el --- automatically extracted autoloads  -*- lexical-binding: t -*-
 ;;
 ;;; Code:
 
@@ -21,7 +21,7 @@ Insert UUIDv4 at point. If TIME-BASED is non-nil, insert UUIDv1 instead.
 
 \(fn TIME-BASED)" t nil)
 
-(if (fboundp 'register-definition-prefixes) (register-definition-prefixes "uuidgen" '("uuidgen-")))
+(register-definition-prefixes "uuidgen" '("uuidgen-"))
 
 ;;;***
 

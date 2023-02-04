@@ -17,6 +17,8 @@
 ;;     (unload-feature 'slime)
 ;;   (message "No need to unload slime"))
 
+(require 'elisp-lib)
+
 ;; These seem to work better.  Why?
 (condition-case nil
     (unload-feature 'swank-clojure)
@@ -25,16 +27,6 @@
     (unload-feature 'slime)
   (error nil))
 
-;;
-;; To use this do: c-u - M-x slime
-;; the - is key
-;;
-
-(setq slime-lisp-implementations
-      '((sbcl ("/usr/local/bin/sbcl" "--dynamic-space-size" "4096"))
-        (ccl ("/usr/local/bin/ccl64" "--quiet"))
-        (abcl ("/usr/local/bin/abcl"))))
-(setq load-path (remove-if (| string-match "slime" %) load-path))
 ;;(add-to-list 'load-path "~/emacs-init/slime")  ; your SLIME directory
 
 (when (file-exists-p "~/quicklisp/slime-helper.el")
@@ -42,6 +34,18 @@
   (require 'slime)
   (require 'slime-autoloads)
   (slime-setup '(slime-fancy)))
+
+
+;;
+;; To use this do: c-u - M-x slime
+;; the - is key
+;;
+
+(setq slime-lisp-implementations
+      '((sbcl ("sbcl" "--dynamic-space-size" "20480"))
+        (ccl ("ccl64" "--quiet"))
+        (abcl ("abcl"))))
+(setq load-path (remove-if (| string-match "slime" %) load-path))
 
 ;; Set the common lisp hyperspec root
 
