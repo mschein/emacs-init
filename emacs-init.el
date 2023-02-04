@@ -239,94 +239,20 @@
 ;; -> System Preferences... → Dock → Prefer tabs when opening documents and select "Manually"
 ;; ;; -> This didn't actually work, but maybe it's related.
 ;;
-(require 'cl-lib)
-(require 'find-lisp)
-(require 'midnight)
-
 ;;
-;; Add the new emacs package loader:
+;; Another note about .elc files and byte-recompilation
+;; (byte-recompile-directory "." 0)
+;;  will force a recompilation... might want that in here.
 ;;
 
-;; For Clojure work use nReple and ritz
 
-;; Add more info paths
-(add-to-list 'Info-default-directory-list "/usr/local/share/info")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup keyboard.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Note!  Use list-packages instead of package-list-packages.
-(require 'package)
-
-(setf package-archives nil)
-
-(setf package-user-dir "~/emacs-init/emacs-packages")
-
-(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
-                    (not (gnutls-available-p))))
-       (url (concat (if no-ssl "http" "https") "://melpa.org/packages/")))
-  (add-to-list 'package-archives (cons "melpa" url) t))
-
-(add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/"))
-
-(add-to-list 'package-archives
-             '("marmalade" . "https://marmalade-repo.org/packages/") t)
-;; (add-to-list 'package-archives
-;;              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-
-(package-initialize)
-
-;; Try use-package (did this for lsp-mode config initially.
-(eval-when-compile
-  (require 'use-package))
-
-
-;; My stuff
-(dolist (path '("~/emacs-init/mine"
-                "~/emacs-init/dynamic-modules"
-                "~/emacs-init/contrib"
-                "~/emacs-init/contrib/groovymode"))
-  (when (file-directory-p path)
-    (add-to-list 'load-path path)))
-
-;; Setup themes
-(add-to-list 'custom-theme-load-path "~/emacs-init/themes/")
-
-;; Add any dynamic modules
 ;;
-;; To create the sqlite3-api module:
-;; https://github.com/pekingduck/emacs-sqlite3-api
+;; Do this first as it is unlikely to fail and makes it nicer to work with emacs.
 ;;
-;; git clone https://github.com/pekingduck/emacs-sqlite3-api.git
-;; cd emacs-sqlite3-api
-;; make HOMEBREW=1
-;;
-;; Also, don't forget that emacs MUST be compiled with
-;; the --with-modules flag.  To re-compile do:
-;; brew info emacs
-;; brew cp /usr/local/Cellar/emacs/<version>/.brew/emacs.rb ~/
-;; brew unlink emacs
-;; brew install ~/emacs.rb --with-modules <other args>
-;;
-;; When properly compiled, the module-file-suffix variable will be set.
-;;
-(dolist (module '(sqlite3-api))
-  (when (load (symbol-name module) t)
-    (require module)))
-
-;; Always load these.
-(require 'elisp-lib)
-(require 'one-off-scripts)
-
-;; To run a slime, uncomment and slime-lisp and start
-;; a new emacs.
-(require 'slime-lisp)
-
-;(require 'cssh)
-
-
-;; Setup 'which-key' so we get a list of key binding options
-;; as we type.
-(require 'which-key)
-(which-key-mode)
-
 ;; Set up the keyboard so the delete key on both the regular keyboard
 ;; and the keypad delete the character under the cursor and to the right
 ;; under X, instead of the default, backspace behavior.
@@ -355,11 +281,65 @@
 (when (eq system-type 'darwin) ;; mac specific settings
   (setq mac-option-modifier 'alt)
   (setq mac-command-modifier 'meta)
-  (global-set-key [kp-delete] 'delete-char)) ;; sets fn-delete to be right-delete
+  (global-set-key [kp-delete] 'delete-char)) ;; sets fn-delete to be right-delet
 
-;;
+(require 'cl-lib)
+(require 'find-lisp)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup the package manaers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Note!  Use list-packages instead of package-list-packages.
+(require 'package)
+
+(setf package-archives nil)
+
+(setf package-user-dir "~/emacs-init/emacs-packages")
+
+(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
+                    (not (gnutls-available-p))))
+       (url (concat (if no-ssl "http" "https") "://melpa.org/packages/")))
+  (add-to-list 'package-archives (cons "melpa" url) t))
+
+(add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/"))
+
+(add-to-list 'package-archives
+             '("marmalade" . "https://marmalade-repo.org/packages/") t)
+(add-to-list 'package-archives
+             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+
+(package-initialize)
+
+;; Try use-package (did this for lsp-mode config initially.
+(eval-when-compile
+  (require 'use-package))
+
+;; Always load these.
+(add-to-list 'load-path "~/emacs-init/mine/")
+(dolist (path '("~/emacs-init/mine"
+                "~/emacs-init/dynamic-modules"
+                "~/emacs-init/contrib"
+                "~/emacs-init/contrib/groovymode"))
+  (when (file-directory-p path)
+    (add-to-list 'load-path path)))
+
+(require 'elisp-lib)
+(require 'one-off-scripts)
+
+;; Setup 'which-key' so we get a list of key binding options
+;; as we type.
+(require 'which-key)
+(which-key-mode)
+
+;; To run a slime, uncomment and slime-lisp and start
+;; a new emacs.
+(require 'slime-lisp)
+
+;; Do I still need this?
+;; (require 'cssh)
+
 ;; Get cperl-mode setup since it is better.
-;;
 (defalias 'perl-mode 'cperl-mode)
 
 (setq cperl-close-paren-offset -4)
@@ -954,6 +934,8 @@ that uses 'font-lock-warning-face'."
 ;; See docs here:
 ;; https://github.com/emacs-lsp/lsp-mode
 ;;
+;; TODO: switch to the new mode.
+;;
 
 (use-package lsp-mode
   :hook (java-mode . lsp)
@@ -1283,3 +1265,4 @@ that uses 'font-lock-warning-face'."
 
 ;; Make it so sort-lines ignores case.
 (setf sort-fold-case t)
+

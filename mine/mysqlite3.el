@@ -6,9 +6,8 @@
 ;; also:
 ;; https://www.sqlite.org/rescode.html  -- constants
 ;; https://www.sqlite.org/c3ref/intro.html  -- api reference
-;; https://github.com/pekingduck/emacs-sqlite3-api
 ;;
-(require 'sqlite3-api)
+(require 'sqlite3)
 
 ;;
 ;;
