@@ -17,9 +17,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'cl-lib)
-(require 'subr-x)
+(require 'f)
+(require 'ht)
 (require 'json)
-;; (require 'dash)
+(require 's)
+(require 'subr-x)
+(require 'uuidgen)
+
 
 (defconst directory-sep "/")
 
