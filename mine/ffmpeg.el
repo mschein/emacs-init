@@ -233,28 +233,42 @@
 ;;
 ;; Make a general "async and update/replace file" function.
 ;;
-(cl-defun ffmpeg-reduce-size (path &key frame-rate (switch-codec t) bit-rate (replace t) (scale-width -1) cb-fn)
-  ;;
-  ;; keep this simple and hard coded for now.
-  ;;
-  ;; ffmpeg -i input.mp4 -vcodec libx265 -crf 28 -b 800k output.mp4
-  ;;
-  ;; 30 is a good default framerate.
-  ;;
-  ;; also:
-  ;;
-  ;; lower the bit rate.
-  ;; ffmpeg -i input.mp4 -b 800k output.mp4
-  ;;
+;; This worked pretty well too.
+;; ffmpeg -i movie scale=1208:-1 -preset slow output.mp4
+;;
+(cl-defun ffmpeg-reduce-size (path &key frame-rate
+                                        switch-codec
+                                        preset-encoding-speed  ; how quickly it gets encoded...
+                                        bit-rate
+                                        (replace t)
+                                        (scale-width -1)
+                                        h264-quality    ; lower is better quality 0 - 51
+                                        cb-fn)
+
+
+  (when preset-encoding-speed
+    (cl-assert (member preset-encoding-speed '(ultrafast
+                                               superfast
+                                               veryfast
+                                               faster
+                                               fast
+                                               medium ; Default if unspecified
+                                               slow
+                                               slower
+                                               veryslow))))
 
   (ffmpeg-async-file-modifier path
                               `(
+                                ,@(when preset-encoding-speed
+                                    (list "-preset" (symbol-name preset-encoding-speed)))
+                                ,@(when h264-quality
+                                    (list "-crf" (number-to-string h264-quality)))
                                 ,@(when frame-rate
-                                    (list "-crf" (number-to-string frame-rate)))
+                                    (list "-r" (number-to-string frame-rate)))
                                 ,@(when bit-rate
                                     (list "-b:v" (number-to-string bit-rate)))
-                                ,@(when (< 0 scale-width)
-                                    (list "-vf" (format "scale=%d:h=-1,setsar=1:1" scale-width)))
+                                ,@(when (and scale-width (< 0 scale-width))
+                                    (list "-vf" (format "scale=%d:-1,setsar=1:1" scale-width)))
                                 ,@(when switch-codec
                                     (list "-vcodec" "libx264")))
                               :replace replace
@@ -280,29 +294,35 @@
       (if (<= w desired-width)
           (cl-return-from ffmpeg-find-closest-width w)))))
 
-(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate max-width max-frame-rate)
+(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate max-width max-frame-rate switch-codec h264-quality)
   (do-list-async list
                  :fn (lambda (entry call-next-fn)
                        ;; Calc the best values for new video parameters
                        (let* ((video-metadata (ffmpeg-get-movie-dimensions entry))
                               (movie-bit-rate (string-to-number (assoc-get 'bit_rate video-metadata "100000000")))
-                              (bit-rate (min max-bit-rate movie-bit-rate))
+                              (bit-rate (when (< max-bit-rate movie-bit-rate)
+                                          max-bit-rate))
 
                               (movie-frame-rate (ffmpeg-frame-rate-to-num (assoc1 'avg_frame_rate video-metadata)))
-                              (frame-rate (min max-frame-rate movie-frame-rate))
+                              (frame-rate (when (< max-frame-rate movie-frame-rate)
+                                            max-frame-rate))
 
                               (movie-width (assoc1 'width video-metadata))
-                              (scale-width (ffmpeg-find-closest-width max-width
-                                                                      movie-width
-                                                                      (assoc1 'height video-metadata))))
+                              (scale-width (when (< max-width movie-width)
+                                             (ffmpeg-find-closest-width max-width
+                                                                        movie-width
+                                                                        (assoc1 'height video-metadata)))))
 
                          (message "Reduce(%s) -> (width %s to %s) (bit-rate %s to %s) (frame-rate %s to %s)"
                                   entry movie-width scale-width movie-bit-rate bit-rate movie-frame-rate frame-rate)
 
                          (ffmpeg-reduce-size entry
                                              :cb-fn call-next-fn
+                                             :switch-codec switch-codec
                                              :scale-width scale-width
+                                             :h264-quality h264-quality
                                              :bit-rate bit-rate
+                                             :preset-encoding-speed 'slow
                                              :frame-rate frame-rate)))))
 
 (cl-defun ffmpeg-conv-video-to-mp4 (file-to-convert &key cb-fn)
