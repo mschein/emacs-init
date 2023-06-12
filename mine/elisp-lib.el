@@ -3797,6 +3797,7 @@ rm -f ${ATTACHMENT}
                        retry
                        retry-delay-sec
                        throw
+                       upload-file
                        map-fn
                        async
                        callback-fn
@@ -3834,6 +3835,7 @@ rm -f ${ATTACHMENT}
    `retry-delay-sec': Time to wait betwey retries in seconds.
    `throw': If `t' raise an error when something goes wrong, otherwise just return
             the error code.
+   `upload-file': The path to a file to upload to the target.
    `map-fn': Apply the function to the data before handing back to the callback.
    `async': Don't block, but also don't worry about calling a callback.
    `callback-fn': Don't return anything, and call the callback-fn when the result returns.
@@ -3948,6 +3950,7 @@ rm -f ${ATTACHMENT}
         (append-option insecure (| `("--insecure")))
         (append-option output-file (| list "--output" output-file))
         (append-option referer (| list "--referer" referer))
+        (append-option upload-file (| list "--upload-file" upload-file))
 
         ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
         (when form
@@ -4113,6 +4116,12 @@ rm -f ${ATTACHMENT}
 (defun web-request-reset-proxy-password (proxy-user)
   "If you need remove the cached proxy password for `web-request' run this."
   (password-cache-remove proxy-user))
+
+(defun web-request-copy-file (file target-url &optional auth)
+  "Use web-request/curl to copy a file to a remote host."
+  (web-request target-url :upload-file file
+               :throw t
+               :auth auth))
 
 (defun normalize-dir-path (path)
   (string-remove-suffix "/" (expand-file-name path)))
@@ -4369,5 +4378,13 @@ rm -f ${ATTACHMENT}
   ;; C-M-x function.
   ;;
   (insertf "(declaim (optimize (speed 0) (space 0) (safety 3) (debug 3)))"))
+
+(defun list-all-defined-variables ()
+  (cl-loop for x being the symbols
+        if (boundp x)
+        collect (symbol-name x)))
+
+(defun dump-defined-variables ()
+  (message "Variables: %s" (list-all-defined-variables)))
 
 (provide 'elisp-lib)
