@@ -1120,20 +1120,20 @@ output is passed to the callback-fn."
     ;; 3. throw
     ;;
 
-    (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output" program)))
+    (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output-%s" program (uuidgen-4))))
           (stderr-buffer (when (equal 'string stderr)
-                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output" program))))
+                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output-%s" program (uuidgen-4)))))
           (do-cmd-id (next-do-cmd-id)))
 
       (with-current-buffer stdout-buffer
-        (setq-local args args)
-        (setq-local stdout stdout)
-        (setq-local stderr stderr)
-        (setq-local stderr-buffer stderr-buffer)
-        (setq-local throw throw)
-        (setq-local program program)
-        (setq-local callback-fn callback-fn)
-        (setq-local do-cmd-id do-cmd-id)
+        (set (make-local-variable 'args) args)
+        (set (make-local-variable 'stdout) stdout)
+        (set (make-local-variable 'stderr) stderr)
+        (set (make-local-variable 'stderr-buffer) stderr-buffer)
+        (set (make-local-variable 'throw) throw)
+        (set (make-local-variable 'program) program)
+        (set (make-local-variable 'callback-fn) callback-fn)
+        (set (make-local-variable 'do-cmd-id) do-cmd-id)
 
         ;;
         ;; I don't know that I need to set both buffer local and the global default diretory
@@ -1169,7 +1169,7 @@ output is passed to the callback-fn."
           (when (equal stdout 'string)
             (pushcons :stdout (buffer->string) output))
 
-          (when (equal stderr 'string)
+          (when (and (equal stderr 'string) stderr-buffer)
             (pushcons :stderr (with-current-buffer stderr-buffer
                                 (buffer->string))
                       output))
@@ -1178,9 +1178,11 @@ output is passed to the callback-fn."
           (message "do-cmd-async[%s]: -> finished :(%s): %s %s" do-cmd-id code program (cmd-to-shell-string args))
           (when callback-fn
             (funcall callback-fn output))))
-    (with-current-buffer (process-buffer proc)
-      (kill-buffer stderr-buffer))
-    (kill-buffer (process-buffer proc))))
+    (let ((stderr-buffer (with-current-buffer (process-buffer proc)
+                           stderr-buffer))
+          (kill-buffer-query-functions nil))
+      (kill-buffer (process-buffer proc))
+      (kill-buffer stderr-buffer))))
 
 (cl-defun run-async (cmd &key cwd cb)
   (do-cmd-async cmd
