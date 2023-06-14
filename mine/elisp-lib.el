@@ -1181,8 +1181,10 @@ output is passed to the callback-fn."
     (let ((stderr-buffer (with-current-buffer (process-buffer proc)
                            stderr-buffer))
           (kill-buffer-query-functions nil))
-      (kill-buffer (process-buffer proc))
-      (kill-buffer stderr-buffer))))
+      (when-let (pb (process-buffer proc))
+        (kill-buffer pb))
+      (when stderr-buffer
+        (kill-buffer stderr-buffer)))))
 
 (cl-defun run-async (cmd &key cwd cb)
   (do-cmd-async cmd
