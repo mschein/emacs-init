@@ -857,7 +857,10 @@ that uses 'font-lock-warning-face'."
 ;; Fix multi-line wrapping and what not in org mode
 ;;
 ;; I can't use this unless I upgrade emacs.  It crashes 23.1
-;; (setq org-startup-indented nil)
+(setq org-startup-indented t)
+
+;; Adapt indentation for all org-mode lines
+(setq org-adapt-indentation t)
 
 ;; Make it so long lines wrap in org mode.
 ;; This might be possible to remove if clean mode can be made to work.
