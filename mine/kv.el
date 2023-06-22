@@ -59,7 +59,7 @@
         (sqlite3-bind-multi stmt key)
         (let ((res (sqlite3-step stmt)))
           (if (= sqlite-row res)
-              (setf result (first (sqlite3-fetch stmt)))
+              (setf result (cl-first (sqlite3-fetch stmt)))
             (error "Unable to retrieve `%s`: %s" key res)))))
     result))
 
@@ -95,7 +95,7 @@
     (nreverse output)))
 
 (defun kv-list (store-name)
-  (mapcar (| cons (first %) (second %))
+  (mapcar (| cons (cl-first %) (second %))
           (kv--select-statement store-name "SELECT * from kv;")))
 
 (defun kv-list-json (store-name)
@@ -112,10 +112,10 @@
           (kv-list store-name)))
 
 (defun kv-list-keys (store-name)
-  (mapcar #'first (kv--select-statement store-name "SELECT key from kv;")))
+  (mapcar #'cl-first (kv--select-statement store-name "SELECT key from kv;")))
 
 (defun kv-list-values (store-name)
-  (mapcar #'first (kv--select-statement store-name "SELECT value from kv;")))
+  (mapcar #'cl-first (kv--select-statement store-name "SELECT value from kv;")))
 
 (defun kv-list-values-json (store-name)
   (mapcar #'json-read-from-string (kv-list-values store-name)))

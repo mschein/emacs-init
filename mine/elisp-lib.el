@@ -789,9 +789,9 @@ each character in the string `chars'."
   (string= (downcase s1) (downcase s2)))
 
 (defun find-longest-string-match (s list)
-  (first (sort
-          (filter (fn (env-key) (string-starts-with env-key s)) list)
-          (fn (e1 e2) (> (length e1) (length e2))))))
+  (cl-first (sort
+             (filter (fn (env-key) (string-starts-with env-key s)) list)
+             (fn (e1 e2) (> (length e1) (length e2))))))
 
 (defun string-find-named (regex str match-names)
   "Return an alist of matching captures.
@@ -941,7 +941,7 @@ each character in the string `chars'."
   "
   ;; TODO: Consider switching to with-tempdir, and using
   ;; it to cleanup the stderr file, and generate/cleanup the input file.
-  (let* ((program (first cmd))
+  (let* ((program (cl-first cmd))
          (arguments (cdr cmd))
          (stdout-buffer (when (equal stdout 'string)
                           (generate-new-buffer "*do-cmd-stdout*")))
@@ -951,11 +951,11 @@ each character in the string `chars'."
          (stderr (if stderr-file stderr-file stderr))
 
          ;; Add a section to remap stderr/stdout
-         (stderr (ecase stderr
+         (stderr (cl-ecase stderr
                    (stdout t)
                    (current-buffer t)
                    (otherwise stderr)))
-         (stdout (ecase stdout
+         (stdout (cl-ecase stdout
                    (current-buffer t)
                    (otherwise stdout)))
          (resp)
@@ -1109,7 +1109,7 @@ output: (list
 
 output is passed to the callback-fn."
 
-  (let* ((program (first cmd))
+  (let* ((program (cl-first cmd))
          (args (rest cmd)))
     ;;
     ;; make a buffer.
@@ -1213,7 +1213,7 @@ output is passed to the callback-fn."
     (lambda (cmd &rest options)
       (cl-flet ((extend-args (&rest new-args)
                   (setf cli-args (concatenate 'list cli-args new-args))))
-        (ecase cmd
+        (cl-ecase cmd
           (:opt (destructuring-bind (name value) options
                   (when value
                     (extend-args name value))))
@@ -1577,7 +1577,7 @@ Use this likely in leu of `buffer-string'."
   (cl-flet ((needs-slash (val check-for-slash)
                (when (and val (funcall check-for-slash directory-sep val))
                  directory-sep)))
-    (let ((leading-slash (needs-slash (first args) #'string-starts-with))
+    (let ((leading-slash (needs-slash (cl-first args) #'string-starts-with))
           (trailing-slash (needs-slash (last-car args) #'string-ends-with)))
       (string-join (list leading-slash
                          (string-join (mapcar (| string-trim-chars %
@@ -1779,7 +1779,7 @@ supplied by the command."
   (let* ((lines (mapcar (fn (line)
                           (split-string line "[ \t]+" t))
                         (string->list (run-to-str "ps" "auxwww"))))
-         (labels (mapcar (| intern (downcase %)) (first lines)))
+         (labels (mapcar (| intern (downcase %)) (cl-first lines)))
          (processes (rest lines)))
     (mapcar (fn (proc-info)
               (mapcar* #'cons labels proc-info))
@@ -2078,7 +2078,7 @@ Returns a list of alists."
 
 (defun open-url-tabs (urls)
   "Open a list of `urls' in one window with tabs."
-  (destructuring-bind (first &rest rest) urls
+  (destructuring-bind (cl-first &rest rest) urls
     (browse-url first t)
     (sleep-for .5)
     (dolist (url rest)
@@ -2311,7 +2311,7 @@ Returns a list of alists."
   (cl-loop for (key . value) in (mapcar (fn (line)
                                             (acond
                                              ((string-find "\\[\\(.+?\\)\\]" line)
-                                              (cons :section (first it)))
+                                              (cons :section (cl-first it)))
                                              ((string-find "\\([^ =]+\\) *= *\\([^ =]+\\)" line)
                                               ;; line
                                               (destructuring-bind (key value) it
@@ -2328,10 +2328,10 @@ Returns a list of alists."
                   (pushcons value '() sections))
                  ((not sections)
                   (pushcons key value sections))
-                 ((let ((section-list (cdr (first sections))))
+                 ((let ((section-list (cdr (cl-first sections))))
                     (or (not section-list)
                         (consp section-list)))
-                  (pushcons key value (cdr (first sections))))
+                  (pushcons key value (cdr (cl-first sections))))
                  (t
                   (pushcons key value sections))))
            finally (return sections)))
@@ -2422,7 +2422,7 @@ Returns a list of alists."
       (message "See if we need to start the screen saver.")
       (if (not (process-is-running-regex-p "ScreenSaverEngine$"))
           (cl-loop for cmd-list in (list frameworks-screen-saver core-services-screen-saver cgsession-saver)
-                   when (file-exists-p (first cmd-list)) do
+                   when (file-exists-p (cl-first cmd-list)) do
                    (destructuring-bind (cmd &rest args) cmd-list
                      (message "Start screen saver: proc running: %s cmd: %s" (process-is-running-regex-p "ScreenSaverEngine$") cmd)
                      (apply #'run-bg cmd args)
@@ -2715,7 +2715,7 @@ end tell
 
 (defun git-get-origin-info ()
   (let* ((urlobj (url-generic-parse-url (git-remote-origin-url)))
-         (pandq (first (url-path-and-query urlobj)))
+         (pandq (cl-first (url-path-and-query urlobj)))
          (repo (file-name-sans-extension (basename pandq)))
          (path (file-name-directory pandq)))
 
@@ -2981,7 +2981,7 @@ python debugging session."
   "Update the flyname mask for `file-pattern'.  This removes any previous matches"
   (setq flymake-allowed-file-name-masks
         (cons (list file-pattern func)
-              (remove-if (| equal file-pattern (first %))
+              (remove-if (| equal file-pattern (cl-first %))
                          flymake-allowed-file-name-masks))))
 
 (defun is-py-activation-p (path)
@@ -3008,7 +3008,7 @@ python debugging session."
   ;; Only search this way if we know this is a git repo...
   ;; otherwise it might match stuff it shouldn't
   ;;
-  (car (first
+  (car (cl-first
         (sort (mapcar (fn (path)
                         (cons path (cond
                                     ((equal (normalize-dir-path (file-name-directory path))
@@ -3077,7 +3077,7 @@ python debugging session."
                         (find-venv-python-binary root-dir)))))
 
 (defun python-version-is-python-3 (version)
-  (= 3 (first version)))
+  (= 3 (cl-first version)))
 
 (defun find-venv-is-python-3 (root-dir)
   (python-version-is-python-3 (find-venv-python-version root-dir)))
@@ -3401,7 +3401,7 @@ and dirty parsing of command output."
                (t (error "Must have either a split-regex or a split-line-fn defined")))))
     (let* ((lines (string->list text))
            (header-line (when has-header-line
-                          (first lines)))
+                          (cl-first lines)))
            (lines (if has-header-line
                       (cdr lines)
                     lines))
@@ -3427,7 +3427,7 @@ and dirty parsing of command output."
   (assert alist)
 
   (let* ((separator "\t")
-         (headers (mapcar (| format "%s" %) (assoc-keys (first alist))))
+         (headers (mapcar (| format "%s" %) (assoc-keys (cl-first alist))))
          (header-string (string-join headers separator)))
     (string-join
      (cons header-string
@@ -3537,7 +3537,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
                     ;; match-string-no-properties, but that doesn't
                     ;; seem to register tha match made by string-replace.
                     ;;
-                    (let ((key (first (string-find "${\\([^}]+\\)}" matched-var))))
+                    (let ((key (cl-first (string-find "${\\([^}]+\\)}" matched-var))))
                       (assert key)
                       (message "Substitute key %s" key)
                       (assoc1 key vars))))
@@ -3580,7 +3580,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 
 (defun random-choice (list)
   "Select a random item from the list."
-  (first (random-items 1 list)))
+  (cl-first (random-items 1 list)))
 
 (defun random-words (n &optional max-word-len)
   "Return `N' random words from the dictionary"
@@ -3631,7 +3631,7 @@ Be sure to url encode the parameters.
   ;; for more details
   (if-let (result (string-find "\\([^:]+\\)[ \t]*:[ \t]*\\(.*\\)$"
                                (string-trim-right header)))
-      (cons (string-to-keyword (downcase (first result)))
+      (cons (string-to-keyword (downcase (cl-first result)))
             (second result))
     (error "Unable to parse http header: %s" header)))
 
@@ -3966,7 +3966,7 @@ rm -f ${ATTACHMENT}
               ;; overwhelm the arg list.
               (cond
                ((atom value) (barf value filename))
-               ((equal :file (first value))
+               ((equal :file (cl-first value))
                 (setf filename (second value)))
                (t (error "Invalid form value: %s" value)))
 
@@ -4192,15 +4192,15 @@ rm -f ${ATTACHMENT}
                  (message "query: %s item: %s" query item)
                  (let ((cmd (car query))
                        (rest (cdr query)))
-                   (message "cmd: %s rest: %s first rest %s" cmd rest (first rest))
+                   (message "cmd: %s rest: %s first rest %s" cmd rest (cl-first rest))
                    (ecase cmd
                      (and (and (mapcar (| match-query % item) rest)))
                      (or  (or  (mapcar (| match-query % item) rest)))
                      (not (not (match-query rest item)))
-                     (key (assoc (first rest) item))
-                     (value (rassoc (first rest) item))))))
+                     (key (assoc (cl-first rest) item))
+                     (value (rassoc (cl-first rest) item))))))
 
-    (first (remove-if-not (| match-query query %) alist))))
+    (cl-first (remove-if-not (| match-query query %) alist))))
 
 (defun memoize (fn &optional timeout-sec)
   (let ((ht (ht))

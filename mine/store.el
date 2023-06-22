@@ -97,7 +97,7 @@
   `store-name': what the directory will be called.
 "
   (let* ((metadata-root (ecase metadata-type
-                          (required (first store--metadata-directories))
+                          (required (cl-first store--metadata-directories))
                           (local (second store--metadata-directories))))
          (metadata-dir (path-join metadata-root store-name))
          (migration-dir (path-join metadata-dir "migrations"))
@@ -121,7 +121,7 @@
   (with-store store-name
     (with-mysqlite3-stmt db (format "SELECT version from %s where id = 1;" store--migration-table)
       (if (= sqlite-row (sqlite3-step stmt))
-          (first (sqlite3-fetch stmt))))))
+          (cl-first (sqlite3-fetch stmt))))))
 
 (defun store--set-metadata-version (store-name version)
   "Update the migration version in the store."

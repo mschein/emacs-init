@@ -245,6 +245,11 @@
 ;;  will force a recompilation... might want that in here.
 ;;
 
+;; Turn on common lisp bindings
+(require 'cl-lib)
+(require 'cl)
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup keyboard.
@@ -283,7 +288,6 @@
   (setq mac-command-modifier 'meta)
   (global-set-key [kp-delete] 'delete-char)) ;; sets fn-delete to be right-delet
 
-(require 'cl-lib)
 (require 'find-lisp)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

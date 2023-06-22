@@ -224,8 +224,8 @@
                for sn-list = (cl-round (/ (* (float bn) smaller) bigger))
                ;; Make our rounding behavior match ffmpeg.
                for sn = (if (eql (second sn-list) .5)
-                            (1+ (first sn-list))
-                          (first sn-list))
+                            (1+ (cl-first sn-list))
+                          (cl-first sn-list))
                when (and (= (mod bn 2) 0)
                          (= (mod sn 2) 0))
                   collect (list bn sn))))

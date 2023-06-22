@@ -57,7 +57,7 @@
   (directory-files-recursively dir "^dosbox.conf$"))
 
 (defun dosbox-find-app (dir)
-  (first
+  (cl-first
    (list-directory-entries dir
                            :dirs-only t
                            :full t
@@ -78,9 +78,9 @@
               ,(when app
                  (cons :app app))
               ,(when configs
-                 (cons :config-file (first configs)))
+                 (cons :config-file (cl-first configs)))
               (:exec . ,(if (= 1 (length filtered-execs))
-                            (first filtered-execs)
+                            (cl-first filtered-execs)
                           ""))
               (:execs . ,execs)))))
 
@@ -107,7 +107,7 @@
   (apply #'run-to-str dosbox-exec cmd))
 
 (defun dosbox-version ()
-  (let ((version (first (string-find "version \\([0-9.-]+\\)" (dosbox-run-to-str "-version")))))
+  (let ((version (cl-first (string-find "version \\([0-9.-]+\\)" (dosbox-run-to-str "-version")))))
     (assert version)
     version))
 
