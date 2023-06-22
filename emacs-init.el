@@ -1141,9 +1141,11 @@ that uses 'font-lock-warning-face'."
  ;; If there is more than one, they won't work right.
  '(custom-safe-themes
    '("80d5a22931c15756b00fb258b80c93b8bc5096bb698dadfb6155ef3550e1c8fb" default))
- '(dosbox-exec "/Applications/DosBox/DOSBox.app/Contents/MacOS/DOSBox")
- '(dosbox-games "/Applications/DosBox/games/")
- '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-2 Preferences")
+ '(dosbox-always-config '(nil))
+ '(dosbox-exec "/Applications/dosbox/dosbox.app/Contents/MacOS/DOSBox")
+ '(dosbox-games "/Users/mike/Documents/games/dos/")
+ '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-3-3 Preferences")
+ '(ignored-local-variable-values '((Base . 10) (Package . CL-USER) (Syntax . COMMON-LISP)))
  '(package-selected-packages
    '(transient terraform-mode company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider)))
 
