@@ -2078,7 +2078,7 @@ Returns a list of alists."
 
 (defun open-url-tabs (urls)
   "Open a list of `urls' in one window with tabs."
-  (destructuring-bind (cl-first &rest rest) urls
+  (destructuring-bind (first &rest rest) urls
     (browse-url first t)
     (sleep-for .5)
     (dolist (url rest)
