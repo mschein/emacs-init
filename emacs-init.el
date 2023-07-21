@@ -799,7 +799,7 @@ that uses 'font-lock-warning-face'."
 ;;
 
 (require 'org)
-
+(require 'ox-html)
 ;; recommended key bindings from the manual.
 ;;C-c C-o  opens saved links
 (global-set-key "\C-cl" 'org-store-link)

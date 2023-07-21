@@ -495,16 +495,13 @@ ${name}")
 
 (defun common-lisp-build-deps (type)
   (let ((default-deps '("alexandria"
-                        "cl-interpol"
                         "cl-ppcre"
                         "closer-mop"
-                        "let-plus"
                         "prove"
                         "serapeum"
                         "rutils"
-                        "rutilsx"
-                        "split-sequence"
                         "uiop"
+                        "log4cl"
                         "mu"
                         ))
         (padding (padding (length "  :depends-on ("))))
