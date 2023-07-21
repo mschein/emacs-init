@@ -58,6 +58,33 @@
      :throw t)
     output-file))
 
+(cl-defun ffmpeg-join-clips (clips output-file &key overwrite)
+  (let ((clips (mapcar #'expand-file-name clips)))
+    (assert (every #'file-exists-p clips))
+
+    (when (file-exists-p output-file)
+      (if overwrite
+          (osx-move-to-trash output-file)
+        (error "File %s exists" output-file)))
+
+    (let ((video-file (expand-file-name "~/videos.txt")))
+      (barf (string-join (mapcar (| format "file '%s'" %) clips) "\n")
+            video-file)
+
+      (do-cmd-async
+       (list "ffmpeg"
+             "-f" "concat"
+             "-safe" "0"
+             "-i" video-file
+             "-c" "copy"
+             output-file)
+       :throw t
+       :callback-fn (lambda (&rest foo)
+                      (when (file-exists-p video-file)
+                        (delete-file video-file))
+                      (message "Finished concat into %s" output-file))))))
+
+
 ;;
 
 ;;  mkdir frames
@@ -68,12 +95,13 @@
 ;;  convert -loop 0 frames/ffout*.png output.gif
 
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
-(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length (overwrite t))
+(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length end-time (overwrite t))
   (assert (file-exists-p input-file) "Input file does not exist.")
   (assert length)
 
   (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
-        (seconds (+ seconds (or (* 60 minutes) 0))))
+        (seconds (+ seconds (or (* 60 minutes) 0)))
+        (length (or length (ffmpeg--clip-time-to-seconds end-time))))
     (when (and overwrite
                (file-exists-p output-file))
       (osx-move-to-trash output-file))
@@ -151,7 +179,7 @@
 ;;
 
 ;; Add an optional end time instead of length
-(cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length (overwrite-output t))
+(cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length overwrite-output)
   "Get a slice from a video."
   (let ((output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file)))
         (seconds (+ seconds (or (* 60 minutes) 0))))
@@ -185,7 +213,7 @@
   (elt (assoc1 'streams (run-to-json "ffprobe" "-v" "error"
                                     "-select_streams" "v"
                                     "-show_entries"
-                                    "stream=width,height,bit_rate,avg_frame_rate"
+                                    "stream=width,height,bit_rate,avg_frame_rate,duration"
                                     "-of" "json=compact=1"
                                     path))
        0))
@@ -207,6 +235,7 @@
                                (list output-file))
                   :throw t
                   :callback-fn (lambda (resp)
+                                 ;; Is the replacement file smaller
                                  (when replace
                                    (osx-move-to-trash path)
                                    (rename-file output-file path))
@@ -242,7 +271,7 @@
                                         bit-rate
                                         (replace t)
                                         (scale-width -1)
-                                        h264-quality    ; lower is better quality 0 - 51
+                                        crf-quality    ; lower is better quality 0 - 51
                                         cb-fn)
 
 
@@ -256,13 +285,15 @@
                                                slow
                                                slower
                                                veryslow))))
+  (when switch-codec
+    (cl-assert (member switch-codec '("libx265" "libx264"))))
 
   (ffmpeg-async-file-modifier path
                               `(
                                 ,@(when preset-encoding-speed
                                     (list "-preset" (symbol-name preset-encoding-speed)))
-                                ,@(when h264-quality
-                                    (list "-crf" (number-to-string h264-quality)))
+                                ,@(when crf-quality
+                                    (list "-crf" (number-to-string crf-quality)))
                                 ,@(when frame-rate
                                     (list "-r" (number-to-string frame-rate)))
                                 ,@(when bit-rate
@@ -270,7 +301,7 @@
                                 ,@(when (and scale-width (< 0 scale-width))
                                     (list "-vf" (format "scale=%d:-1,setsar=1:1" scale-width)))
                                 ,@(when switch-codec
-                                    (list "-vcodec" "libx264")))
+                                    (list "-vcodec" switch-codec)))
                               :replace replace
                               :cb-fn cb-fn))
 
@@ -294,15 +325,51 @@
       (if (<= w desired-width)
           (cl-return-from ffmpeg-find-closest-width w)))))
 
-(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate max-width max-frame-rate switch-codec h264-quality)
+(cl-defun ffmpeg--check-limit (limit value cmp-fn)
+  (if limit
+      (funcall cmp-fn limit value)
+    value))
+
+
+(cl-defun ffmpeg--calc-bit-rate (movie-bit-rate &key min-bit-rate max-bit-rate bit-rate-reduction)
+  (when movie-bit-rate
+    (let ((movie-bit-rate (if (integerp movie-bit-rate)
+                              movie-bit-rate
+                            (string-to-number movie-bit-rate))))
+      ;; Do we need to do anything?
+      (if (and (or min-bit-rate max-bit-rate bit-rate-reduction)
+               (or (not min-bit-rate) (>= movie-bit-rate min-bit-rate)))
+          (let* ((bit-rate (ffmpeg--check-limit bit-rate-reduction movie-bit-rate
+                                                (fn (limit value)
+                                                  (round (* limit value)))))
+                 (bit-rate (ffmpeg--check-limit max-bit-rate
+                                                bit-rate
+                                                #'min))
+                 (bit-rate (ffmpeg--check-limit min-bit-rate bit-rate
+                                                #'max)))
+            bit-rate)
+        movie-bit-rate))))
+;;
+;; I may want to have a function that a data size limit
+;;
+;; https://trac.ffmpeg.org/wiki/Encode/H.265
+;;
+;; h265 is great but processing is super slow.
+;;  - 23 min for 1GB -> 220mb
+;;
+;; (cl-defun ffmpeg-reduce-size-list-perc (list &key percent scale-width max-size-byte))
+
+
+(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate min-bit-rate max-width max-frame-rate switch-codec crf-quality (preset-encoding-speed 'medium) bit-rate-reduction)
   (do-list-async list
                  :fn (lambda (entry call-next-fn)
                        ;; Calc the best values for new video parameters
                        (let* ((video-metadata (ffmpeg-get-movie-dimensions entry))
-                              (movie-bit-rate (string-to-number (assoc-get 'bit_rate video-metadata "100000000")))
-                              (bit-rate (when (< max-bit-rate movie-bit-rate)
-                                          max-bit-rate))
-
+                              (movie-bit-rate (assoc-get 'bit_rate video-metadata))
+                              (bit-rate (ffmpeg--calc-bit-rate movie-bit-rate
+                                                               :bit-rate-reduction bit-rate-reduction
+                                                               :min-bit-rate min-bit-rate
+                                                               :max-bit-rate max-bit-rate))
                               (movie-frame-rate (ffmpeg-frame-rate-to-num (assoc1 'avg_frame_rate video-metadata)))
                               (frame-rate (when (< max-frame-rate movie-frame-rate)
                                             max-frame-rate))
@@ -320,9 +387,9 @@
                                              :cb-fn call-next-fn
                                              :switch-codec switch-codec
                                              :scale-width scale-width
-                                             :h264-quality h264-quality
+                                             :crf-quality crf-quality
                                              :bit-rate bit-rate
-                                             :preset-encoding-speed 'slow
+                                             :preset-encoding-speed preset-encoding-speed
                                              :frame-rate frame-rate)))))
 
 (cl-defun ffmpeg-conv-video-to-mp4 (file-to-convert &key cb-fn)
