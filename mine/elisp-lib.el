@@ -1007,20 +1007,6 @@ each character in the string `chars'."
 (defun do-cmd-succeeded-p (results)
   (= 0 (assoc1 :code results)))
 
-(defun run-to-str-async (callback-fn &rest cmd-parts)
-  (assert cmd-parts)
-  (do-cmd-async cmd-parts
-                :stdout 'string
-                :throw t
-                :callback-fn (lambda (resp)
-                               (funcall callback-fn (assoc1 :stdout resp)))))
-
-(defun run-to-json-async (callback-fn &rest cmd-parts)
-  (apply #'run-to-str-async
-         (lambda (s)
-           (funcall callback-fn (json-read-from-string s)))
-         cmd-parts))
-
 (defun run (&rest cmd-parts)
   "Execute a shell command given an argument list.  See `do-cmd'
    for return value.
@@ -1159,32 +1145,37 @@ output is passed to the callback-fn."
             proc))))))
 
 (cl-defun do-cmd-async-finish (proc change-desc)
-  (unwind-protect
-      (with-current-buffer (process-buffer proc)
-        (let* ((code (process-exit-status proc))
-               (output))
-          (when (and throw (not (equal 0 code)))
-            (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
+  (let ((got-error))
+    (unwind-protect
+        (with-current-buffer (process-buffer proc)
+          (let* ((code (process-exit-status proc))
+                 (output))
 
-          (when (equal stdout 'string)
-            (pushcons :stdout (buffer->string) output))
+            (setf got-error (and throw (not (equal 0 code))))
+            (when got-error
+              (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
 
-          (when (and (equal stderr 'string) stderr-buffer)
-            (pushcons :stderr (with-current-buffer stderr-buffer
-                                (buffer->string))
-                      output))
-          (pushcons :code code output)
+            (when (equal stdout 'string)
+              (pushcons :stdout (buffer->string) output))
 
-          (message "do-cmd-async[%s]: -> finished :(%s): %s %s" do-cmd-id code program (cmd-to-shell-string args))
-          (when callback-fn
-            (funcall callback-fn output))))
-    (let ((stderr-buffer (with-current-buffer (process-buffer proc)
-                           stderr-buffer))
-          (kill-buffer-query-functions nil))
-      (when-let (pb (process-buffer proc))
-        (kill-buffer pb))
-      (when stderr-buffer
-        (kill-buffer stderr-buffer)))))
+            (when (and (equal stderr 'string) stderr-buffer)
+              (pushcons :stderr (with-current-buffer stderr-buffer
+                                  (buffer->string))
+                        output))
+            (pushcons :code code output)
+
+            (message "do-cmd-async[%s]: -> finished :(%s): %s %s" do-cmd-id code program (cmd-to-shell-string args))
+            (when callback-fn
+              (funcall callback-fn output))))
+      (let ((stderr-buffer (with-current-buffer (process-buffer proc)
+                             stderr-buffer))
+            (kill-buffer-query-functions nil))
+        (unless got-error
+          ;; Don't delete the buffers if we got an error... maybe make this an option?
+          (when-let (pb (process-buffer proc))
+            (kill-buffer pb))
+          (when stderr-buffer
+            (kill-buffer stderr-buffer)))))))
 
 (cl-defun run-async (cmd &key cwd cb)
   (do-cmd-async cmd
@@ -1196,6 +1187,38 @@ output is passed to the callback-fn."
                 :stdout 'string
                 :stderr 'string
                 :cwd cwd))
+
+(defun run-to-str-async (callback-fn &rest cmd-parts)
+  (assert cmd-parts)
+  (do-cmd-async cmd-parts
+                :stdout 'string
+                :throw t
+                :callback-fn (lambda (resp)
+                               (funcall callback-fn (assoc1 :stdout resp)))))
+
+(defun run-to-json-async (callback-fn &rest cmd-parts)
+  (apply #'run-to-str-async
+         (lambda (s)
+           (funcall callback-fn (json-read-from-string s)))
+         cmd-parts))
+
+(cl-defun do-cmd-async-to-buffer (buffer-name
+                                  &key cmd json generate-new-buffer)
+  (do-cmd-async cmd
+                :throw t
+                :stdout 'string
+                :callback-fn (lambda (resp)
+                               (let ((buffer-name (if generate-new-buffer
+                                                      (generate-new-buffer-name buffer-name)
+                                                    buffer-name)))
+                                 (assert (do-cmd-succeeded-p resp))
+
+                                 (let ((output (assoc1 :stdout resp)))
+                                 (if json
+                                     (with-overwrite-buffer-pp buffer-name
+                                       (json-read-from-string output))
+                                   (with-overwrite-buffer buffer-name
+                                     (insertf "%s" output))))))))
 
 ;;;
 ;;; Some functions for dealing with arguments
