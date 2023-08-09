@@ -1067,7 +1067,7 @@ Don't expect any output."
     "Return the next command id `do-cmd-async' should use for logging."
     (funcall do-cmd-async-counter)))
 
-(cl-defun do-cmd-async (cmd &key callback-fn input input-file stdout stderr throw cwd)
+(cl-defun do-cmd-async (cmd &key callback-fn input input-str stdout stderr throw cwd)
   "Use Emacs's make-process function to run a command in async fashion.
 
 The goal is to do work in the background without locking Emacs until
@@ -1078,9 +1078,8 @@ The arguments are:
           The arguments won't be interpreted by the shell.
 2. `callback-fn': A function that takes one argument (the response object
                   described below).
-3. `input': A string to send to the input process as stdin.
-
-4. `input-file': A path to a file to send as input/stdin to the command.
+4. `input': A path to a file to send as input/stdin to the command.
+5. `input-str': A string to send to the input process as stdin.
 5. `stdout': What to do with the stdout from the subprocess.
              'string:         Return it as a string in the result alist.
 6. `stderr': Include stderr in the response object.
@@ -1137,8 +1136,8 @@ output is passed to the callback-fn."
                                     :command (cons program args)
                                     :connection-type 'pipe
                                     :sentinel #'ignore)))
-            (when (or input input-file)
-              (process-send-string proc (or input (slurp input-file)))
+            (when (or input input-str)
+              (process-send-string proc (or input-str (slurp input)))
               (process-send-eof proc))
 
             (set-process-sentinel proc #'do-cmd-async-finish)
