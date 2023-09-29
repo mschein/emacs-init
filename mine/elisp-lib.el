@@ -4400,10 +4400,10 @@ rm -f ${ATTACHMENT}
 (defun common-lisp-insert-debug ()
   (interactive)
   ;;
-  ;; Note: Works best inside a function declaration, and then use
-  ;; C-M-x function.
+  ;; Note: Try C-M-x function and it may put the code in its own window.
+  ;; also C-u C-c C-c does the same thing
   ;;
-  (insertf "(declaim (optimize debug 3))"))
+  (insertf "(declaim (optimize (speed 0) (space 0) (debug 3)))"))
 
 (defun list-all-defined-variables ()
   (cl-loop for x being the symbols
