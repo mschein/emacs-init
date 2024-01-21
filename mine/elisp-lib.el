@@ -218,10 +218,10 @@ the setter work."
             (out '())
             (matched t))
         (while matched
-          (aif (match-string-no-properties i str)
-               (progn
-                 (setf out (cons  it out)))
-               (setf matched nil))
+          (if-let (it (match-string-no-properties i str))
+              (progn
+                (setf out (cons  it out)))
+            (setf matched nil))
           (setf i (1+ i)))
         (reverse out))))
 
@@ -458,7 +458,7 @@ test.  If the test returned nil, then the body will not execute."
                          ((equal nil arg-num) (error "Unexpected nil.  Internal Error"))
                          (t (if-let (old-sym (cdr (assoc arg-num alist-args)))
                                       (setf new-name old-sym)
-                                      (setf alist-args (acons arg-num new-name alist-args)))))
+                                      (setf alist-args (cl-acons arg-num new-name alist-args)))))
                         new-name)
                       elm))
                elm)))
@@ -951,11 +951,11 @@ each character in the string `chars'."
          (stderr (if stderr-file stderr-file stderr))
 
          ;; Add a section to remap stderr/stdout
-         (stderr (cl-ecase stderr
+         (stderr (cl-case stderr
                    (stdout t)
                    (current-buffer t)
                    (otherwise stderr)))
-         (stdout (cl-ecase stdout
+         (stdout (cl-case stdout
                    (current-buffer t)
                    (otherwise stdout)))
          (resp)
@@ -1168,6 +1168,7 @@ output is passed to the callback-fn."
               (funcall callback-fn output))))
       (let ((stderr-buffer (with-current-buffer (process-buffer proc)
                              stderr-buffer))
+            ;; Setting this to nil eliminates the query.
             (kill-buffer-query-functions nil))
         (unless got-error
           ;; Don't delete the buffers if we got an error... maybe make this an option?
@@ -2227,16 +2228,17 @@ Returns a list of alists."
 (defmacro pushd (dir &rest body)
   "Run the body in this new default directory"
   (declare (indent defun))
-  (let ((old-dir (gensym)))
-
-    `(let ((,old-dir default-directory))
+  (with-gensyms (gold-dir gnew-dir)
+    `(let ((,gnew-dir ,dir)
+           (,gold-dir default-directory))
        (unwind-protect
            (progn
-             (setf default-directory (if (file-name-absolute-p ,dir)
-                                         ,dir
-                                       (path-join ,old-dir ,dir)))
+             (setf default-directory (normalize-dir-path
+                                      (if (file-name-absolute-p ,gnew-dir)
+                                          ,gnew-dir
+                                        (path-join ,gold-dir ,gnew-dir))))
              ,@body)
-         (setf default-directory ,old-dir)))))
+         (setf default-directory ,gold-dir)))))
 
 (cl-defmacro with-tempdir ((&key root-dir
                                  leave-dir)
@@ -2516,12 +2518,15 @@ Returns a list of alists."
   (with-tempdir (:root-dir "/tmp")
     (let ((script-path "apple-script.txt"))
       (barf script script-path)
-      (do-cmd (append (list "osascript" script-path) args) :throw t))))
+      (do-cmd (append (list "osascript" script-path) args) :throw t :stdout 'string))))
 
 (defun osascript-quote-str (str)
   (concat "\"" (escape-string str "\"\\") "\""))
 
 (defconst +osx-path-to-firefox+ "/Applications/Firefox.app/Contents/MacOS/firefox")
+
+(defun macos-get-current-screen-resolution ()
+  (string-trim (assoc1 :stdout (run-osascript "tell application \"Finder\" to get bounds of window of desktop"))))
 
 (defun init-quicktime-movie (path)
   (do-cmd (list "killall" "QuickTime Player"))
@@ -2566,7 +2571,7 @@ end tell
                           ", ")))))
 
 (defun get-chrome-path ()
-  (ecase system-type
+  (cl-ecase system-type
     (darwin "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
     (linux "google-chrome")))
 
@@ -4150,7 +4155,7 @@ rm -f ${ATTACHMENT}
                :auth auth))
 
 (defun normalize-dir-path (path)
-  (string-remove-suffix "/" (expand-file-name path)))
+  (concat (string-remove-suffix "/" (expand-file-name path)) "/"))
 
 (defun enumerate (seq)
   (cl-loop for elm in seq
@@ -4402,6 +4407,11 @@ rm -f ${ATTACHMENT}
   ;;
   ;; Note: Try C-M-x function and it may put the code in its own window.
   ;; also C-u C-c C-c does the same thing
+  ;;
+  ;;
+  ;; (declaim (optimize (debug 2)
+  ;;          (sb-c::insert-step-conditions 0)
+  ;;          (sb-c::insert-debug-catch 0)))
   ;;
   (insertf "(declaim (optimize (speed 0) (space 0) (debug 3)))"))
 

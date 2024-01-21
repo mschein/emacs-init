@@ -66,7 +66,6 @@
 ;;; Code for database access to the %s store.
 ;;;
 (require 'store)
-(require 'mysqlite3)
 
 ;; Use this to access the database
 (defconst %s-store \"%s\" \"Constant to use with `with-store' to access the database.\")

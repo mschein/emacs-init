@@ -7,7 +7,7 @@
 ;; https://www.sqlite.org/rescode.html  -- constants
 ;; https://www.sqlite.org/c3ref/intro.html  -- api reference
 ;;
-(require 'sqlite3)
+(require 'sqlite3-api)
 
 ;;
 ;;

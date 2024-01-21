@@ -225,7 +225,7 @@
   (let* ((path (if (file-name-absolute-p path)
                    path
                  (path-join default-directory path)))
-         (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
+         (output-file (concat (file-name-sans-extension path) "-out." "mp4")))
     (when (file-exists-p output-file)
       (osx-move-to-trash output-file))
     (do-cmd-async (concatenate 'list
