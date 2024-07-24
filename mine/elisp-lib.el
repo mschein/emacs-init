@@ -1220,6 +1220,31 @@ output is passed to the callback-fn."
                                    (with-overwrite-buffer buffer-name
                                      (insertf "%s" output))))))))
 
+(cl-defun wait-for-procs (procs)
+  "Wait for a list of emacs processes to finish."
+
+  (cl-loop for proc in procs
+           do (cl-loop
+               (if (not (process-live-p proc))
+                   (cl-return)
+                 (progn
+                   (message "Sleep for procs")
+                   (sleep-for 1))))))
+
+(defun parallel-commands (cmds)
+  "Run a list of commands and callback function cons cells in parallel.
+
+So pass a list like:
+ '(((\"ls\" \"-l\" \"/tmp\") . #'handler)
+   ((\"ls\" \"-l\" \"/tmp\") . #'handler))
+"
+   (wait-for-procs (cl-loop for (cmd . cb-fn) in cmds
+                            collect (do-cmd-async cmd
+                                                  :throw t
+                                                  :stdout 'string
+                                                  :stderr 'string
+                                                  :callback-fn cb-fn))))
+
 ;;;
 ;;; Some functions for dealing with arguments
 ;;;
@@ -2730,15 +2755,64 @@ end tell
       ;; Will this check be to slow on large repos?
       (run-is-true "git" "status" "."))))
 
-(defun git-push-current-branch ()
+(defun git-push-current-branch (&key set-upstream)
   ""
   ;;
   ;; git push -v origin test:refs/heads/test
   ;;
 
   (let ((target "origin"))
-    (run "git" "push" target (format "%s:%s" (git-current-branch) (git-current-branch-ref)))))
+    (apply #'run `("git" "push"
+                   ,@(when set-upstream
+                       (list "--set-upstream"))
+                   ,target
+                   ,(format "%s:%s" (git-current-branch) (git-current-branch-ref))))))
 
+(defun git-get-upstream-branch ()
+  (string-trim (run-to-str "git" "rev-parse" "--abbrev-ref" "--symbolic-full-name" "@{u}")))
+
+(defun git-get-all-branch-info ()
+  (let ((field-names '("refname" "upstream")))
+    (csv-split-text (run-to-str "git" "branch" (concat "--format=" (string-join
+                                                                    (mapcar (fn (field)
+                                                                             (format "%%(%s)" field))
+                                                                            field-names)
+                                                                    ",")))
+                    :field-names field-names
+                    :has-header-line nil)))
+
+(defun git-get-branch-info (branch-name)
+  (first
+   (filter (fn (info)
+             (string-ends-with branch-name
+                               (assoc1 "refname" info)))
+           (git-get-all-branch-info))))
+
+(defun git-branch-tracks-remote-p ()
+  (let* ((current-branch-ref (git-current-branch-ref))
+         (branch-info (git-get-branch-info current-branch-ref))
+         (upstream (assoc1 "upstream" branch-info)))
+    (let ((potential-remote-branch-name (if (string-ends-with "heads/master" current-branch-ref)
+                                            "remotes/origin/master"
+                                          (basename current-branch-ref))))
+      (not (not (string-ends-with potential-remote-branch-name upstream))))))
+
+(cl-defun git-sync-branch (&optional (remote-branch "master"))
+  "Attempt to bring the current git branch up to date.
+
+If you have a remote branch, you need to merge, if you don't have remote changes, you can
+rebase."
+  (interactive)
+  (let ((local-branch (git-current-branch)))
+    (assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
+    (run "git" "checkout" remote-branch)
+    (run "git" "fetch" "-p" "origin")
+    (run "git" "merge" (path-join "origin/" remote-branch))
+    (run "git" "checkout" local-branch)
+    (if (git-branch-tracks-remote-p)
+        (run "git" "merge" remote-branch)
+      (run "git" "pull" "--rebase"))
+    (magit-status)))
 
 (defun git-get-origin-info ()
   (let* ((urlobj (url-generic-parse-url (git-remote-origin-url)))
@@ -3508,10 +3582,22 @@ https://www.ietf.org/rfc/rfc2849.txt."
     (docker-list-images)))
 
 (defun docker-run-image (image-id)
-  (with-shell-buffer "~" (format "*sh-docker-container-%s" image-id)
+  (with-shell-buffer "~" (format "*sh-docker-image-%s" image-id)
     (insertf "# To install bash in Apline, do: apk add bash\n")
     (insertf "docker run -it %s /bin/sh" image-id)
     (comint-send-input nil t)))
+
+(defun docker-exec-to-container (container-id)
+  (with-shell-buffer "~" (format "*sh-docker-container-%s" container-id)
+    (insertf "# To install bash in Apline do: apk add bash\n")
+    (insertf "# To isntall stuff in aws use yum\n")
+    (comint-send-input nil t)
+
+    (insertf-send "docker exec -it %s /bin/sh" container-id)))
+
+(defun docker-connect-to-running-image (container-id)
+  )
+
 
 ;;
 ;; Should add some support for port mapping:
