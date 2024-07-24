@@ -33,7 +33,7 @@
            for operand = 1 then (* operand 60)
            sum (* num operand)))
 
-(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) seconds length end-time overwrite)
+(cl-defun ffmpeg-slice-clip (input-file &key (minutes 0) (seconds 0) length end-time overwrite)
   (assert (file-exists-p input-file) "Input file does not exist.")
   (assert (or length end-time))
 
@@ -41,8 +41,8 @@
                               (file-name-sans-extension input-file)
                               "clip"
                               (file-name-extension input-file)))
-         (seconds (+ seconds (or (* 60 minutes) 0)))
-         (length (or length (ffmpeg--clip-time-to-seconds end-time ))))
+         (seconds (+ seconds (* 60 minutes)))
+         (length (or length (- (ffmpeg--clip-time-to-seconds end-time) seconds))))
     (when (and overwrite
                (file-exists-p output-file))
       (osx-move-to-trash output-file))
