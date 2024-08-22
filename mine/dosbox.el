@@ -115,35 +115,35 @@
   (interactive (list (completing-read "Game: " (assoc-keys dosbox-game-table) nil t)))
 
   (let* ((data (assoc1 name dosbox-game-table))
-         (exec (path-join (assoc1 :dir data) (assoc1 :exec data)))
-         (config-file (assoc-get :config-file data))
-         (full-screen (assoc-get :full-screen data))
          (app (assoc-get :app data)))
+    (if app
+        (run "open" app)
+      (let* ((exec (path-join (assoc1 :dir data) (assoc1 :exec data)))
+             (config-file (assoc-get :config-file data))
+             (full-screen (assoc-get :full-screen data)))
 
-    (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
-    (message "Use alt (no fn) enter for full screen.")
+        (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
+        (message "Use alt (no fn) enter for full screen.")
 
-    (with-tempdir (:root-dir "/tmp")
-      ;; Deal with any custom config that's not in a file.
-      (let ((file-name "config.ini"))
-        (when-let (adjustments (assoc-get :config data))
-          (barf (dosbox-ini-write adjustments) file-name)
-          (setf config-file file-name)))
+        (with-tempdir (:root-dir "/tmp")
+          ;; Deal with any custom config that's not in a file.
+          (let ((file-name "config.ini"))
+            (when-let (adjustments (assoc-get :config data))
+              (barf (dosbox-ini-write adjustments) file-name)
+              (setf config-file file-name)))
 
-      (let ((extra-args '()))
-        (when (string-has-value-p config-file)
-          (append-atom! extra-args "-conf" config-file))
+          (let ((extra-args '()))
+            (when (string-has-value-p config-file)
+              (append-atom! extra-args "-conf" config-file))
 
-        (when full-screen
-          (append-atom! extra-args "-fullscreen"))
+            (when full-screen
+              (append-atom! extra-args "-fullscreen"))
 
-        (if app
-            (run "open" app)
-          (apply #'dosbox-run exec extra-args))
+            (apply #'dosbox-run exec extra-args))
 
-        ;; Keep the config file around long enough to start it.
-        ;; This is gross, and I should find a better mechanism.
-        (sleep-for 5)))))
+          ;; Keep the config file around long enough to start it.
+          ;; This is gross, and I should find a better mechanism.
+          (sleep-for 5))))))
 
 (defun dosbox-open-config ()
   (interactive)
