@@ -125,7 +125,9 @@
         (message "Use Ctrl+F11 and Ctrl+F12 to set the cycles.")
         (message "Use alt (no fn) enter for full screen.")
 
-        (with-tempdir (:root-dir "/tmp")
+        (with-tempdir (:root-dir "/tmp"
+                       ;; This is a little gross, but seems to help
+                       :delay-cleanup-sec 5)
           ;; Deal with any custom config that's not in a file.
           (let ((file-name "config.ini"))
             (when-let (adjustments (assoc-get :config data))
@@ -139,11 +141,7 @@
             (when full-screen
               (append-atom! extra-args "-fullscreen"))
 
-            (apply #'dosbox-run exec extra-args))
-
-          ;; Keep the config file around long enough to start it.
-          ;; This is gross, and I should find a better mechanism.
-          (sleep-for 5))))))
+            (apply #'dosbox-run exec extra-args)))))))
 
 (defun dosbox-open-config ()
   (interactive)

@@ -2266,7 +2266,8 @@ Returns a list of alists."
          (setf default-directory ,gold-dir)))))
 
 (cl-defmacro with-tempdir ((&key root-dir
-                                 leave-dir)
+                                 leave-dir
+                                 delay-cleanup-sec)
                         &rest body)
   "Run body inside a temporary directory.  It uses
    a uuid-4 for the directory name.
@@ -2276,16 +2277,22 @@ Returns a list of alists."
    "
   (declare (indent defun))
 
-  (with-gensyms (root dir-name)
+  (with-gensyms (root dir-name gdelay-cleanup-sec gleave-dir)
       `(let* ((,root ,root-dir)
               (,root (or ,root default-directory))
-              (,dir-name (path-join ,root (uuidgen-4))))
+              (,dir-name (path-join ,root (uuidgen-4)))
+              (,gdelay-cleanup-sec ,delay-cleanup-sec)
+              (,gleave-dir ,leave-dir))
          (unwind-protect
              (progn
                (make-directory ,dir-name t)
                (pushd ,dir-name
-                   ,@body))
-           (when (and (not ,leave-dir)
+
+                   ,@body
+
+                   (when ,gdelay-cleanup-sec
+                     (sleep-for ,gdelay-cleanup-sec))))
+           (when (and (not ,gleave-dir)
                       (file-exists-p ,dir-name))
              (delete-directory ,dir-name t))))))
 
