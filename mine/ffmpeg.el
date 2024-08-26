@@ -95,25 +95,29 @@
 ;;  convert -loop 0 frames/ffout*.png output.gif
 
 ;; $ ffmpeg -ss 61.0 -t 2.5 -i StickAround.mp4 -filter_complex "[0:v] fps=12,scale=w=480:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1" StickAroundPerFrame.gif
-(cl-defun ffmpeg-to-gif (input-file &key (scale-width 680) (minutes 0) seconds length end-time (overwrite t))
+(cl-defun ffmpeg-to-gif (input-file &key (scale-width 480) (minutes 0) seconds length start-time end-time (overwrite t))
   (assert (file-exists-p input-file) "Input file does not exist.")
-  (assert length)
+  (assert (or length end-time))
 
-  (let ((output-file (concat (file-name-sans-extension input-file) ".gif"))
-        (seconds (+ seconds (or (* 60 minutes) 0)))
-        (length (or length (ffmpeg--clip-time-to-seconds end-time))))
+  (let* ((output-file (concat (file-name-sans-extension input-file) ".gif"))
+         (seconds (if start-time
+                      (ffmpeg--clip-time-to-seconds start-time)
+                      (+ seconds (or (* 60 minutes) 0))))
+         (length (or length (- (ffmpeg--clip-time-to-seconds end-time) seconds))))
     (when (and overwrite
                (file-exists-p output-file))
       (osx-move-to-trash output-file))
 
     (do-cmd-async
-     (list "ffmpeg"
-           "-ss" (format "%s" seconds)
-           "-t"  (format "%s" length)
-           "-i" input-file
-           "-filter_complex" (format "[0:v] fps=12,scale=w=%d:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1"
+     `("ffmpeg"
+       ,@(when (< 0 seconds)
+           (list "-ss" (format "%s" seconds)))
+       ,@(when (< 0 length)
+           (list "-t"  (format "%s" length)))
+       "-i" ,input-file
+       "-filter_complex" ,(format "[0:v] fps=12,scale=w=%d:h=-1,split [a][b];[a] palettegen=stats_mode=single [p];[b][p] paletteuse=new=1"
                                      scale-width)
-           output-file)
+       ,output-file)
      :callback-fn (lambda (&rest foo)
                     (message "Finished processing %s to gif" input-file))
      :throw t)
@@ -225,7 +229,7 @@
   (let* ((path (if (file-name-absolute-p path)
                    path
                  (path-join default-directory path)))
-         (output-file (concat (file-name-sans-extension path) "-out." "mp4")))
+         (output-file (concat (file-name-sans-extension path) "-out." (file-name-extension path))))
     (when (file-exists-p output-file)
       (osx-move-to-trash output-file))
     (do-cmd-async (concatenate 'list
@@ -304,6 +308,9 @@
                                     (list "-vcodec" switch-codec)))
                               :replace replace
                               :cb-fn cb-fn))
+
+(cl-defun ffmpeg-reduce-size-gif (path &key (replace t))
+  (ffmpeg-reduce-size path :replace replace :scale-width 480))
 
 (cl-defun ffmpeg-reduce-size-list (list &rest ffmpeg-args)
   (do-list-async list
