@@ -2277,7 +2277,7 @@ Returns a list of alists."
    "
   (declare (indent defun))
 
-  (with-gensyms (root dir-name gdelay-cleanup-sec gleave-dir)
+  (with-gensyms (root dir-name gdelay-cleanup-sec gleave-dir gresult)
       `(let* ((,root ,root-dir)
               (,root (or ,root default-directory))
               (,dir-name (path-join ,root (uuidgen-4)))
@@ -2288,10 +2288,11 @@ Returns a list of alists."
                (make-directory ,dir-name t)
                (pushd ,dir-name
 
-                   ,@body
-
+                 (let ((,gresult
+                        (progn ,@body)))
                    (when ,gdelay-cleanup-sec
-                     (sleep-for ,gdelay-cleanup-sec))))
+                     (sleep-for ,gdelay-cleanup-sec))
+                   ,gresult)))
            (when (and (not ,gleave-dir)
                       (file-exists-p ,dir-name))
              (delete-directory ,dir-name t))))))
@@ -4148,7 +4149,7 @@ rm -f ${ATTACHMENT}
                                              nil
                                            use-caching)))
 
-                      (let* ((output (assoc1 :stdout resp))
+                      (let* ((curl-output (assoc1 :stdout resp))
                              ;; Split out the '< content-type: application/json' headers
                              ;; from curl, and turn them into an alist.
                              (resp-block (parse-http-header-block (assoc1 :stderr resp)))
@@ -4166,7 +4167,7 @@ rm -f ${ATTACHMENT}
                                           (json-read-from-string (assoc1 :stdout resp))))
                              (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
                                           (ignore-errors
-                                            (parse-html-string output)))))
+                                            (parse-html-string curl-output)))))
 
                         (message "web-req[%d]: finished: curl code: %s http code: %s"
                                  web-request-id curl-code http-code)
@@ -4180,7 +4181,7 @@ rm -f ${ATTACHMENT}
                             (let ((error-message
                                    (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
                                            http-code (assoc1 :message status-line)
-                                           (string-truncate output *webrequest-http-error-msg-len*))))
+                                           (string-truncate curl-output *webrequest-http-error-msg-len*))))
                               (message "web-req[%d]: %s" web-request-id error-message)
                               (error error-message))))
 
@@ -4198,7 +4199,7 @@ rm -f ${ATTACHMENT}
                                          (:curl-code . ,curl-code)
                                          (:stderr . ,(when curl-code
                                                        (assoc1 :stderr resp)))
-                                         (:resp . ,output)
+                                         (:resp . ,curl-output)
                                          (:output-file . ,output-file)
                                          (:json . ,resp-json)
                                          (:html . ,resp-html)))
