@@ -118,7 +118,9 @@
          (app (assoc-get :app data)))
     (if app
         (run "open" app)
-      (let* ((exec (path-join (assoc1 :dir data) (assoc1 :exec data)))
+      (let* ((dir (assoc1 :dir data))
+             (exec (assoc1 :exec data))
+             (exec-args (assoc-get :exec-args data))
              (config-file (assoc-get :config-file data))
              (full-screen (assoc-get :full-screen data)))
 
@@ -141,7 +143,13 @@
             (when full-screen
               (append-atom! extra-args "-fullscreen"))
 
-            (apply #'dosbox-run exec extra-args)))))))
+            (apply #'dosbox-run (append
+                                 (if exec-args
+                                     `("-c" ,(format "mount C %s" dir)
+                                       "-c" "C:"
+                                       "-c" ,(format "%s %s" exec exec-args))
+                                   (list (path-join dir exec)))
+                                 extra-args))))))))
 
 (defun dosbox-open-config ()
   (interactive)
