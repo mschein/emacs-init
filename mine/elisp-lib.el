@@ -2214,7 +2214,7 @@ Returns a list of alists."
 
 (defun url-join (&rest args)
   (cl-flet ((clean-element (elm)
-           (let ((trimmed (string-trim-chars elm "\\/" "\\")))
+           (let ((trimmed (string-trim-chars elm "\\/" "\\/")))
              (if (string-ends-with "://" elm)
                  (concat trimmed "/")
                trimmed))))
