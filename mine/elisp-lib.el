@@ -4155,7 +4155,7 @@ rm -f ${ATTACHMENT}
                              (resp-block (parse-http-header-block (assoc1 :stderr resp)))
                              (status-line (assoc1 :status-line resp-block))
                              (curl-code (assoc1 :code resp))
-                             (http-code (if (= curl-code 0)
+                             (http-code (if (and (= curl-code 0) status-line)
                                             (assoc1 :status-code status-line)
                                           -1))
                              (http-error-type (http-classify-status-code http-code))
