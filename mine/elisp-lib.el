@@ -2954,6 +2954,26 @@ conflict with dir/subdir/project.")
          default-directory
        (error "Please run this command from the root of the repo!")))))
 
+(defun git-repo-remote-dir-list-repos--core ()
+  (mapcar (fn (path)
+            (cons (file-name-base path) path))
+          (list-directory-entries git-repo-remote-dir :full t :dirs-only t :match "\\.git$")))
+
+(defun git-repo-remote-dir-list-repos ()
+  (interactive)
+
+  (with-overwrite-buffer-pp (format "+remote-repo-dir-%s-repos+" git-repo-remote-dir)
+    (git-repo-remote-dir-list-repos--core)))
+
+(defun git-repo-remote-dir-clone (target-dir repo)
+  (interactive (list (read-string "target-dir: ")
+                     (completing-read "repo: " (assoc-keys (git-repo-remote-dir-list-repos--core))
+                                      nil t)))
+
+  (let ((repo-table (git-repo-remote-dir-list-repos--core)))
+    (pushd target-dir
+      (git-clone (assoc1 repo repo-table)))))
+
 (defun git-status ()
   (cl-loop for line in (string->list (run-to-str "git" "status" "--short"))
            collect (destructuring-bind (status path)
