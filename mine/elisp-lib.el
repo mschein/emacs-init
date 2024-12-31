@@ -2703,20 +2703,20 @@ end tell
 ;; Async Utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(cl-defun do-list-async (list &key fn cb)
+(cl-defun do-list-async (list &key fn (cb (lambda ())))
   "A helper/wrapper for when you want to do work on a list with a function that takes a callback.
 
 
 `list': a list of things that will get passed one at a time to the callback.
 
 "
-  (when list
+  (if list
     (cl-labels ((handler-fn (&rest args)
-                  (when cb
-                    (apply cb args))
-                  (when list
-                    (funcall fn (pop list) #'handler-fn))))
-    (funcall fn (pop list) #'handler-fn))))
+                  (if list
+                    (funcall fn (pop list) #'handler-fn)
+                    (funcall cb))))
+      (funcall fn (pop list) #'handler-fn))
+    (funcall cb)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Git commands
