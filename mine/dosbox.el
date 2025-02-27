@@ -151,8 +151,24 @@
                                    (list (path-join dir exec)))
                                  extra-args))))))))
 
+(defun dosbox-get-game-data (game-name)
+  (assoc1 game-name dosbox-game-table))
+
 (defun dosbox-open-config ()
   (interactive)
   (find-file dosbox-global-config))
+
+(defun dosbox-open-gamedir (name)
+  (interactive (list (completing-read "Game: " (assoc-keys dosbox-game-table) nil t)))
+
+  (if-let (dir (assoc-get :dir (dosbox-get-game-data name)))
+      (shell-open-dir dir)
+    (message "No game directory registered for %s" name)))
+
+(defun dosbox-open-manual (name)
+  (interactive (list (completing-read "Game: " (assoc-keys dosbox-game-table) nil t)))
+  (if-let (manual (assoc-get :manual (dosbox-get-game-data name)))
+      (do-cmd-async (list "open" "-a" "Preview" manual))
+    (message "No manual found for %s" name)))
 
 (provide 'dosbox)

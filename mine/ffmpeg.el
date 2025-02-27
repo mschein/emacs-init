@@ -367,7 +367,7 @@
 ;; (cl-defun ffmpeg-reduce-size-list-perc (list &key percent scale-width max-size-byte))
 
 
-(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate min-bit-rate max-width max-frame-rate switch-codec crf-quality (preset-encoding-speed 'medium) bit-rate-reduction)
+(cl-defun ffmpeg-reduce-size-list-auto (list &key max-bit-rate min-bit-rate max-width max-frame-rate switch-codec crf-quality (preset-encoding-speed 'medium) bit-rate-reduction (replace t))
   (do-list-async list
                  :fn (lambda (entry call-next-fn)
                        ;; Calc the best values for new video parameters
@@ -397,7 +397,8 @@
                                              :crf-quality crf-quality
                                              :bit-rate bit-rate
                                              :preset-encoding-speed preset-encoding-speed
-                                             :frame-rate frame-rate)))))
+                                             :frame-rate frame-rate
+                                             :replace replace)))))
 
 (cl-defun ffmpeg-conv-video-to-mp4 (file-to-convert &key cb-fn)
   (ffmpeg-async-file-modifier file-to-convert
