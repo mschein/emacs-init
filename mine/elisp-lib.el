@@ -17,7 +17,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'cl-lib)
-(require 'f)
+;; (require 'f)
 (require 'ht)
 (require 'json)
 (require 's)
@@ -2379,7 +2379,6 @@ Returns a list of alists."
                                           (string->list str))
            with sections = '()
            do (progn
-                (message "sections: %s" sections)
                 (cond
                  ((eql :section key)
                   (pushcons value '() sections))
