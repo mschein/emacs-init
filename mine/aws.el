@@ -97,6 +97,7 @@
     "sns"
     "sqs"
     "ssm"
+    "sso"
     "stepfunctions"
     "storagegateway"
     "sts"
@@ -822,6 +823,10 @@ doesn't deal with paging yet."
     (assoc1 'CertificateSummaryList
             (aws-acm "list-certificates"))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Iam and access functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun aws-iam-list-roles ()
   (let ((-aws-return-json t))
     (assoc1 'Roles (aws-iam "list-roles"))))
@@ -840,6 +845,14 @@ doesn't deal with paging yet."
 (defun aws-assume-role (role-arn role-session-name)
   (let ((-aws-return-json t))
     (aws-sts "assume-role" "--role-arn" role-arn "--role-session-name" role-session-name)))
+
+(defun aws-sts-get-caller-identity ()
+  (aws-sts "get-caller-identity"))
+
+(defun aws-has-credentials-p ()
+  (not (not
+        (ignore-errors
+          (aws-sts-get-caller-identity)))))
 
 (defun aws-elasticsearch-list-domain-names ()
   (let ((-aws-return-json t))
@@ -897,6 +910,34 @@ doesn't deal with paging yet."
     (aws-eks "describe-cluster" "--name" name
              "--query" "cluster.{endpoint:endpoint,certificateAuthority:certificateAuthority}")))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Shell and profile management
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun aws-sso-login (profile)
+  (aws-sso "login" "--profile" profile))
+
+(cl-defmacro with-aws--profile ((profile region) &rest body)
+  (declare (indent defun))
+
+  (with-gensyms (gprofile gregion)
+    `(let ((,gprofile ,profile)
+           (,gregion ,region))
+       (with-env-vars `(("AWS_PROFILE" . ,,gprofile)
+                        ("AWS_DEFAULT_REGION" . ,,gregion))
+         (unless (aws-has-credentials-p)
+           (aws-sso-login ,gprofile))
+         ,@body))))
+
+(defun aws--open-profile-shell (profile region)
+  (with-aws--profile (profile region)
+    (shell-open-dir (expand-file-name "~"))))
+
+(defun aws-list-profile-names-from-file (config-file)
+  (cl-loop for entry in (ini-parse (slurp config-file))
+           for (type name) = (string-split " " (car entry))
+           when (equal type "profile")
+               collect name))
 
 ;; describe-container-instances can get you the ami id.
 
