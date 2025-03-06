@@ -43,7 +43,7 @@
       '((sbcl ("sbcl" "--dynamic-space-size" "20480"))
         (ccl ("ccl64" "--quiet"))
         (abcl ("abcl"))))
-(setq load-path (remove-if (| string-match "slime" %) load-path))
+(setq load-path (cl-remove-if (| string-match "slime" %) load-path))
 
 ;; Set the common lisp hyperspec root
 

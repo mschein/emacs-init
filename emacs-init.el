@@ -2,6 +2,8 @@
 ;;
 ;; Copyright (C) by Michael Scheinholtz.  All Rights Reserved.
 ;;
+;; Link to this file with: ln -s ~/emacs-init/emacs-init.el .emacs
+;;
 ;; TODO:
 ;; 1. reorg doc here.
 ;; 2. Need to figure out tab and hippie expand to
@@ -245,11 +247,117 @@
 ;;  will force a recompilation... might want that in here.
 ;;
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Early Config values
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; We want all of our elisp under this repo.
+(setq user-emacs-directory "~/emacs-init/")
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup the package manager (Elpaca in this case.)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar elpaca-installer-version 0.10)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (<= emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+
+;;
+;; Make it so we can install packages in the init file.
+;;
+(elpaca elpaca-use-package
+  ;; Enable use-package :ensure support for Elpaca.
+  (elpaca-use-package-mode))
+
+;;
+;; When installing a package used in the init file itself,
+;; e.g. a package which adds a use-package key word,
+;; use the :wait recipe keyword to block until that package is installed/configured.
+;; For example:
+;;
+;;(use-package general :ensure (:wait t) :demand t)
+;; Expands to: (elpaca evil (use-package evil :demand t))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Install Packages
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Nice elisp enhancements
+(use-package ht :ensure (:wait t) :demand t)
+(use-package s :ensure (:wait t) :demand t)
+(use-package f :ensure (:wait t) :demand t)
+
+;; Sometimes you need non-cryptographically unique ids
+(use-package uuidgen :ensure (:wait t) :demand t)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setup my personal packages.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; Try use-package (did this for lsp-mode config initially.
+;; See: https://github.com/jwiegley/use-package
+;;
+(eval-when-compile
+  (require 'use-package))
+
+;; Always load these.
+(add-to-list 'load-path "~/emacs-init/mine/")
+(dolist (path '("~/emacs-init/mine"
+                "~/emacs-init/dynamic-modules"
+                "~/emacs-init/contrib"))
+  (when (file-directory-p path)
+    (add-to-list 'load-path path)))
+
 ;; Turn on common lisp bindings
 (require 'cl-lib)
+
+;; TODO: XXXXXX
+(require 'elisp-lib)
+(require 'one-off-scripts)
+
+;; Run our custom slime code
+(require 'slime-lisp)
+
+;; This is deprecated
 (require 'cl)
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup keyboard.
@@ -288,254 +396,41 @@
   (setq mac-command-modifier 'meta)
   (global-set-key [kp-delete] 'delete-char)) ;; sets fn-delete to be right-delet
 
-(require 'find-lisp)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setup the package manaers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Note!  Use list-packages instead of package-list-packages.
-(require 'package)
-
-(setf package-archives nil)
-
-(setf package-user-dir "~/emacs-init/emacs-packages")
-
-(let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
-                    (not (gnutls-available-p))))
-       (url (concat (if no-ssl "http" "https") "://melpa.org/packages/")))
-  (add-to-list 'package-archives (cons "melpa" url) t))
-
-(add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/"))
-
-(add-to-list 'package-archives
-             '("marmalade" . "https://marmalade-repo.org/packages/") t)
-(add-to-list 'package-archives
-             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-
-(package-initialize)
-
-;; Try use-package (did this for lsp-mode config initially.
-(eval-when-compile
-  (require 'use-package))
-
-;; Always load these.
-(add-to-list 'load-path "~/emacs-init/mine/")
-(dolist (path '("~/emacs-init/mine"
-                "~/emacs-init/dynamic-modules"
-                "~/emacs-init/contrib"
-                "~/emacs-init/contrib/groovymode"))
-  (when (file-directory-p path)
-    (add-to-list 'load-path path)))
-
-(require 'elisp-lib)
-(require 'one-off-scripts)
-
 ;; Setup 'which-key' so we get a list of key binding options
-;; as we type.
-(require 'which-key)
-(which-key-mode)
+(use-package which-key
+  :ensure t
+  :config
+  (which-key-mode))
 
-;; To run a slime, uncomment and slime-lisp and start
-;; a new emacs.
-(require 'slime-lisp)
-
-;; Do I still need this?
-;; (require 'cssh)
-
-;; Get cperl-mode setup since it is better.
-(defalias 'perl-mode 'cperl-mode)
-
-(setq cperl-close-paren-offset -4)
-(setq cperl-continued-statement-offset 4)
-(setq cperl-indent-level 4)
-(setq cperl-intent-parens-as-block t)
-(setq cperl-tab-always-indent t)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; General Emacs Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Turn tabs off
 (setq-default indent-tabs-mode nil)
 
-;;
-;; Mike's customizations
-;; XXX May want to change how I do this.
-;;
-(setq c-basic-offset 4)
+;; Shut off useless menu items. etc.
+(setq inhibit-splash-screen t)
 
-;; Add ruby files.
-(add-to-list 'load-path "~/emacs-init/ruby-mode")
-(add-to-list 'auto-mode-alist '("\\.rb\\'" . ruby-mode))
-(autoload 'ruby-mode "ruby-mode" "Major mode for ruby code")
+(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
+(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
 
-;; Auto indentation
-(add-hook 'ruby-mode-hook (lambda () (local-set-key "\r" 'newline-and-indent)))
+;; Save desktops
+(desktop-save-mode t)
 
-;; Ruby inside emacs
-(require 'inf-ruby)
+;; Enable time in the mode line.
+(display-time-mode t)
 
-;; Make it so C-n adds newlines.
-(setq next-line-add-newlines t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Calc Mode Settings.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(setq calc-algebraic-mode t)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Javascript Configuration
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(add-to-list 'load-path "~/emacs-init/javascript")
-(add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
-(add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
-(add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
-
-
-(autoload 'javascript-mode "javascript" nil t)
-
-;; flymake stuff is done later.
-(let ((js-basic-offset 2))
-  (setq js2-basic-offset js-basic-offset)
-  (setq-default web-mode-markup-indent-offset js-basic-offset)
-  (setq-default web-mode-css-indent-offset js-basic-offset)
-  (setq-default web-mode-code-indent-offset js-basic-offset)
-  (setq js-indent-level js-basic-offset)
-  (setq sqml-basic-offset js-basic-offset))
-
-
-;; Allow these functions.
-(put 'upcase-region 'disabled nil)
-(put 'downcase-region 'disabled nil)
-
-;; Enable flymake
-(require 'flymake)
-(if (< emacs-major-version 26)
-    (progn
-      (defmacro define-flymake-checker (func cmd &rest args)
-        "Define a flymake checker function.
-   It will be named `func', and will execute cmd + the rest of the args."
-
-        (let ((temp-file (gensym))
-              (local-file (gensym)))
-          `(defun ,func ()
-             (let* ((,temp-file (flymake-init-create-temp-buffer-copy
-                                 #'flymake-create-temp-inplace))
-                    (,local-file (file-relative-name ,temp-file
-                                                     (file-name-directory buffer-file-name))))
-               (list ,cmd (list ,@args ,local-file))))))
-      (require 'flymake-cursor))
-  ;; New flymake setup
-  (eval-after-load 'flymake
-    (progn
-      (require 'flymake-diagnostic-at-point)
-      (setq flymake-diagnostic-at-point-timer-delay 0.3)
-      (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode))))
-
-;;
-;; Turn on a jslint flymake
-;;
-;; to setup on a new osx system:
-;; - brew install npm
-;; - npm install -g jshint
-;; - npm install -g eslint eslint-plugin-react babel-eslint
-;;
-;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
-;;
-;; TODO: I should make a function to simplify these declarations.
-;;
-
-(defun flymake-proc-jshint-init ()
-  (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
-                     'flymake-proc-create-temp-inplace))
-         (local-file (file-relative-name
-                      temp-file
-                      (file-name-directory buffer-file-name))))
-    (list "jshint" (list "--reporter=unix" local-file))))
-
-(defun flymake-proc-eslist-init ()
-  (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
-                     'flymake-proc-create-temp-inplace))
-         (local-file (file-relative-name
-                      temp-file
-                      (file-name-directory buffer-file-name))))
-    (list "eslint" (list "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix" local-file))))
-
-(when (which "jshint")
-  (if (< emacs-major-version 26)
-      (progn
-        (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
-        (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
-
-        (when (load "flymake" t)
-          (add-to-list 'flymake-allowed-file-name-masks
-                       '("\\.jsx\\'" flymake-eslint-checker))
-          (add-to-list 'flymake-allowed-file-name-masks
-                       '("\\.js\\'" flymake-js-checker)))
-        ;;
-        ;; Turn off flymake for xml/html since I can't get it to work
-        ;;
-        (setf flymake-allowed-file-name-masks (remove-if
-                                               (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
-                                               flymake-allowed-file-name-masks)))
-    (progn
-      (setq flymake-proc-allowed-file-name-masks
-           (cons '("\\.js\\'"
-                   flymake-proc-jshint-init
-                   flymake-proc-simple-cleanup
-                   flymake-proc-get-real-file-name)
-                 flymake-proc-allowed-file-name-masks))
-      (setq flymake-proc-err-line-patterns
-           (cons '("^\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\): \\(.+\\)$"
-                   1 2 3 4)
-                 flymake-proc-err-line-patterns))
-
-      (setq flymake-proc-allowed-file-name-masks
-            (cons '("\\.jsx\\'"
-                    flymake-proc-eslint-init
-                    flymake-proc-simple-cleanup
-                    flymake-proc-get-real-file-name)
-                  flymake-proc-allowed-file-name-masks)))))
-
-(defun js-type-hooks ()
-  "Any commands we want to run when editing js style files (jsx etc.)"
-  (subword-mode)
-  (when (and (which "jshint")
-             (>= emacs-major-version 26))
-    (flymake-mode t)))
-
-(add-hook 'js-mode-hook 'js-type-hooks)
-(add-hook 'web-mode-hook 'js-type-hooks)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Shell Mode options
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Emacs now supports colors :-)
-(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
-;; But it doesn't support less, so turn the pager off.
-(setenv "GIT_PAGER" "")
-
-;; Set Chrome as the default browser
-(setq browse-url-generic-program "/opt/google/chrome/google-chrome")
+;; Flash the screen instead of making a noise on bell.
+;; We'll see if I like this.
+(setq visible-bell t)
 
 ;; automatically unzip/gunzip/uncompress files
 (auto-compression-mode 1)
 
-;;
-;; Turn on red highlighting for characters outside of the 80/100 char limit
-(defun font-lock-width-keyword (width)
-  "Return a font-lock style keyword for a string beyond width WIDTH
-that uses 'font-lock-warning-face'."
-  `((,(format "^%s\\(.+\\)" (make-string width ?.))
-     (1 font-lock-warning-face t))))
-
-(font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 99))
-(font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
-(add-hook 'java-mode 'subword-mode)
-
 ;; Make cut and paste work
-(setq x-select-enable-clipboard t)
+(setq select-enable-clipboard t)
 
 ;; Find files faster.  http://curiousprogrammer.wordpress.com/2009/02/18/emacs-directory-aliases/
 ;;
@@ -555,84 +450,325 @@ that uses 'font-lock-warning-face'."
 (setq ido-create-new-buffer 'always)
 
 ;;
-;; Add YASnippet support
-;;
-;; Note, it's the 'key' part that you should type.
-;;
-(require 'yasnippet) ;; not yasnippet-bundle
-;; relocate my person extension dir
-(setf yas-snippet-dirs (remove-if (| when (stringp %)
-                                     (cl-search ".emacs.d" %)) yas-snippet-dirs))
-(push "~/emacs-init/snippets" yas-snippet-dirs)
-(yas/initialize)
-
-;; We don't always need the final new line in a file.
-(setq require-final-newline nil)
-
-;; Paredit setup
-;; TODO Need to learn to use this.
-;(autoload 'paredit-mode "paredit"
-;  "Minor mode for pseudo-structurally editing Lisp code." t)
-;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
-;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
-;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
-
-;; Stop SLIME's REPL from grabbing DEL,
-;; which is annoying when backspacing over a '('
-;; (defun override-slime-repl-bindings-with-paredit ()
-;;   (define-key slime-repl-mode-map
-;;     (read-kbd-macro paredit-backward-delete-key) nil))
-;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
-
-
-;; Shut off useless menu items. etc.
-(setq inhibit-splash-screen t)
-
-(if (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
-(if (fboundp 'tool-bar-mode) (tool-bar-mode -1))
-(if (fboundp 'menu-bar-mode) (menu-bar-mode -1))
-
-;; pick a font.
-;; set fond size, etc. etc.
-;;(set-face-attribute 'default nil :height 110)
-;;
-;; hack can be downloaded from:
-;; https://sourcefoundry.org/hack/
-;;
-;; brew tap homebrew/cask-fonts
-;; brew cask install font-
-;;
-;; Interesting fonts:
-;; Hack
-;; Monaco
-;;
-;; To Try:
-;; Dejavu sans
-;;
-;;
-;;
-(let ((font "Hack"))
-  (when (member font  (font-family-list))
-    (set-frame-font font t t)))
-(set-face-attribute 'default nil :height 120)
-
-
-;; Magit options
-(add-hook 'magit-mode-hook 'magit-load-config-extensions)
-
-;; Enable ace-jump-mode
-;;
-;; use 'pop-mark' with it. (C-u C-<SPC>)
-;; global mark ring pop: (C-x C-<SPC>)
-(require 'ace-jump-mode)
-(define-key global-map (kbd "C-c C-<SPC>") 'ace-jump-mode)
-(define-key global-map (kbd "C-x C-<SPC>") 'ace-jump-mode-pop-mark)
-
-;;
 ;; Make window navigation easier
 ;; Use shift and arrow keys
 ;;
 (windmove-default-keybindings)
+
+;; put all backup files in one place
+(setq backup-by-copying t      ; don't clobber symlinks
+      backup-directory-alist
+      '(("." . "~/.emacs-backups"))    ; don't litter my fs tree
+      delete-old-versions t
+      kept-new-versions 8
+      kept-old-versions 8
+      version-control t)      ; use versioned backups
+
+;; Make it so we can list timers if we want.
+(put 'list-timers 'disabled nil)
+
+;; Make it so sort-lines ignores case.
+;; The debugger doesn't think this works, but it does as of emacs 30.
+(setf sort-fold-case t)
+
+;; XXX Do we want this?
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Electic Auto Pair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;
+;; ;; Enable globally, but disable a few things.
+;; ;;
+;; (electric-pair-mode 1)
+
+;; ;; Don't add autopair in certain modes
+;; (dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
+;;   (add-hook mode (lambda ()
+;;                    (electric-pair-local-mode -1))))
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Hippie Expand ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ;; For now I'm just going to set hippie expand to take over M-/, since
+;; ;; that should be similar to what I have now.
+;; ;; It looks like ac/yas will share the tab in a reasonable way, if I think
+;; ;; of a more efficient way to use it, I will.
+;; (global-set-key (kbd "C-/") 'hippie-expand)
+;; (global-set-key (kbd "M-/") 'dabbrev-expand)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Text Mode configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Make it so long lines wrap even on internal frames (not windows)
+(setq truncate-partial-width-windows nil)
+
+;;
+;; Other line wrapping goodies:
+;; Visual Line mode.
+;; Long line mode... apparently this mode sucks.
+;; fill paragraph (realigns a paragraph based on the frame or fill column.)
+;;
+(add-hook 'text-mode-hook 'turn-on-visual-line-mode)
+
+
+;; XXXX How did this work?
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Password Check  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (add-password-prompt-check "\\|^Enter host password .*:\\'")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Perl Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Get cperl-mode setup since it is better.
+(defalias 'perl-mode 'cperl-mode)
+
+(setq cperl-close-paren-offset -4)
+(setq cperl-continued-statement-offset 4)
+(setq cperl-indent-level 4)
+(setq cperl-intent-parens-as-block t)
+(setq cperl-tab-always-indent t)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; C Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Set a 4 space offset
+(setq c-basic-offset 4)
+
+;; Make it so C-n adds newlines.
+(setq next-line-add-newlines t)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Ruby Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Ruby inside emacs
+(use-package ruby-mode
+  :mode "\\.rb\\'"
+  :interpreter "ruby")
+(use-package inf-ruby
+  :mode "\\.rb\\'")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Calc Mode Settings.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(setq calc-algebraic-mode t)
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; Javascript Configuration
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (add-to-list 'load-path "~/emacs-init/javascript")
+;; (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
+;; (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+;; (add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
+
+
+;; (autoload 'javascript-mode "javascript" nil t)
+
+;; ;; flymake stuff is done later.
+;; (let ((js-basic-offset 2))
+;;   (setq js2-basic-offset js-basic-offset)
+;;   (setq-default web-mode-markup-indent-offset js-basic-offset)
+;;   (setq-default web-mode-css-indent-offset js-basic-offset)
+;;   (setq-default web-mode-code-indent-offset js-basic-offset)
+;;   (setq js-indent-level js-basic-offset)
+;;   (setq sqml-basic-offset js-basic-offset))
+
+
+;; ;; Allow these functions.
+;; (put 'upcase-region 'disabled nil)
+;; (put 'downcase-region 'disabled nil)
+
+;; ;; Enable flymake
+;; (require 'flymake)
+;; (if (< emacs-major-version 26)
+;;     (progn
+;;       (defmacro define-flymake-checker (func cmd &rest args)
+;;         "Define a flymake checker function.
+;;    It will be named `func', and will execute cmd + the rest of the args."
+
+;;         (let ((temp-file (gensym))
+;;               (local-file (gensym)))
+;;           `(defun ,func ()
+;;              (let* ((,temp-file (flymake-init-create-temp-buffer-copy
+;;                                  #'flymake-create-temp-inplace))
+;;                     (,local-file (file-relative-name ,temp-file
+;;                                                      (file-name-directory buffer-file-name))))
+;;                (list ,cmd (list ,@args ,local-file))))))
+;;       (require 'flymake-cursor))
+;;   ;; New flymake setup
+;;   (eval-after-load 'flymake
+;;     (progn
+;;       (require 'flymake-diagnostic-at-point)
+;;       (setq flymake-diagnostic-at-point-timer-delay 0.3)
+;;       (add-hook 'flymake-mode-hook #'flymake-diagnostic-at-point-mode))))
+
+;; ;;
+;; ;; Turn on a jslint flymake
+;; ;;
+;; ;; to setup on a new osx system:
+;; ;; - brew install npm
+;; ;; - npm install -g jshint
+;; ;; - npm install -g eslint eslint-plugin-react babel-eslint
+;; ;;
+;; ;; ln -s ~/emacs-init/dotfiles/eslintrc .eslintrc
+;; ;;
+;; ;; TODO: I should make a function to simplify these declarations.
+;; ;;
+
+;; (defun flymake-proc-jshint-init ()
+;;   (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
+;;                      'flymake-proc-create-temp-inplace))
+;;          (local-file (file-relative-name
+;;                       temp-file
+;;                       (file-name-directory buffer-file-name))))
+;;     (list "jshint" (list "--reporter=unix" local-file))))
+
+;; (defun flymake-proc-eslist-init ()
+;;   (let* ((temp-file (flymake-proc-init-create-temp-buffer-copy
+;;                      'flymake-proc-create-temp-inplace))
+;;          (local-file (file-relative-name
+;;                       temp-file
+;;                       (file-name-directory buffer-file-name))))
+;;     (list "eslint" (list "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix" local-file))))
+
+;; (when (which "jshint")
+;;   (if (< emacs-major-version 26)
+;;       (progn
+;;         (define-flymake-checker flymake-js-checker "jshint" "--reporter=unix")
+;;         (define-flymake-checker flymake-eslint-checker "eslint" "-c" (expand-file-name "~/.eslintrc") "--no-color" "--format" "unix")
+
+;;         (when (load "flymake" t)
+;;           (add-to-list 'flymake-allowed-file-name-masks
+;;                        '("\\.jsx\\'" flymake-eslint-checker))
+;;           (add-to-list 'flymake-allowed-file-name-masks
+;;                        '("\\.js\\'" flymake-js-checker)))
+;;         ;;
+;;         ;; Turn off flymake for xml/html since I can't get it to work
+;;         ;;
+;;         (setf flymake-allowed-file-name-masks (remove-if
+;;                                                (| find (car %) '("\\.html?\\'" "\\.xml\\'" "\\.java\\'") :test #'equal)
+;;                                                flymake-allowed-file-name-masks)))
+;;     (progn
+;;       (setq flymake-proc-allowed-file-name-masks
+;;            (cons '("\\.js\\'"
+;;                    flymake-proc-jshint-init
+;;                    flymake-proc-simple-cleanup
+;;                    flymake-proc-get-real-file-name)
+;;                  flymake-proc-allowed-file-name-masks))
+;;       (setq flymake-proc-err-line-patterns
+;;            (cons '("^\\([^:]+\\):\\([0-9]+\\):\\([0-9]+\\): \\(.+\\)$"
+;;                    1 2 3 4)
+;;                  flymake-proc-err-line-patterns))
+
+;;       (setq flymake-proc-allowed-file-name-masks
+;;             (cons '("\\.jsx\\'"
+;;                     flymake-proc-eslint-init
+;;                     flymake-proc-simple-cleanup
+;;                     flymake-proc-get-real-file-name)
+;;                   flymake-proc-allowed-file-name-masks)))))
+
+;; (defun js-type-hooks ()
+;;   "Any commands we want to run when editing js style files (jsx etc.)"
+;;   (subword-mode)
+;;   (when (and (which "jshint")
+;;              (>= emacs-major-version 26))
+;;     (flymake-mode t)))
+
+;; (add-hook 'js-mode-hook 'js-type-hooks)
+;; (add-hook 'web-mode-hook 'js-type-hooks)
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; Shell Mode options
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ;; Emacs now supports colors :-)
+;; (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+;; ;; But it doesn't support less, so turn the pager off.
+(setenv "GIT_PAGER" "")
+
+;; ;;
+;; ;; Turn on red highlighting for characters outside of the 80/100 char limit
+;; (defun font-lock-width-keyword (width)
+;;   "Return a font-lock style keyword for a string beyond width WIDTH
+;; that uses 'font-lock-warning-face'."
+;;   `((,(format "^%s\\(.+\\)" (make-string width ?.))
+;;      (1 font-lock-warning-face t))))
+
+;; (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
+;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 99))
+;; (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
+;; (add-hook 'java-mode 'subword-mode)
+
+
+;; ;;
+;; ;; Add YASnippet support
+;; ;;
+;; ;; Note, it's the 'key' part that you should type.
+;; ;;
+;; (require 'yasnippet) ;; not yasnippet-bundle
+;; ;; relocate my person extension dir
+;; (setf yas-snippet-dirs (remove-if (| when (stringp %)
+;;                                      (cl-search ".emacs.d" %)) yas-snippet-dirs))
+;; (push "~/emacs-init/snippets" yas-snippet-dirs)
+;; (yas/initialize)
+
+;; ;; We don't always need the final new line in a file.
+;; (setq require-final-newline nil)
+
+;; ;; Paredit setup
+;; ;; TODO Need to learn to use this.
+;; ;(autoload 'paredit-mode "paredit"
+;; ;  "Minor mode for pseudo-structurally editing Lisp code." t)
+;; ;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
+;; ;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
+;; ;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
+
+;; ;; Stop SLIME's REPL from grabbing DEL,
+;; ;; which is annoying when backspacing over a '('
+;; ;; (defun override-slime-repl-bindings-with-paredit ()
+;; ;;   (define-key slime-repl-mode-map
+;; ;;     (read-kbd-macro paredit-backward-delete-key) nil))
+;; ;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
+
+
+;; ;; pick a font.
+;; ;; set fond size, etc. etc.
+;; ;;(set-face-attribute 'default nil :height 110)
+;; ;;
+;; ;; hack can be downloaded from:
+;; ;; https://sourcefoundry.org/hack/
+;; ;;
+;; ;; brew tap homebrew/cask-fonts
+;; ;; brew cask install font-
+;; ;;
+;; ;; Interesting fonts:
+;; ;; Hack
+;; ;; Monaco
+;; ;;
+;; ;; To Try:
+;; ;; Dejavu sans
+;; ;;
+;; ;;
+;; ;;
+;; (let ((font "Hack"))
+;;   (when (member font  (font-family-list))
+;;     (set-frame-font font t t)))
+;; (set-face-attribute 'default nil :height 120)
+
+
+;; ;; Magit options
+;; (add-hook 'magit-mode-hook 'magit-load-config-extensions)
+
+;; ;; Enable ace-jump-mode
+;; ;;
+;; ;; use 'pop-mark' with it. (C-u C-<SPC>)
+;; ;; global mark ring pop: (C-x C-<SPC>)
+;; (require 'ace-jump-mode)
+;; (define-key global-map (kbd "C-c C-<SPC>") 'ace-jump-mode)
+;; (define-key global-map (kbd "C-x C-<SPC>") 'ace-jump-mode-pop-mark)
 
 ;; Thanks Steve.
 (defalias 'cr 'comment-region)
@@ -688,96 +824,78 @@ that uses 'font-lock-warning-face'."
 (global-set-key "\M-g" 'goto-line)
 (global-set-key "\C-x\M-f" 'find-file-at-point)
 
-;; Save desktops
-(desktop-save-mode t)
 
-;; Enable time in the mode line.
-(display-time-mode t)
+;; ;;
+;; ;; Make buffer names smarter
+;; ;;
+;; (require 'uniquify)
+;; (setq uniquify-separator "/")
+;; (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
+;; (setq uniqify-ignore-buffers-re "^\\*")
 
-;; Flash the screen instead of making a noise on bell.
-;; We'll see if I like this.
-(setq visible-bell t)
+;; ;; Flyspell code
+;; (defun turn-on-flyspell ()
+;;   "Force flyspell-mode on using a positive arg.  For use in hooks."
+;;   (interactive)
+;;   (flyspell-mode 1)
+;;   (define-key flyspell-mode-map (kbd "C-;") 'undo))
+;; (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
+;; (add-hook 'text-mode-hook 'turn-on-flyspell)
 
-;; put all backup files in one place
-(setq backup-by-copying t      ; don't clobber symlinks
-      backup-directory-alist
-      '(("." . "~/.emacs-backups"))    ; don't litter my fs tree
-      delete-old-versions t
-      kept-new-versions 8
-      kept-old-versions 8
-      version-control t)      ; use versioned backups
-
-;;
-;; Make buffer names smarter
-;;
-(require 'uniquify)
-(setq uniquify-separator "/")
-(setq uniquify-buffer-name-style 'post-forward-angle-brackets)
-(setq uniqify-ignore-buffers-re "^\\*")
-
-;; Flyspell code
-(defun turn-on-flyspell ()
-  "Force flyspell-mode on using a positive arg.  For use in hooks."
-  (interactive)
-  (flyspell-mode 1)
-  (define-key flyspell-mode-map (kbd "C-;") 'undo))
-(autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
-(add-hook 'text-mode-hook 'turn-on-flyspell)
-
-(setf exec-path (append exec-path '("/usr/local/bin")))
+;; (setf exec-path (append exec-path '("/usr/local/bin")))
 
 
-;; ;; Found on interwebs:
-;; ;; http://emacsblog.org/2007/03/12/tab-completion-everywhere/
-;; (defun indent-or-expand (arg)
-;;   "Either indent according to mode, or expand the word preceding
-;; point."
-;;   (interactive "*P")
-;;   (if (and
-;;        (or (bobp) (= ?w (char-syntax (char-before))))
-;;        (or (eobp) (not (= ?w (char-syntax (char-after))))))
-;;       (dabbrev-expand arg)
-;;     (indent-according-to-mode)))
+;; ;; ;; Found on interwebs:
+;; ;; ;; http://emacsblog.org/2007/03/12/tab-completion-everywhere/
+;; ;; (defun indent-or-expand (arg)
+;; ;;   "Either indent according to mode, or expand the word preceding
+;; ;; point."
+;; ;;   (interactive "*P")
+;; ;;   (if (and
+;; ;;        (or (bobp) (= ?w (char-syntax (char-before))))
+;; ;;        (or (eobp) (not (= ?w (char-syntax (char-after))))))
+;; ;;       (dabbrev-expand arg)
+;; ;;     (indent-according-to-mode)))
 
-;; (defun my-tab-fix ()
-;;   (local-set-key [tab] 'indent-or-expand))
+;; ;; (defun my-tab-fix ()
+;; ;;   (local-set-key [tab] 'indent-or-expand))
 
-;; (add-hook 'c-mode-hook          'my-tab-fix)
-;; (add-hook 'ruby-mode-hook       'my-tab-fix)
-;; (add-hook 'sh-mode-hook         'my-tab-fix)
-;; (add-hook 'emacs-lisp-mode-hook 'my-tab-fix)
-;; ;;(add-hook 'slime-mode-hook 'my-tab-fix)
-;; (add-hook 'clojure-mode-hook 'my-tab-fix)
-
-
-;; from http://joost.zeekat.nl/2010/06/03/slime-hints-3-interactive-completions-and-smart-tabs/
-
-;;
-;; This might be the way to go.
-;;
-;; (setq hippie-expand-try-functions-list
-;;       (append hippie-expand-try-functions-list '(slime-complete-symbol)))
-;; (setq smart-tab-completion-functions-alist
-;;       '((emacs-lisp-mode . lisp-complete-symbol)
-;;         (text-mode . dabbrev-completion)
-;;         (slime-repl-mode . slime-complete-symbol)))
-
-;; Turn on auto completion.
-(require 'auto-complete-config)
-(add-to-list 'ac-dictionary-directories "~/emacs-init/contrib/ac-dict")
-(ac-config-default)
-(ac-flyspell-workaround)
+;; ;; (add-hook 'c-mode-hook          'my-tab-fix)
+;; ;; (add-hook 'ruby-mode-hook       'my-tab-fix)
+;; ;; (add-hook 'sh-mode-hook         'my-tab-fix)
+;; ;; (add-hook 'emacs-lisp-mode-hook 'my-tab-fix)
+;; ;; ;;(add-hook 'slime-mode-hook 'my-tab-fix)
+;; ;; (add-hook 'clojure-mode-hook 'my-tab-fix)
 
 
-;; default to better frame titles
-(setq frame-title-format
-      (concat  "%b - emacs@" (system-name)))
+;; ;; from http://joost.zeekat.nl/2010/06/03/slime-hints-3-interactive-completions-and-smart-tabs/
 
-;; default to unified diffs
-(setq diff-switches "-u")
+;; ;;
+;; ;; This might be the way to go.
+;; ;;
+;; ;; (setq hippie-expand-try-functions-list
+;; ;;       (append hippie-expand-try-functions-list '(slime-complete-symbol)))
+;; ;; (setq smart-tab-completion-functions-alist
+;; ;;       '((emacs-lisp-mode . lisp-complete-symbol)
+;; ;;         (text-mode . dabbrev-completion)
+;; ;;         (slime-repl-mode . slime-complete-symbol)))
 
-;;; uncomment for CJK utf-8 support for non-Asian users
-;; (require 'un-define)
+;; ;; Turn on auto completion.
+;; (require 'auto-complete-config)
+;; (add-to-list 'ac-dictionary-directories "~/emacs-init/contrib/ac-dict")
+;; (ac-config-default)
+;; (ac-flyspell-workaround)
+
+
+;; ;; default to better frame titles
+;; (setq frame-title-format
+;;       (concat  "%b - emacs@" (system-name)))
+
+;; ;; default to unified diffs
+;; (setq diff-switches "-u")
+
+;; ;;; uncomment for CJK utf-8 support for non-Asian users
+;; ;; (require 'un-define)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Org mode customizations.
@@ -879,298 +997,260 @@ that uses 'font-lock-warning-face'."
             (local-set-key [S-up] 'windmove-up)
             (local-set-key [S-down] 'windmove-down)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Text Mode configuration
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; Lisp and elisp mode configs
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Make it so long lines wrap even on internal frames (not windows)
-(setq truncate-partial-width-windows nil)
-
-;;
-;; Other line wrapping goodies:
-;; Visual Line mode.
-;; Long line mode... apparently this mode sucks.
-;; fill paragraph (realigns a paragraph based on the frame or fill column.)
-;;
-(add-hook 'text-mode-hook 'turn-on-visual-line-mode)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Lisp and elisp mode configs
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(add-hook 'emacs-lisp-mode-hook (lambda ()
-                                  (flymake-mode)))
+;; (add-hook 'emacs-lisp-mode-hook (lambda ()
+;;                                   (flymake-mode)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; LDAP and EMAIL command setup
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; LDAP and EMAIL command setup
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; I have tabled this for the moment since it depends on ldapsearch
-;; and that doesn't appeat to be installed right now :-p
+;; ;; I have tabled this for the moment since it depends on ldapsearch
+;; ;; and that doesn't appeat to be installed right now :-p
 
-;; (require 'eudc)
+;; ;; (require 'eudc)
 
-;; ;; make it work with tab in mail mode.
-;; (eval-after-load
-;;  "message"
-;;  '(define-key message-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
-;; (eval-after-load
-;;  "sendmail"
-;;  '(define-key mail-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Setting up the Python IDE
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;
-;; Info additions
-;;
-(add-to-list 'load-path "~/emacs-init/contrib/pydoc-info-0.2/")
-(require 'pydoc-info)
-
-;;
-;; Python mode stuff
-;;
-(add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
-(add-to-list 'interpreter-mode-alist '("python" . python-mode))
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
-
-;;
-;; See docs here:
-;; https://github.com/emacs-lsp/lsp-mode
-;;
-;; TODO: switch to the new mode.
-;;
-
-(use-package lsp-mode
-  :hook (java-mode . lsp)
-  :hook (ruby-mode . lsp)
-  :hook (go-mode . lsp)
-  :hook (python-mode . lsp)
-  ;;
-  ;; python mode gets setup below, to make sure
-  ;; everything works with virtualenvs
-  ;;
-  :commands lsp)
-
-(use-package lsp-ui :commands lsp-ui-mode)
-(use-package company-lsp :commands company-lsp)
-(use-package lsp-treemacs :commands lsp-treemacs-errors-list)
-(use-package dap-mode)
-
-;;
-;; Python Mode stuff.
-;;
-
-;;
-;; Disable this for now, unless we go back to Google Style.
-;;
-;; ;; Set the indent level to be 2 spaces
-;; (setq python-indent 2)
-;; (setq python-indent-offset 2)
-
-;; Remember that in python mode when you eval a region it only produces
-;; the visible results of doing so.
-
-;; Turn on flymake with pylink et al.
-
-(if (< emacs-major-version 26)
-    (progn
-      (define-flymake-checker flymake-flake8-checker "flake8")
-      (define-flymake-checker flymake-flake83-checker "flake83")
-
-      ;;
-      ;; This is my old (25 and below) flymake setup code for Python.
-      ;; for 26, python.el does what we need out of the box.
-      ;;
-      (defun setup-python-mode-common (interpreter checker)
-        (setq py-python-command interpreter)
-        (setq python-shell-interpreter interpreter)
-        (update-flymake-mask "\\.py\\'" checker)
-        (when (eql 'python-mode major-mode)
-          (update-flymake-mask "." checker)))
-
-      ;; (defun setup-python3-mode ()
-      ;;   (interactive)
-      ;;   (setup-python-mode-common "python3" #'flymake-flake83-checker)
-      ;;   (message "Set python3 mode"))
-
-      ;; (defun setup-python2-mode ()
-      ;;   (interactive)
-      ;;   (setup-python-mode-common "python" #'flymake-flake8-checker)
-      ;;   (message "Set python2 mode"))
+;; ;; ;; make it work with tab in mail mode.
+;; ;; (eval-after-load
+;; ;;  "message"
+;; ;;  '(define-key message-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
+;; ;; (eval-after-load
+;; ;;  "sendmail"
+;; ;;  '(define-key mail-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
 
 
-      ;; (when (load "flymake" t)
-      ;;   ;; Do I need this, if I call this during the mode hook?
-      ;;   (setup-python3-mode))
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; Setting up the Python IDE
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-      ;; If we're in python mode, make sure flymake comes on.
-      ;; (add-hook 'python-mode-hook (lambda ()
-      ;;                               ;; enable flymake-python for files with no '.py' extension
-      ;;                               (make-local-variable 'flymake-allowed-file-name-masks)
-      ;;                               (if (guess-python-version-3)
-      ;;                                   (setup-python3-mode)
-      ;;                                 (setup-python2-mode))))
-      )
-  ;; emacs 26 version
-  (progn
-    (add-hook 'python-mode-hook (lambda ()
-                                  ;; enable flymake-python for files with no '.py' extension
-                                  (if (guess-python-version-3)
-                                      (setq python-shell-interpreter "python3")
-                                    (setq python-shell-interpreter "python"))))))
-
-(global-set-key [f10] 'flymake-goto-prev-error)
-(global-set-key [f11] 'flymake-goto-next-error)
-
-(yapf-mode -1)
-
-;; Automatically delete trailing whitespace when saving files
-;; while you are in python major mode.
-;; Also, only use spaces, no tabs.
-;; Also, turn on CamelCase navigation mode
-(add-hook 'python-mode-hook
-          (lambda()
-            (setq-default indent-tabs-mode nil)
-            (subword-mode)
-            (flymake-mode)
-            ;; Setup lsp-mode, but in the right directory
-            (destructuring-bind (pyls-path library-path)
-                (python-lsp-get-config)
-              (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
-              ;; This call here causes problems sometimes.  Is this code actually needed?
-              ;; or can i rely on lsp-pyls to set itself up.
-              (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))
-            ;;
-            ;; setup yapf mode.  Make sure we disabled it before we use our
-            ;; special version
-            ;;
-            (yapf-mode -1)
-            (lexical-let ((yapf-dir (file-name-directory (python-find-executable "yapf"))))
-              (cl-flet ((python-before-save-hook ()
-                          (message "start python save hook")
-                          (whitespace-cleanup)
-                          (message "start yapf %s" yapf-dir)
-                          (with-exec-path yapf-dir
-                            (message "yapf buffer %s" yapf-dir)
-                            (yapfify-buffer))))
-                (add-hook 'before-save-hook #'python-before-save-hook nil t)))))
-
-(add-hook 'before-save-hook #'delete-trailing-whitespace)
-
-;; Try out jinja2 mode.
-(require 'jinja2-mode)
-
-;; Allows crazy long lines.
-(font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
-
-;; Activate pymacs (it should be installed in the system elisp code.)
-;;
-;; Pymacs documentation link: http://pymacs.progiciels-bpi.ca/pymacs.html
-;; (autoload 'pymacs-apply "pymacs")
-;; (autoload 'pymacs-call "pymacs")
-;; (autoload 'pymacs-eval "pymacs" nil t)
-;; (autoload 'pymacs-exec "pymacs" nil t)
-;; (autoload 'pymacs-load "pymacs" nil t)
-
-;; ;;If you plan to use a special directory to hold your own Pymacs code
-;; ;;in Python, which should be searched prior to the usual Python import
-;; ;;search path, then uncomment the next two lines:
 ;; ;;
-;; ;;(eval-after-load "pymacs"
-;; ;;     '(add-to-list 'pymacs-load-path YOUR-PYMACS-DIRECTORY"))
-;; (require 'pymacs)
-;; (pymacs-load "ropemacs" "rope-")
-;; (setq ropemacs-enable-autoimport t)
+;; ;; Info additions
+;; ;;
+;; (add-to-list 'load-path "~/emacs-init/contrib/pydoc-info-0.2/")
+;; (require 'pydoc-info)
 
-(add-hook 'html-mode-hook
-          (lambda ()
-            ;; Default indentation is usually 2 spaces, changing to 4.
-            (set (make-local-variable 'sgml-basic-offset) 4)))
+;; ;;
+;; ;; Python mode stuff
+;; ;;
+;; (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+;; (add-to-list 'interpreter-mode-alist '("python" . python-mode))
+;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 80))
 
+;; ;;
+;; ;; See docs here:
+;; ;; https://github.com/emacs-lsp/lsp-mode
+;; ;;
+;; ;; TODO: switch to the new mode.
+;; ;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Electic Auto Pair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Enable globally, but disable a few things.
-;;
-(electric-pair-mode 1)
+;; (use-package lsp-mode
+;;   :hook (java-mode . lsp)
+;;   :hook (ruby-mode . lsp)
+;;   :hook (go-mode . lsp)
+;;   :hook (python-mode . lsp)
+;;   ;;
+;;   ;; python mode gets setup below, to make sure
+;;   ;; everything works with virtualenvs
+;;   ;;
+;;   :commands lsp)
 
-;; Don't add autopair in certain modes
-(dolist (mode '(sldb-mode-hook term-mode-hook shell-mode-hook))
-  (add-hook mode (lambda ()
-                   (electric-pair-local-mode -1))))
+;; (use-package lsp-ui :commands lsp-ui-mode)
+;; (use-package company-lsp :commands company-lsp)
+;; (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+;; (use-package dap-mode)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;(require 'psvn)
+;; ;;
+;; ;; Python Mode stuff.
+;; ;;
 
+;; ;;
+;; ;; Disable this for now, unless we go back to Google Style.
+;; ;;
+;; ;; ;; Set the indent level to be 2 spaces
+;; ;; (setq python-indent 2)
+;; ;; (setq python-indent-offset 2)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Hippie Expand ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; Remember that in python mode when you eval a region it only produces
+;; ;; the visible results of doing so.
 
-;; For now I'm just going to set hippie expand to take over M-/, since
-;; that should be similar to what I have now.
-;; It looks like ac/yas will share the tab in a reasonable way, if I think
-;; of a more efficient way to use it, I will.
-(global-set-key (kbd "C-/") 'hippie-expand)
-(global-set-key (kbd "M-/") 'dabbrev-expand)
+;; ;; Turn on flymake with pylink et al.
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Scala Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(add-to-list 'load-path "~/emacs-init/contrib/scala-emacs")
-(require 'scala-mode-auto)
+;; (if (< emacs-major-version 26)
+;;     (progn
+;;       (define-flymake-checker flymake-flake8-checker "flake8")
+;;       (define-flymake-checker flymake-flake83-checker "flake83")
 
+;;       ;;
+;;       ;; This is my old (25 and below) flymake setup code for Python.
+;;       ;; for 26, python.el does what we need out of the box.
+;;       ;;
+;;       (defun setup-python-mode-common (interpreter checker)
+;;         (setq py-python-command interpreter)
+;;         (setq python-shell-interpreter interpreter)
+;;         (update-flymake-mask "\\.py\\'" checker)
+;;         (when (eql 'python-mode major-mode)
+;;           (update-flymake-mask "." checker)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Groovy Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(autoload 'groovy-mode "groovy-mode" "Major mode for editing Groovy code." t)
-(add-to-list 'auto-mode-alist '("\.groovy$" . groovy-mode))
-(add-to-list 'auto-mode-alist '("\.gradle$" . groovy-mode))
-(add-to-list 'interpreter-mode-alist '("groovy" . groovy-mode))
+;;       ;; (defun setup-python3-mode ()
+;;       ;;   (interactive)
+;;       ;;   (setup-python-mode-common "python3" #'flymake-flake83-checker)
+;;       ;;   (message "Set python3 mode"))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
-;; (require 'confluence)
-;; (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
-;; (put 'set-goal-column 'disabled nil)
-
-
-;; Get Hy
-(add-to-list 'load-path "~/emacs-init/emacs-packages/hy-mode")
-(require 'hy-mode)
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(custom-safe-themes
-   '("80d5a22931c15756b00fb258b80c93b8bc5096bb698dadfb6155ef3550e1c8fb" default))
- '(dosbox-always-config '(nil))
- '(dosbox-exec "/Applications/dosbox/dosbox.app/Contents/MacOS/DOSBox")
- '(dosbox-games "/Users/mike/Documents/games/dos/")
- '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-3-3 Preferences")
- '(ignored-local-variable-values '((Base . 10) (Package . CL-USER) (Syntax . COMMON-LISP)))
- '(package-selected-packages
-   '(org-magit magit transient terraform-mode company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))
- '(sly-complete-symbol-function 'sly-simple-completions))
-
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+;;       ;; (defun setup-python2-mode ()
+;;       ;;   (interactive)
+;;       ;;   (setup-python-mode-common "python" #'flymake-flake8-checker)
+;;       ;;   (message "Set python2 mode"))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;       ;; (when (load "flymake" t)
+;;       ;;   ;; Do I need this, if I call this during the mode hook?
+;;       ;;   (setup-python3-mode))
 
-(add-hook 'go-mode-hook (lambda ()
-                          (setq tab-width 4)))
+;;       ;; If we're in python mode, make sure flymake comes on.
+;;       ;; (add-hook 'python-mode-hook (lambda ()
+;;       ;;                               ;; enable flymake-python for files with no '.py' extension
+;;       ;;                               (make-local-variable 'flymake-allowed-file-name-masks)
+;;       ;;                               (if (guess-python-version-3)
+;;       ;;                                   (setup-python3-mode)
+;;       ;;                                 (setup-python2-mode))))
+;;       )
+;;   ;; emacs 26 version
+;;   (progn
+;;     (add-hook 'python-mode-hook (lambda ()
+;;                                   ;; enable flymake-python for files with no '.py' extension
+;;                                   (if (guess-python-version-3)
+;;                                       (setq python-shell-interpreter "python3")
+;;                                     (setq python-shell-interpreter "python"))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Password Check  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (global-set-key [f10] 'flymake-goto-prev-error)
+;; (global-set-key [f11] 'flymake-goto-next-error)
 
-(add-password-prompt-check "\\|^Enter host password .*:\\'")
+;; (yapf-mode -1)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
+;; ;; Automatically delete trailing whitespace when saving files
+;; ;; while you are in python major mode.
+;; ;; Also, only use spaces, no tabs.
+;; ;; Also, turn on CamelCase navigation mode
+;; (add-hook 'python-mode-hook
+;;           (lambda()
+;;             (setq-default indent-tabs-mode nil)
+;;             (subword-mode)
+;;             (flymake-mode)
+;;             ;; Setup lsp-mode, but in the right directory
+;;             (destructuring-bind (pyls-path library-path)
+;;                 (python-lsp-get-config)
+;;               (set (make-variable-buffer-local 'lsp-pyls-server-command) pyls-path)
+;;               ;; This call here causes problems sometimes.  Is this code actually needed?
+;;               ;; or can i rely on lsp-pyls to set itself up.
+;;               (set (make-variable-buffer-local 'lsp-clients-python-library-directories) (list library-path)))
+;;             ;;
+;;             ;; setup yapf mode.  Make sure we disabled it before we use our
+;;             ;; special version
+;;             ;;
+;;             (yapf-mode -1)
+;;             (lexical-let ((yapf-dir (file-name-directory (python-find-executable "yapf"))))
+;;               (cl-flet ((python-before-save-hook ()
+;;                           (message "start python save hook")
+;;                           (whitespace-cleanup)
+;;                           (message "start yapf %s" yapf-dir)
+;;                           (with-exec-path yapf-dir
+;;                             (message "yapf buffer %s" yapf-dir)
+;;                             (yapfify-buffer))))
+;;                 (add-hook 'before-save-hook #'python-before-save-hook nil t)))))
+
+;; (add-hook 'before-save-hook #'delete-trailing-whitespace)
+
+;; ;; Try out jinja2 mode.
+;; (require 'jinja2-mode)
+
+;; ;; Allows crazy long lines.
+;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
+
+;; ;; Activate pymacs (it should be installed in the system elisp code.)
+;; ;;
+;; ;; Pymacs documentation link: http://pymacs.progiciels-bpi.ca/pymacs.html
+;; ;; (autoload 'pymacs-apply "pymacs")
+;; ;; (autoload 'pymacs-call "pymacs")
+;; ;; (autoload 'pymacs-eval "pymacs" nil t)
+;; ;; (autoload 'pymacs-exec "pymacs" nil t)
+;; ;; (autoload 'pymacs-load "pymacs" nil t)
+
+;; ;; ;;If you plan to use a special directory to hold your own Pymacs code
+;; ;; ;;in Python, which should be searched prior to the usual Python import
+;; ;; ;;search path, then uncomment the next two lines:
+;; ;; ;;
+;; ;; ;;(eval-after-load "pymacs"
+;; ;; ;;     '(add-to-list 'pymacs-load-path YOUR-PYMACS-DIRECTORY"))
+;; ;; (require 'pymacs)
+;; ;; (pymacs-load "ropemacs" "rope-")
+;; ;; (setq ropemacs-enable-autoimport t)
+
+;; (add-hook 'html-mode-hook
+;;           (lambda ()
+;;             ;; Default indentation is usually 2 spaces, changing to 4.
+;;             (set (make-local-variable 'sgml-basic-offset) 4)))
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;;(require 'psvn)
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Scala Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (add-to-list 'load-path "~/emacs-init/contrib/scala-emacs")
+;; (require 'scala-mode-auto)
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Groovy Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; (autoload 'groovy-mode "groovy-mode" "Major mode for editing Groovy code." t)
+;; (add-to-list 'auto-mode-alist '("\.groovy$" . groovy-mode))
+;; (add-to-list 'auto-mode-alist '("\.gradle$" . groovy-mode))
+;; (add-to-list 'interpreter-mode-alist '("groovy" . groovy-mode))
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ;; (add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
+;; ;; (require 'confluence)
+;; ;; (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
+;; ;; (put 'set-goal-column 'disabled nil)
+
+
+;; ;; Get Hy
+;; (add-to-list 'load-path "~/emacs-init/emacs-packages/hy-mode")
+;; (require 'hy-mode)
+;; (custom-set-variables
+;;  ;; custom-set-variables was added by Custom.
+;;  ;; If you edit it by hand, you could mess it up, so be careful.
+;;  ;; Your init file should contain only one such instance.
+;;  ;; If there is more than one, they won't work right.
+;;  '(custom-safe-themes
+;;    '("80d5a22931c15756b00fb258b80c93b8bc5096bb698dadfb6155ef3550e1c8fb" default))
+;;  '(dosbox-always-config '(nil))
+;;  '(dosbox-exec "/Applications/dosbox/dosbox.app/Contents/MacOS/DOSBox")
+;;  '(dosbox-games "/Users/mike/Documents/games/dos/")
+;;  '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-3-3 Preferences")
+;;  '(ignored-local-variable-values '((Base . 10) (Package . CL-USER) (Syntax . COMMON-LISP)))
+;;  '(package-selected-packages
+;;    '(org-magit magit transient terraform-mode company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))
+;;  '(sly-complete-symbol-function 'sly-simple-completions))
+
+;; (custom-set-faces
+;;  ;; custom-set-faces was added by Custom.
+;;  ;; If you edit it by hand, you could mess it up, so be careful.
+;;  ;; Your init file should contain only one such instance.
+;;  ;; If there is more than one, they won't work right.
+;;  )
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (add-hook 'go-mode-hook (lambda ()
+;;                           (setq tab-width 4)))
+
+
+;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
 
 ;;
 ;; I used to load all files in the directory in ls order,
@@ -1186,92 +1266,3 @@ that uses 'font-lock-warning-face'."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  JSON Parsing stuff  ;;;;;;;;;;;;;;;;;;;;
 (require 'json)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  setup ryo mode  ;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; If I use option, that's key code 18.
-(use-package ryo-modal
-  :commands ryo-modal-mode
-
-  ;; Switch capslock in osx to be Escape.
-  :bind ([escape] . ryo-modal-mode)
-  :config
-  (ryo-modal-keys
-   ("q" kill-line)
-   ("w" kill-region)
-   ("e" backward-kill-word)
-   ("r" yank)
-   ("t" duplicate-line)
-
-   ("a" beginning-of-line)
-   ;;   ("s" ctl-x-map)
-   ;;Control-X-prefix)
-   ("d" "M-x")
-   ;;   ("f" "C-c")
-
-   ("g" save-buffer)
-   ("h" find-file)
-
-   ;;
-   ;; common stuff:
-   ;; ctrl x
-   ;; ctrl c
-   ;; meta x
-   ;;
-   ;; save
-   ;; load
-   ;; yank
-   ;; kill
-   ;; undo
-   ;; search forward
-   ;; search backward
-   ;; search forward regex
-   ;; search backwards regex
-   ;;
-   ;; duplicate line
-   ;; kill word
-   ;;
-   ;;
-
-   ;; Navigation
-   ("j" left-char)
-   ("k" next-line)
-   ("l" right-char)
-   ("i" previous-line)
-
-   ;; forward word
-   ("o" forward-word)
-   ("O" scroll-up-command)
-   ("u" backward-word)
-   ("U" scroll-down-command)
-   (";" end-of-line)
-   (":" end-of-line) ;; XXX switch back to insert mode!
-   ("x" isearch-forward)
-   ("X" isearch-backward)
-
-   ;; backwards word
-   ;; previous paragraph
-   ;; next paragraph
-   ;;
-   ;; forward sexp
-   ;; backward sexp
-   ;; beginning of line
-   ;; end of line
-   ;; home
-   ;; end
-   ;; page up
-   ;; page down
-   ("," ryo-modal-repeat)
-   ("z" ryo-modal-mode)
-   ("SPC" "C-SPC")
-
-   ))
-
-(global-set-key (kbd "<C-return>") 'ryo-modal-mode)
-(define-key ryo-modal-mode-map "s" ctl-x-map)
-(define-key ryo-modal-mode-map "g" help-map)
-
-(put 'list-timers 'disabled nil)
-
-;; Make it so sort-lines ignores case.
-(setf sort-fold-case t)

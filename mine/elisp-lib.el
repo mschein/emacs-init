@@ -17,7 +17,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (require 'cl-lib)
-;; (require 'f)
+(require 'f)
 (require 'ht)
 (require 'json)
 (require 's)
@@ -27,7 +27,7 @@
 
 (defconst directory-sep "/")
 
-(defalias 'filter #'remove-if-not)
+(defalias 'filter #'cl-remove-if-not)
 
 (defmacro pushcons (key value alist)
   "Push a new key value pair onto an alist."
@@ -43,7 +43,7 @@
   (let ((my-gensym-counter 0))
     (defun gensym ()
       "Return an uninterned symbol."
-      (make-symbol (format "G%d" (incf my-gensym-counter))))))
+      (make-symbol (format "G%d" (cl-incf my-gensym-counter))))))
 
 (defmacro with-gensyms (syms &rest body)
   (declare (indent defun))
@@ -615,7 +615,7 @@ Example:
                     chunk))))
 
 (defun remove-if-not-regex (regex list &optional replace)
-  (let ((res (remove-if-not (| string-match regex %) list)))
+  (let ((res (cl-remove-if-not (| string-match regex %) list)))
     (if (string-has-value-p replace)
         (mapcar (| replace-regexp-in-string regex replace %) res)
       res)))
@@ -678,7 +678,7 @@ This should be used to write find-x-at-point functions.
   "Create a stateful counter."
   (let ((amount start))
     (fn ()
-        (incf amount inc))))
+        (cl-incf amount inc))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
@@ -770,7 +770,7 @@ each character in the string `chars'."
             (cond
               ((equal c quote-char) (setf in-quote nil))
               ((equal c ?\\) (progn
-                               (incf i)
+                               (cl-incf i)
                                (append-atom! out-str (aref str i))))
               (t (append-atom! out-str c)))
           (cond
@@ -781,7 +781,7 @@ each character in the string `chars'."
                (setf in-quote t)))
             ;; pass it on like normal.
             (t (append-atom! out-str c)))))
-      (incf i))
+      (cl-incf i))
     (concatenate 'string out-str)))
 
 (defun string-case= (s1 s2)
@@ -1664,7 +1664,7 @@ Use this likely in leu of `buffer-string'."
               (funcall cb_fn file))
           (if (and (>= max_depth 0) (file-directory-p file))
               (traverse-directories cb_fn file :file_match file_match :max_depth (1- max_depth))))
-        (remove-if-not #'is-real-file  (directory-files start_dir t))))
+        (cl-remove-if-not #'is-real-file  (directory-files start_dir t))))
 
 (defun directory-last-dirname (path)
   "Return the name of the last directory in the path.
@@ -3097,7 +3097,7 @@ python debugging session."
                                    (when (re-search-forward regex nil t)
                                      (message "match regex %s" regex)
                                      (funcall score-fn)))))
-           (run-searches python3-regex (| incf py3-score))
+           (run-searches python3-regex (| cl-incf py3-score))
            (run-searches python2-regex (| decf py3-score)))
 
          ;; If the score is positive or zero, assume python3.
@@ -3806,7 +3806,7 @@ Be sure to url encode the parameters.
         (:next (when (< pos (length vec))
                  (prog1
                      (aref vec pos)
-                   (incf pos))))
+                   (cl-incf pos))))
         (:peek (aref vec pos))
         ;; don't add unless we need it.
         ;; (:prev (when (> pos 0) (decf pos)))
@@ -3830,8 +3830,8 @@ Be sure to url encode the parameters.
         (headers)
         (found-real-status))
     (dolist (line (mapcar (| string-left-trim-regex "< *" %)
-                          (remove-if-not (| string-starts-with "<" %)
-                                         (string->list curl-header-block "\r*\n+"))))
+                          (cl-remove-if-not (| string-starts-with "<" %)
+                                            (string->list curl-header-block "\r*\n+"))))
       (let* ((line-info (or (when-let (parsed (ignore-errors (parse-http-header line)))
                               (cons 'header parsed))
                             (when-let (parsed (ignore-errors (parse-http-status-line line)))
@@ -3863,7 +3863,7 @@ Be sure to url encode the parameters.
            parse-args)))
 
 (defun web-request--handle-auth (auth)
-  (if (search ":" auth)
+  (if (cl-search ":" auth)
       auth
     (concat auth ":" (read-user-password (format "Password for (%s): " auth) auth))))
 
@@ -3882,7 +3882,7 @@ Be sure to url encode the parameters.
    (t :success)))
 
 (defun content-type-html-p (header)
-  (not (not (search "text/html" (downcase header)))))
+  (not (not (cl-search "text/html" (downcase header)))))
 
 (defconst web-request-shell-script-template "#!/bin/bash -xe
 
@@ -4340,7 +4340,7 @@ rm -f ${ATTACHMENT}
                      (key (assoc (cl-first rest) item))
                      (value (rassoc (cl-first rest) item))))))
 
-    (cl-first (remove-if-not (| match-query query %) alist))))
+    (cl-first (cl-remove-if-not (| match-query query %) alist))))
 
 (defun memoize (fn &optional timeout-sec)
   (let ((ht (ht))
