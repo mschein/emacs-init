@@ -202,11 +202,6 @@
 ;; ECR Functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-(defun aws-ecr-login ()
-  "Login to Amazon ECR based on the current environment."
-  (aws-ecr "get-login" "--no-include-email"))
-
 (defun aws-ecr-get-login-password (&optional region)
   "Get the ecr login password"
   (apply #'aws-ecr "get-login-password" `(,@(if region (list "--region" region)))))
@@ -849,10 +844,24 @@ doesn't deal with paging yet."
 (defun aws-sts-get-caller-identity ()
   (aws-sts "get-caller-identity"))
 
-(defun aws-has-credentials-p ()
+(defun aws-has-credentials-no-cache-p ()
   (not (not
         (ignore-errors
           (aws-sts-get-caller-identity)))))
+
+(defun aws-has-credentials-p ()
+  (let ((time-keeping-file (expand-file-name "~/.aws-cred-time-keeper"))
+        (credential-timeout (seconds-to-time (* 4 60))))
+    (let ((result (if (time-less-p (time-add (if (file-exists-p time-keeping-file)
+                                                 (get-file-modification-time time-keeping-file)
+                                               0)
+                                             credential-timeout)
+                                   (current-time))
+                      (aws-has-credentials-no-cache-p)
+                    t)))
+      (when result
+        (touch time-keeping-file))
+      result)))
 
 (defun aws-elasticsearch-list-domain-names ()
   (let ((-aws-return-json t))
@@ -931,13 +940,21 @@ doesn't deal with paging yet."
 
 (defun aws--open-profile-shell (profile region)
   (with-aws--profile (profile region)
-    (shell-open-dir (expand-file-name "~"))))
+    (with-shell-buffer default-directory (format "*aws-sh-%s-%s-sh-aws*" profile region) t
+      (current-buffer))))
 
 (defun aws-list-profile-names-from-file (config-file)
   (cl-loop for entry in (ini-parse (slurp config-file))
            for (type name) = (string-split " " (car entry))
            when (equal type "profile")
                collect name))
+
+(cl-defun aws-configure-export-credentials (&key profile format)
+  (apply #'aws-configure "export-credentials"
+         `(,@(when profile
+               (list "--profile" profile))
+           ,@(when format
+               (list "--format" format)))))
 
 ;; describe-container-instances can get you the ami id.
 
