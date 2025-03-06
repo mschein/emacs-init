@@ -1770,6 +1770,9 @@ Note that this includes start-dir itself."
      inode-number
      device-number)))
 
+(defun get-file-modification-time (path)
+  (assoc1 'size (get-file-info-path)))
+
 (defun get-file-size (path)
   "Return the size of the file specified by `path' in bytes."
   (assoc1 'size (get-file-info path)))
@@ -3668,7 +3671,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
   "A simple template filling function.  Something like this probably exists
    already.
 
-   Variables are: ${[a-z0-9A-Z]+}."
+   Variables are: ${[a-z0-9A-Z_]+}."
   (cl-flet ((sub-fn (matched-var)
                     ;;
                     ;; this seems stupid, but I haven't found a better
@@ -3682,7 +3685,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
                       (message "Substitute key %s" key)
                       (assoc1 key vars))))
     (cl-loop for (k . v) in vars
-             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9]+}" #'sub-fn template)))
+             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9_]+}" #'sub-fn template)))
     template))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
