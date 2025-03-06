@@ -2,7 +2,9 @@ company/
 local/
 dynamic-modules/
 emacs-packages/gnupg/
+elpaca/repos/elpaca/
 tmp/
 /local
 /tmp
+ielm-history.eld
 *.elc
