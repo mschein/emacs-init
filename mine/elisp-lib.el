@@ -1771,7 +1771,7 @@ Note that this includes start-dir itself."
      device-number)))
 
 (defun get-file-modification-time (path)
-  (assoc1 'size (get-file-info-path)))
+  (assoc1 'last-modification-time (get-file-info-path)))
 
 (defun get-file-size (path)
   "Return the size of the file specified by `path' in bytes."
