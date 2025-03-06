@@ -3,6 +3,8 @@ local/
 dynamic-modules/
 emacs-packages/gnupg/
 elpaca/repos/elpaca/
+elpaca/builds/elpaca/
+
 tmp/
 /local
 /tmp
