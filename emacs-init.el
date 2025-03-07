@@ -327,6 +327,10 @@
 ;; Sometimes you need non-cryptographically unique ids
 (use-package uuidgen :ensure (:wait t) :demand t)
 
+;; Larger packages
+(use-package transient :ensure (:wait t) :demand t)
+(use-package magit :ensure (:wait t) :demand t )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup my personal packages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
