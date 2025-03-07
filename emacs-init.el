@@ -332,7 +332,9 @@
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
-(use-package magit :ensure (:wait t) :demand t )
+(use-package magit :ensure (:wait t) :demand t)
+(use-package yasnippet :ensure (:wait t) :demand t)
+(use-package yasnippet-snippets :ensure (:wait t) :demand t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs packages.
@@ -475,6 +477,73 @@
 ;; Make it so sort-lines ignores case.
 ;; The debugger doesn't think this works, but it does as of emacs 30.
 (setf sort-fold-case t)
+
+;;
+;; Add YASnippet support
+;;
+;; Note, it's the 'key' part that you should type.
+;;
+(require 'yasnippet) ;; not yasnippet-bundle
+;; relocate my person extension dir
+(setf yas-snippet-dirs (list (expand-file-name "~/emacs-init/snippets")
+                             "~/emacs-init/elpaca/repos/yasnippet-snippets/snippets"))
+(yas-global-mode 1)
+
+;; We don't always need the final new line in a file.
+(setq require-final-newline nil)
+
+;; Paredit setup
+;; TODO Need to learn to use this.
+;(autoload 'paredit-mode "paredit"
+;  "Minor mode for pseudo-structurally editing Lisp code." t)
+;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
+;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
+;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
+
+;; Stop SLIME's REPL from grabbing DEL,
+;; which is annoying when backspacing over a '('
+;; (defun override-slime-repl-bindings-with-paredit ()
+;;   (define-key slime-repl-mode-map
+;;     (read-kbd-macro paredit-backward-delete-key) nil))
+;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
+
+
+;; ;; pick a font.
+;; ;; set fond size, etc. etc.
+;; ;;(set-face-attribute 'default nil :height 110)
+;; ;;
+;; ;; hack can be downloaded from:
+;; ;; https://sourcefoundry.org/hack/
+;; ;;
+;; ;; brew tap homebrew/cask-fonts
+;; ;; brew cask install font-
+;; ;;
+;; ;; Interesting fonts:
+;; ;; Hack
+;; ;; Monaco
+;; ;;
+;; ;; To Try:
+;; ;; Dejavu sans
+;; ;;
+;; ;;
+;; ;;
+;; (let ((font "Hack"))
+;;   (when (member font  (font-family-list))
+;;     (set-frame-font font t t)))
+;; (set-face-attribute 'default nil :height 120)
+
+
+;; ;; Magit options
+;; (add-hook 'magit-mode-hook 'magit-load-config-extensions)
+
+;; ;; Enable ace-jump-mode
+;; ;;
+;; ;; use 'pop-mark' with it. (C-u C-<SPC>)
+;; ;; global mark ring pop: (C-x C-<SPC>)
+;; (require 'ace-jump-mode)
+;; (define-key global-map (kbd "C-c C-<SPC>") 'ace-jump-mode)
+;; (define-key global-map (kbd "C-x C-<SPC>") 'ace-jump-mode-pop-mark)
+
 
 ;; XXX Do we want this?
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Electic Auto Pair Stuff  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -708,72 +777,9 @@
 ;; (add-hook 'java-mode 'subword-mode)
 
 
-;; ;;
-;; ;; Add YASnippet support
-;; ;;
-;; ;; Note, it's the 'key' part that you should type.
-;; ;;
-;; (require 'yasnippet) ;; not yasnippet-bundle
-;; ;; relocate my person extension dir
-;; (setf yas-snippet-dirs (remove-if (| when (stringp %)
-;;                                      (cl-search ".emacs.d" %)) yas-snippet-dirs))
-;; (push "~/emacs-init/snippets" yas-snippet-dirs)
-;; (yas/initialize)
-
-;; ;; We don't always need the final new line in a file.
-;; (setq require-final-newline nil)
-
-;; ;; Paredit setup
-;; ;; TODO Need to learn to use this.
-;; ;(autoload 'paredit-mode "paredit"
-;; ;  "Minor mode for pseudo-structurally editing Lisp code." t)
-;; ;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
-;; ;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
-;; ;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
-
-;; ;; Stop SLIME's REPL from grabbing DEL,
-;; ;; which is annoying when backspacing over a '('
-;; ;; (defun override-slime-repl-bindings-with-paredit ()
-;; ;;   (define-key slime-repl-mode-map
-;; ;;     (read-kbd-macro paredit-backward-delete-key) nil))
-;; ;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
-
-
-;; ;; pick a font.
-;; ;; set fond size, etc. etc.
-;; ;;(set-face-attribute 'default nil :height 110)
-;; ;;
-;; ;; hack can be downloaded from:
-;; ;; https://sourcefoundry.org/hack/
-;; ;;
-;; ;; brew tap homebrew/cask-fonts
-;; ;; brew cask install font-
-;; ;;
-;; ;; Interesting fonts:
-;; ;; Hack
-;; ;; Monaco
-;; ;;
-;; ;; To Try:
-;; ;; Dejavu sans
-;; ;;
-;; ;;
-;; ;;
-;; (let ((font "Hack"))
-;;   (when (member font  (font-family-list))
-;;     (set-frame-font font t t)))
-;; (set-face-attribute 'default nil :height 120)
-
-
-;; ;; Magit options
-;; (add-hook 'magit-mode-hook 'magit-load-config-extensions)
-
-;; ;; Enable ace-jump-mode
-;; ;;
-;; ;; use 'pop-mark' with it. (C-u C-<SPC>)
-;; ;; global mark ring pop: (C-x C-<SPC>)
-;; (require 'ace-jump-mode)
-;; (define-key global-map (kbd "C-c C-<SPC>") 'ace-jump-mode)
-;; (define-key global-map (kbd "C-x C-<SPC>") 'ace-jump-mode-pop-mark)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Aliases
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Thanks Steve.
 (defalias 'cr 'comment-region)
