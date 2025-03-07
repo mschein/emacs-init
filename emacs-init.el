@@ -319,6 +319,9 @@
 ;; Install Packages
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(eval-when-compile
+  (require 'use-package))
+
 ;; Nice elisp enhancements
 (use-package ht :ensure (:wait t) :demand t)
 (use-package s :ensure (:wait t) :demand t)
@@ -332,15 +335,13 @@
 (use-package magit :ensure (:wait t) :demand t )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Emacs packages.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(require 'flyspell)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup my personal packages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;
-;; Try use-package (did this for lsp-mode config initially.
-;; See: https://github.com/jwiegley/use-package
-;;
-(eval-when-compile
-  (require 'use-package))
 
 ;; Always load these.
 (add-to-list 'load-path "~/emacs-init/mine/")
