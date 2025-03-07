@@ -9,3 +9,6 @@ tmp/
 /tmp
 ielm-history.eld
 *.elc
+/ido.last
+/projects
+/transient/
