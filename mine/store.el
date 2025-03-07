@@ -10,9 +10,8 @@
 (require 'cl-lib)
 (require 'elisp-lib)
 
-;; How can I tentatively import this?
-;; https://github.com/pekingduck/emacs-sqlite3-api
-(require 'mysqlite3)
+(cl-assert (sqlite-available-p))
+(require 'sqlite)
 
 ;;
 ;; what is the goal here.
@@ -32,7 +31,6 @@
 ;; plans:
 ;; 1. create a commands dir for holding all sql commands in individual files
 ;; 2. allow for named vars and inheritance
-;;
 ;;
 
 (defconst store--directory (expand-file-name "~/.emacs-data-store"))
@@ -57,7 +55,7 @@
 
 (defun store-get-path (store-name)
   "Return the path to the sqlite3 database specified by `store-name'"
-  (assert (string-has-value-p store-name))
+  (cl-assert (string-has-value-p store-name))
 
   (path-join store--directory (concat store-name ".db")))
 
@@ -118,18 +116,13 @@
 (defun store--get-metadata-version (store-name)
   "Return the current version of a store based on what migrations have been run."
   (with-store store-name
-    (with-mysqlite3-stmt db (format "SELECT version from %s where id = 1;" store--migration-table)
-      (if (= sqlite-row (sqlite3-step stmt))
-          (cl-first (sqlite3-fetch stmt))))))
+    (caar (sqlite-select db (format "SELECT version from %s where id = 1;" store--migration-table)))))
 
 (defun store--set-metadata-version (store-name version)
   "Update the migration version in the store."
   (with-store store-name
-    (with-mysqlite3-stmt db (format "INSERT INTO %s(id, version) VALUES (1, ?)
-                                     ON CONFLICT (id) DO UPDATE SET version=excluded.version" store--migration-table)
-      (sqlite3-bind-multi stmt version)
-      (unless (= sqlite-done (sqlite3-step stmt))
-        (error "Store %s unable to set version %s" store-name version)))))
+    (sqlite-execute db (format "INSERT INTO %s(id, version) VALUES (1, ?)
+                                ON CONFLICT (id) DO UPDATE SET version=excluded.version" store--migration-table))))
 
 ;; TODO(mls): could make the "if regex" thing a macro
 (defun store--parse-migration-file-name (name)
@@ -144,8 +137,8 @@
   (let* ((metadata-dir (path-join metadata-root store-name))
          (migration-dir (path-join metadata-dir "migrations")))
     ;; Make sure this is a valid metadata directory.
-    (assert (file-exists-p metadata-dir))
-    (assert (file-exists-p migration-dir))
+    (cl-assert (file-exists-p metadata-dir))
+    (cl-assert (file-exists-p migration-dir))
 
     ;;
     ;; Create the sqlite db, if it doesn't exit
@@ -153,10 +146,9 @@
     (unless (store-exists-p store-name)
       (message "Create store %s from metadata dir %s" store-name metadata-dir)
       (with-store store-name
-                  (sqlite3-exec
-                   db
-                   (format "CREATE TABLE %s (id Integer PRIMARY KEY, version Integer);"
-                           store--migration-table))))
+        (sqlite-execute db
+         (format "CREATE TABLE %s (id Integer PRIMARY KEY, version Integer);"
+                 store--migration-table))))
 
     ;;
     ;; Run the migrations on the database.
@@ -206,7 +198,7 @@
    (schema
      (dolist (entry (to-list schema))
        (with-store store-name
-         (sqlite3-exec db entry))))
+         (sqlite-execute db entry))))
    (use-metadata
      (store--load-metadata store-name))))
 
@@ -235,23 +227,47 @@
                    if (file-exists-p (make-file-name x))
                       do (--confirm-delete-file (make-file-name x))
                    else
-                     return t))
+                   return t))
       (cl-loop for x from 1
                when (not (file-exists-p (make-file-name x)))
                  do (progn (rename-file (store-get-path store-name) (make-file-name x))
-                           (return))))))
-
+                           (cl-return))))))
 
 (defmacro with-store (store-name &rest body)
-  "A macro for running mysqlite functions against a store.
-Please use `store-create-store' at some point before calling this function"
+  "A macro for running sqlite functions against a store.  The idea
+is to have a convienient place/way to store the database my emacs uses for
+its operations.  Note that store-name can be an open sqlite connection or
+a string designating a store.
+
+Please use `store-create-store' at some point before calling this function.
+
+Creates the variable `db' for access to the sqlite database.
+
+`store-name': sqlite connection or store name string.
+"
   (declare (indent defun))
-  `(with-mysqlite3 ((store-get-path ,store-name))
-     ,@body))
+  (with-gensyms (gstore gis-open-db)
+    `(let* ((,gstore ,store-name)
+            (,gis-open-db (sqlitep ,gstore))
+            (db (if ,gis-open-db
+                    ,gstore
+                  (sqlite-open (store-get-path ,gstore)))))
+       (unwind-protect
+           (progn
+             ,@body)
+         (when (and db
+                    (not ,gis-open-db))
+           (sqlite-close db))))))
 
+(defmacro with-store-txn (store-name &rest body)
+  "A macro to access a store within a sqlite write transaction.  Note that
+if this is too broad, you can call `with-sqlite-transaction' directly.
 
-(defun store-run-query (store-name query-name params)
-
-  )
+`store-name': sqlite connection or store name string.
+"
+  (declare (indent defun))
+  `(with-store ,store-name
+     (with-sqlite-transaction db
+       ,@body)))
 
 (provide 'store)

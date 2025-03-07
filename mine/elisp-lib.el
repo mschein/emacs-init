@@ -3992,7 +3992,7 @@ rm -f ${ATTACHMENT}
    `+preserve-request+': Instead of making the request, dump everything to a script to run for
                          testing.
    `+debug-request+': Enter the debugger before sending the request.
-   `+cache-request+': Use the url cache to save lookup time.
+   `+webrequest-cache-urls+': Use the url cache to save lookup time.  Can be nil, :forever, or a timeout in sec.
    `+proxy-url+': Provide the url as an argument to --proxy.  Can also be a function which will
                   be called with the url as its argument.
    `+proxy-auth+': Provide auth for a proxy, a la proxy user.  Can also be a function.

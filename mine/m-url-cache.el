@@ -16,9 +16,10 @@
   (time-to-seconds (current-time)))
 
 (defun m-url-cache-entry-expired (entry)
-  (and (assoc-get :ttl-sec entry)
-       (> (m-url-cache-current-time-sec) (+ (assoc1 :create-time entry)
-                                          (assoc1 :ttl-sec entry)))))
+  (ignore-errors
+      (and (assoc-get :ttl-sec entry)
+           (> (m-url-cache-current-time-sec) (+ (assoc1 :create-time entry)
+                                                (assoc1 :ttl-sec entry))))))
 
 (defun m-url-cache-set (url data &optional ttl-sec)
   (kv-set-pp m-url-cache-store-name

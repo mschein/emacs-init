@@ -18,6 +18,9 @@
 ;; Note that you should use the "store-*" functions
 ;; to check for existence  and remove any kv-store
 ;;
+;; I wonder if a "with-kv" function would be useful
+;; or just a kv dynamic variable.
+;;
 
 (defun kv-create (store-name)
   (store-create-store store-name
@@ -29,22 +32,13 @@
 
 (defun kv-set (store-name key value)
   (with-store store-name
-    (with-mysqlite3-stmt db kv-upsert-string
-      (sqlite3-bind-multi stmt key value)
-      (let ((result (sqlite3-step stmt)))
-        (unless (eql sqlite-done result)
-          (error "Store %s unable to set %s" store-name key)))))
-  key)
+    (sqlite-execute db kv-upsert-string (list key value))
+    key))
 
 (defun kv-add-key-values (store-name kvs)
   (with-store store-name
-    (with-mysqlite3-stmt db kv-upsert-string
-      (cl-loop for (k . v) in kvs do
-               (assert (stringp k))
-               (sqlite3-bind-multi stmt k v)
-               (unless (= sqlite-done (sqlite3-step stmt))
-                 (error "Store %s unable to set %s" store-name k))
-               (sqlite3-reset stmt)))))
+    (dolist (kv kvs)
+      (sqlite-execute db kv-upsert-string kv))))
 
 (defun kv-set-json (store-name key data)
   (kv-set store-name key (json-encode data)))
@@ -53,15 +47,8 @@
   (kv-set store-name key (pp-to-string data)))
 
 (defun kv-get (store-name key)
-  (let ((result))
-    (with-store store-name
-      (with-mysqlite3-stmt db "SELECT value FROM kv WHERE key = ?;"
-        (sqlite3-bind-multi stmt key)
-        (let ((res (sqlite3-step stmt)))
-          (if (= sqlite-row res)
-              (setf result (cl-first (sqlite3-fetch stmt)))
-            (error "Unable to retrieve `%s`: %s" key res)))))
-    result))
+  (with-store store-name
+    (caar (sqlite-select db "SELECT value FROM kv WHERE key = ?;" (list key)))))
 
 (defun kv-check (store-name key)
   (ignore-errors (kv-get store-name key)))
@@ -73,7 +60,8 @@
   (ignore-errors (kv-get-json store-name key)))
 
 (defun kv-get-pp (store-name key)
-  (read (kv-get store-name key)))
+  (when-let (data (kv-get store-name key))
+    (read data)))
 
 (defun kv-check-pp (store-name key)
   (ignore-errors (kv-get-pp store-name key)))
@@ -81,41 +69,38 @@
 (defun kv-delete (store-name key)
   ;; TODO(mls): add error checking.
   (with-store store-name
-      (with-mysqlite3-stmt db "DELETE FROM kv WHERE key = ?;"
-        (sqlite3-bind-multi stmt key)
-        (sqlite3-step stmt))))
+      (sqlite-execute db "DELETE FROM kv WHERE key = ?;" (list key))))
 
-(defun kv--select-statement (store-name statement)
-  (let ((output '()))
-    (with-store store-name
-      (with-mysqlite3-stmt db statement
-        (while (= sqlite-row (sqlite3-step stmt))
-          (push (sqlite3-fetch stmt) output))))
 
-    (nreverse output)))
+;;
+;; TODO: switch to using sets for this, to handle
+;; large data sets better.
+;; 
+(defun kv--select-statement-single-value (store-name statement)
+  (with-store store-name
+    (mapcar #'first (sqlite-select db statement))))
 
 (defun kv-list (store-name)
-  (mapcar (| cons (cl-first %) (second %))
-          (kv--select-statement store-name "SELECT * from kv;")))
+  (with-store store-name
+    (mapcar (fn ((key value))
+              (cons key value))
+            (sqlite-select db "SELECT * from kv;"))))
+
+(defun kv-list-cb (store-name cb)
+  (dolist (row (kv-list store-name))
+    (funcall cb row)))
 
 (defun kv-list-json (store-name)
   (mapcar (fn ((key . value))
-            ;;
-            ;; Is this needed?  Or does it just clutter up the code.
-            ;;
-            ;; (when (or (not item)
-            ;;         (not (car item))
-            ;;         (not (cdr item)))
-            ;;     (error "key-value item is null or corrupt or contains null values: %s" item))
             (cons key (when value
                         (json-read-from-string value))))
           (kv-list store-name)))
 
 (defun kv-list-keys (store-name)
-  (mapcar #'cl-first (kv--select-statement store-name "SELECT key from kv;")))
+  (kv--select-statement-single-value store-name "SELECT key from kv;"))
 
 (defun kv-list-values (store-name)
-  (mapcar #'cl-first (kv--select-statement store-name "SELECT value from kv;")))
+  (kv--select-statement-single-value store-name "SELECT value from kv;"))
 
 (defun kv-list-values-json (store-name)
   (mapcar #'json-read-from-string (kv-list-values store-name)))
