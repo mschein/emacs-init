@@ -264,7 +264,6 @@ Creates the variable `db' for access to the sqlite database.
              ,@body)
          (when (and db
                     (not ,gis-open-db))
-           (message "Close sqlite conn %s" db)
            (sqlite-close db))))))
 
 (defmacro with-store-txn (store-name &rest body)
