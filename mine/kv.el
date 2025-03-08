@@ -51,7 +51,10 @@
     (caar (sqlite-select db "SELECT value FROM kv WHERE key = ?;" (list key)))))
 
 (defun kv-check (store-name key)
-  (ignore-errors (kv-get store-name key)))
+  (not (not
+        (ignore-errors
+          (with-store store-name
+            (sqlite-select db "SELECT key from kv WHERE key = ?;" (list key)))))))
 
 (defun kv-get-json (store-name key)
   (json-read-from-string (kv-get store-name key)))
@@ -68,9 +71,8 @@
 
 (defun kv-delete (store-name key)
   ;; TODO(mls): add error checking.
-  (with-store store-name
-      (sqlite-execute db "DELETE FROM kv WHERE key = ?;" (list key))))
-
+  (with-store-txn store-name
+    (sqlite-execute db "DELETE FROM kv WHERE key = ?;" (list key))))
 
 ;;
 ;; TODO: switch to using sets for this, to handle
@@ -80,21 +82,31 @@
   (with-store store-name
     (mapcar #'first (sqlite-select db statement))))
 
-(defun kv-list (store-name)
+(cl-defun kv-list (store-name)
   (with-store store-name
     (mapcar (fn ((key value))
               (cons key value))
-            (sqlite-select db "SELECT * from kv;"))))
+            (sqlite-select db (kv--make-list-query-str limit offset)))))
 
-(defun kv-list-cb (store-name cb)
-  (dolist (row (kv-list store-name))
-    (funcall cb row)))
+(cl-defun kv-list-cb (store-name cb)
+  (with-store-select-set (store-name "SELECT * from kv;")
+      (cl-loop while (sqlite-more-p stmt) do
+               (let ((data (sqlite-next stmt)))
+                 (when data
+                   (funcall cb (first data) (second data)))))))
 
-(defun kv-list-json (store-name)
-  (mapcar (fn ((key . value))
-            (cons key (when value
-                        (json-read-from-string value))))
-          (kv-list store-name)))
+;; Don't add offset a limit.  they don't make sense for a kv store 
+(cl-defun kv-list-json (store-name)
+  (let ((output))
+    (kv-list-cb store-name
+                (fn (key value)
+                  (pushcons key (json-read-from-string value) output)))
+    output))
+
+(cl-defun kv-list-json-cb (store-name cb)
+  (kv-list-cb store-name
+              (fn (key  value)
+                (funcall cb key (json-read-from-string value)))))
 
 (defun kv-list-keys (store-name)
   (kv--select-statement-single-value store-name "SELECT key from kv;"))
@@ -106,3 +118,4 @@
   (mapcar #'json-read-from-string (kv-list-values store-name)))
 
 (provide 'kv)
+

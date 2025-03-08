@@ -233,6 +233,12 @@
                  do (progn (rename-file (store-get-path store-name) (make-file-name x))
                            (cl-return))))))
 
+(defun store--set-sqlite-pragmas (db)
+  (sqlite-pragma db "PRAGMA journal_mode=WAL;")
+  (sqlite-pragma db "PRAGMA sysynchronous = NORMAL;")
+  (sqlite-pragma db "PRAGMA foreign_keys = ON;")
+  (sqlite-pragma db "PRAGMA journal_size_limit = 67108864 -- 64 megabytes;"))
+
 (defmacro with-store (store-name &rest body)
   "A macro for running sqlite functions against a store.  The idea
 is to have a convienient place/way to store the database my emacs uses for
@@ -254,9 +260,11 @@ Creates the variable `db' for access to the sqlite database.
                   (sqlite-open (store-get-path ,gstore)))))
        (unwind-protect
            (progn
+             (store--set-sqlite-pragmas db)
              ,@body)
          (when (and db
                     (not ,gis-open-db))
+           (message "Close sqlite conn %s" db)
            (sqlite-close db))))))
 
 (defmacro with-store-txn (store-name &rest body)
@@ -267,7 +275,20 @@ if this is too broad, you can call `with-sqlite-transaction' directly.
 "
   (declare (indent defun))
   `(with-store ,store-name
-     (with-sqlite-transaction db
+     (with-s\qlite-transaction db
        ,@body)))
+
+(cl-defmacro with-store-select-set ((store-name query &optional args) &rest body)
+  "A with- macro to allow for cleanup of sqlite statements."
+  (declare (indent defun))
+
+  `(with-store ,store-name
+     (let ((stmt (sqlite-select db ,query ,args 'set)))
+       (unwind-protect
+           (progn
+             ,@body)
+         (when stmt
+           (sqlite-finalize stmt))))))
+
 
 (provide 'store)
