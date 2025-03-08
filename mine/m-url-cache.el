@@ -40,7 +40,7 @@
   (kv-delete m-url-cache-store-name url))
 
 (defun m-url-cache-prefix (m-url-prefix)
-  (cl-loop for url in (kv-list-keys m-url-cache-store-name)
+  (cl-loop for url in (kv-keys m-url-cache-store-name)
            when (string-starts-with url m-url-prefix)
              do (m-url-cache-forget url)))
 

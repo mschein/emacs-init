@@ -108,14 +108,14 @@
               (fn (key  value)
                 (funcall cb key (json-read-from-string value)))))
 
-(defun kv-list-keys (store-name)
+(defun kv-keys (store-name)
   (kv--select-statement-single-value store-name "SELECT key from kv;"))
 
-(defun kv-list-values (store-name)
+(defun kv-values (store-name)
   (kv--select-statement-single-value store-name "SELECT value from kv;"))
 
-(defun kv-list-values-json (store-name)
-  (mapcar #'json-read-from-string (kv-list-values store-name)))
+(defun kv-values-json (store-name)
+  (mapcar #'json-read-from-string (kv-values store-name)))
 
 (provide 'kv)
 
