@@ -21,14 +21,31 @@
 ;; I wonder if a "with-kv" function would be useful
 ;; or just a kv dynamic variable.
 ;;
+;; new ideas for kv:
+;; 1. create and updated fields, to allow proper function of ybl
+;; 2. type? So you can convert each field?
+;; 3. Metadata table?  
+;;    name, creation date, data type?
+;;
 
 (defun kv-create (store-name)
-  (store-create-store store-name
-                      :schema (format "CREATE TABLE %s (key TEXT PRIMARY KEY, value TEXT);"
-                                      kv--table-name)))
+  (store-create-store 
+   store-name
+   :schema
+   (format "CREATE TABLE %s (key TEXT PRIMARY KEY,
+            value TEXT,
+            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+
+            CREATE TRIGGER kv_update_trigger AFTER UPDATE ON %s 
+            BEGIN
+                UPDATE kv SET update_time = CURRENT_TIME WHERE key = new.key;
+            END;"
+           kv--table-name kv--table-name)))
 
 (defconst kv-upsert-string "INSERT INTO kv(key, value) VALUES (?, ?)
-                            ON CONFLICT (key) DO UPDATE SET value=excluded.value")
+                            ON CONFLICT (key) DO UPDATE SET 
+                            value=excluded.value")
 
 (defun kv-set (store-name key value)
   (with-store store-name
@@ -50,7 +67,7 @@
   (with-store store-name
     (caar (sqlite-select db "SELECT value FROM kv WHERE key = ?;" (list key)))))
 
-(defun kv-check (store-name key)
+(defun kv-exists-p (store-name key)
   (not (not
         (ignore-errors
           (with-store store-name
@@ -82,18 +99,19 @@
   (with-store store-name
     (mapcar #'first (sqlite-select db statement))))
 
-(cl-defun kv-list (store-name)
-  (with-store store-name
-    (mapcar (fn ((key value))
-              (cons key value))
-            (sqlite-select db (kv--make-list-query-str limit offset)))))
-
 (cl-defun kv-list-cb (store-name cb)
-  (with-store-select-set (store-name "SELECT * from kv;")
+  (with-store-select-set (store-name "SELECT key, value from kv;")
       (cl-loop while (sqlite-more-p stmt) do
                (let ((data (sqlite-next stmt)))
                  (when data
                    (funcall cb (first data) (second data)))))))
+
+(cl-defun kv-list (store-name)
+  (let ((output))
+    (kv-list-cb store-name
+                (fn (key value)
+                  (pushcons key value output)))
+    (nreverse output)))
 
 ;; Don't add offset a limit.  they don't make sense for a kv store 
 (cl-defun kv-list-json (store-name)
@@ -118,4 +136,5 @@
   (mapcar #'json-read-from-string (kv-values store-name)))
 
 (provide 'kv)
+
 
