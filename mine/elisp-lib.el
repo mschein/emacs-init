@@ -617,7 +617,7 @@ Example:
 (defun remove-if-not-regex (regex list &optional replace)
   (let ((res (cl-remove-if-not (| string-match regex %) list)))
     (if (string-has-value-p replace)
-        (mapcar (| replace-regexp-in-string regex replace %) res)
+        (mapcar (| replace-regexp-in-string regex replace % t) res)
       res)))
 
 (defun all-true (list)
@@ -707,7 +707,7 @@ This should be used to write find-x-at-point functions.
 
 (defun string-trim-chars (str front-group back-group)
   "Remove leading and trailing characters from a string."
-  (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group) "" str))
+  (replace-regexp-in-string (format "\\(^[%s]+\\|[%s]+$\\)" front-group back-group t) "" str))
 
 (defun string-left-trim-regex (regex str)
   (replace-regexp-in-string (format "^%s" regex) "" str))
@@ -3685,7 +3685,7 @@ https://www.ietf.org/rfc/rfc2849.txt."
                       (message "Substitute key %s" key)
                       (assoc1 key vars))))
     (cl-loop for (k . v) in vars
-             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9_]+}" #'sub-fn template)))
+             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9_]+}" #'sub-fn template t)))
     template))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -3735,7 +3735,7 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 
 (defun remove-newlines (begin end)
   (interactive "r")
-  (replace-regex-region "[\n ]+" " " begin end))
+  (replace-regex-region "[\n ]+" " " begin end t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web-request functions
