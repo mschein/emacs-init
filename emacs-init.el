@@ -327,11 +327,19 @@
 (use-package s :ensure (:wait t) :demand t)
 (use-package f :ensure (:wait t) :demand t)
 
-;; Sometimes you need non-cryptographically unique ids
-(use-package uuidgen :ensure (:wait t) :demand t)
+;; Packages Put them in dependency order
 (use-package dockerfile-mode :ensure (:wait t) :demand t)
-(use-package markdown-mode :ensure (:wait t) :demand t)
+(use-package go-mode :ensure (:wait t) :demand t)
 (use-package groovy-mode :ensure (:wait t) :demand t)
+(use-package ini-mode :ensure (:wait t) :demand t)
+(use-package jinja2-mode :ensure (:wait t) :demand t)
+(use-package json-mode :ensure (:wait t) :demand t)
+(use-package markdown-mode :ensure (:wait t) :demand t)
+(use-package lsp-mode :ensure (:wait t) :demand t)
+(use-package syslog-mode :ensure (:wait t) :demand t)
+(use-package terraform-mode :ensure (:wait t) :demand t)
+(use-package uuidgen :ensure (:wait t) :demand t)
+(use-package yaml-mode :ensure (:wait t) :demand t)
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
@@ -339,6 +347,13 @@
 (use-package yasnippet :ensure (:wait t) :demand t)
 (use-package yasnippet-snippets :ensure (:wait t) :demand t)
 
+;; For clojure dev
+(use-package clojure-mode :ensure (:wait t) :demand t)
+(use-package clojure-ts-mode :ensure (:wait t) :demand t)
+(use-package cider :ensure (:wait t) :demand t)
+(use-package clojure-essential-ref :ensure (:wait t) :demand t)
+
+;; clojure-snippets?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs packages.
