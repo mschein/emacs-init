@@ -499,6 +499,11 @@
 ;; We don't always need the final new line in a file.
 (setq require-final-newline nil)
 
+;; Allow these functions.
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+
+
 ;; Paredit setup
 ;; TODO Need to learn to use this.
 ;(autoload 'paredit-mode "paredit"
@@ -655,11 +660,6 @@
 ;;   (setq-default web-mode-code-indent-offset js-basic-offset)
 ;;   (setq js-indent-level js-basic-offset)
 ;;   (setq sqml-basic-offset js-basic-offset))
-
-
-;; ;; Allow these functions.
-;; (put 'upcase-region 'disabled nil)
-;; (put 'downcase-region 'disabled nil)
 
 ;; ;; Enable flymake
 ;; (require 'flymake)
