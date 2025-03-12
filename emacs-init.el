@@ -330,12 +330,14 @@
 ;; Sometimes you need non-cryptographically unique ids
 (use-package uuidgen :ensure (:wait t) :demand t)
 (use-package dockerfile-mode :ensure (:wait t) :demand t)
+(use-package markdown-mode :ensure (:wait t) :demand t)
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
 (use-package magit :ensure (:wait t) :demand t)
 (use-package yasnippet :ensure (:wait t) :demand t)
 (use-package yasnippet-snippets :ensure (:wait t) :demand t)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs packages.
@@ -409,6 +411,9 @@
   :ensure t
   :config
   (which-key-mode))
+
+;; Trying this out.
+(fido-mode t)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; General Emacs Config
