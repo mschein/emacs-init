@@ -340,6 +340,10 @@
 (use-package terraform-mode :ensure (:wait t) :demand t)
 (use-package uuidgen :ensure (:wait t) :demand t)
 (use-package yaml-mode :ensure (:wait t) :demand t)
+(use-package scala-mode :ensure (:wait t) :demand t)
+(use-package php-mode :ensure (:wait t) :demand t)
+(use-package flymake-php :ensure (:wait t) :demand t)
+(use-package package-lint :ensure (:wait t) :demand t)
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
@@ -515,21 +519,24 @@
 (put 'upcase-region 'disabled nil)
 (put 'downcase-region 'disabled nil)
 
+;; If we can't exec stuff from /usr/local/bin
+;; (setf exec-path (append exec-path '("/usr/local/bin")))
 
-;; Paredit setup
-;; TODO Need to learn to use this.
-;(autoload 'paredit-mode "paredit"
-;  "Minor mode for pseudo-structurally editing Lisp code." t)
-;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
-;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
-;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
 
-;; Stop SLIME's REPL from grabbing DEL,
-;; which is annoying when backspacing over a '('
-;; (defun override-slime-repl-bindings-with-paredit ()
-;;   (define-key slime-repl-mode-map
-;;     (read-kbd-macro paredit-backward-delete-key) nil))
-;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Save Hook Stuff
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-hook 'before-save-hook #'delete-trailing-whitespace)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Html Mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-hook 'html-mode-hook
+          (lambda ()
+            ;; Default indentation is usually 2 spaces, changing to 4.
+            (set (make-local-variable 'sgml-basic-offset) 4)))
 
 
 ;; ;; pick a font.
@@ -556,9 +563,6 @@
 ;;     (set-frame-font font t t)))
 ;; (set-face-attribute 'default nil :height 120)
 
-
-;; ;; Magit options
-;; (add-hook 'magit-mode-hook 'magit-load-config-extensions)
 
 ;; ;; Enable ace-jump-mode
 ;; ;;
@@ -855,24 +859,30 @@
 (global-set-key "\C-x\M-f" 'find-file-at-point)
 
 
-;; ;;
-;; ;; Make buffer names smarter
-;; ;;
-;; (require 'uniquify)
-;; (setq uniquify-separator "/")
-;; (setq uniquify-buffer-name-style 'post-forward-angle-brackets)
-;; (setq uniqify-ignore-buffers-re "^\\*")
+;;
+;; NOTE: we could change how uniquify handles buffer name collisions if we want
+;; https://pragmaticemacs.wordpress.com/2016/05/10/uniquify-your-buffer-names/
+;;
 
-;; ;; Flyspell code
-;; (defun turn-on-flyspell ()
-;;   "Force flyspell-mode on using a positive arg.  For use in hooks."
-;;   (interactive)
-;;   (flyspell-mode 1)
-;;   (define-key flyspell-mode-map (kbd "C-;") 'undo))
-;; (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
-;; (add-hook 'text-mode-hook 'turn-on-flyspell)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Flyspell, spelling code.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (setf exec-path (append exec-path '("/usr/local/bin")))
+(defun turn-on-flyspell ()
+  "Force flyspell-mode on using a positive arg.  For use in hooks."
+  (interactive)
+  (flyspell-mode 1)
+  (define-key flyspell-mode-map (kbd "C-;") 'undo))
+
+(add-hook 'text-mode-hook 'turn-on-flyspell)
+(add-hook 'org-mode-hook 'turn-on-flyspell)
+(add-hook 'html-mode-hook #'flyspell-prog-mode)
+(add-hook 'python-mode-hook #'flyspell-prog-mode)
+(add-hook 'php-mode-hook #'flyspell-prog-mode)
+(add-hook 'ruby-mode-hook #'flyspell-prog-mode)
+(add-hook 'perl-mode-hook #'flyspell-prog-mode)
+(add-hook 'clojure-mode-hook #'flyspell-prog-mode)
+(add-hook 'lisp-mode-hook #'flyspell-prog-mode)
 
 
 ;; ;; ;; Found on interwebs:
@@ -1027,30 +1037,47 @@
             (local-set-key [S-up] 'windmove-up)
             (local-set-key [S-down] 'windmove-down)))
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Lisp and elisp mode configs
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Lisp and Elisp, Emacs Lisp mode configs
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (add-hook 'emacs-lisp-mode-hook (lambda ()
-;;                                   (flymake-mode)))
+(add-hook 'emacs-lisp-mode-hook #'flymake-mode)
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; LDAP and EMAIL command setup
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Common Lisp options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ;; I have tabled this for the moment since it depends on ldapsearch
-;; ;; and that doesn't appeat to be installed right now :-p
 
-;; ;; (require 'eudc)
+;;
+;; Maybe use smart parens instead: https://smartparens.readthedocs.io/en/latest/
+;;
 
-;; ;; ;; make it work with tab in mail mode.
-;; ;; (eval-after-load
-;; ;;  "message"
-;; ;;  '(define-key message-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
-;; ;; (eval-after-load
-;; ;;  "sendmail"
-;; ;;  '(define-key mail-mode-map [(control ?c) (tab)] 'eudc-expand-inline))
+;; Paredit setup
+;; TODO Need to learn to use this.
+;(autoload 'paredit-mode "paredit"
+;  "Minor mode for pseudo-structurally editing Lisp code." t)
+;(add-hook 'emacs-lisp-mode-hook       (lambda () (paredit-mode +1)))
+;(add-hook 'lisp-mode-hook             (lambda () (paredit-mode +1)))
+;(add-hook 'lisp-interaction-mode-hook (lambda () (paredit-mode +1)))
+
+;; Stop SLIME's REPL from grabbing DEL,
+;; which is annoying when backspacing over a '('
+;; (defun override-slime-repl-bindings-with-paredit ()
+;;   (define-key slime-repl-mode-map
+;;     (read-kbd-macro paredit-backward-delete-key) nil))
+;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Magit Options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Magit options
+(add-hook 'magit-mode-hook 'magit-load-config-extensions)
+
 
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1194,9 +1221,6 @@
 
 ;; (add-hook 'before-save-hook #'delete-trailing-whitespace)
 
-;; ;; Try out jinja2 mode.
-;; (require 'jinja2-mode)
-
 ;; ;; Allows crazy long lines.
 ;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
 
@@ -1219,26 +1243,6 @@
 ;; ;; (pymacs-load "ropemacs" "rope-")
 ;; ;; (setq ropemacs-enable-autoimport t)
 
-;; (add-hook 'html-mode-hook
-;;           (lambda ()
-;;             ;; Default indentation is usually 2 spaces, changing to 4.
-;;             (set (make-local-variable 'sgml-basic-offset) 4)))
-
-
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  SVN Stuff ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;;(require 'psvn)
-
-
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Scala Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (add-to-list 'load-path "~/emacs-init/contrib/scala-emacs")
-;; (require 'scala-mode-auto)
-
-
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Groovy Mode ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (autoload 'groovy-mode "groovy-mode" "Major mode for editing Groovy code." t)
-;; (add-to-list 'auto-mode-alist '("\.groovy$" . groovy-mode))
-;; (add-to-list 'auto-mode-alist '("\.gradle$" . groovy-mode))
-;; (add-to-list 'interpreter-mode-alist '("groovy" . groovy-mode))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Confluence Mode  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ;; (add-to-list 'load-path "~/emacs-init/contrib/confluence-el")
@@ -1274,10 +1278,10 @@
 ;;  )
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (add-hook 'go-mode-hook (lambda ()
-;;                           (setq tab-width 4)))
+(add-hook 'go-mode-hook (lambda ()
+                          (setq tab-width 4)))
 
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Deal with anything in the local directory  ;;;;;;;;;;;;;;;;;;;;
