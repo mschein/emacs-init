@@ -344,6 +344,7 @@
 (use-package php-mode :ensure (:wait t) :demand t)
 (use-package flymake-php :ensure (:wait t) :demand t)
 (use-package package-lint :ensure (:wait t) :demand t)
+(use-package cape :ensure (:wait t) :demand t)
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
@@ -363,6 +364,53 @@
 ;; Emacs packages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'flyspell)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Completion
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(use-package corfu
+  :ensure (:wait t) :demand t
+
+  ;; Optional customizations
+  ;; :custom
+  (corfu-cycle t)                ;; Enable cycling for `corfu-next/previous'
+  ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
+  ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  ;; (corfu-preview-current nil)    ;; Disable current candidate preview
+  ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
+  ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
+
+  ;; Enable Corfu only for certain modes. See also `global-corfu-modes'.
+  ;; :hook ((prog-mode . corfu-mode)
+  ;;        (shell-mode . corfu-mode)
+  ;;        (eshell-mode . corfu-mode))
+
+  ;; Recommended: Enable Corfu globally.  This is recommended since Dabbrev can
+  ;; be used globally (M-/).  See also the customization variable
+  ;; `global-corfu-modes' to exclude certain modes.
+  :init
+  (global-corfu-mode))
+
+;; A few more useful configurations...
+(use-package emacs
+  :custom
+  ;; TAB cycle if there are only few candidates
+  ;; (completion-cycle-threshold 3)
+
+  ;; Enable indentation+completion using the TAB key.
+  ;; `completion-at-point' is often bound to M-TAB.
+  (tab-always-indent 'complete)
+
+  ;; Emacs 30 and newer: Disable Ispell completion function.
+  ;; Try `cape-dict' as an alternative.
+  (text-mode-ispell-word-completion nil)
+
+  ;; Hide commands in M-x which do not apply to the current mode.  Corfu
+  ;; commands are hidden, since they are not used via M-x. This setting is
+  ;; useful beyond Corfu.
+  (read-extended-command-predicate #'command-completion-default-include-p))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup my personal packages.
@@ -538,6 +586,27 @@
             ;; Default indentation is usually 2 spaces, changing to 4.
             (set (make-local-variable 'sgml-basic-offset) 4)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Hippie Expand
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; For now I'm just going to set hippie expand to take over M-/, since
+;; that should be similar to what I have now.
+;; It looks like ac/yas will share the tab in a reasonable way, if I think
+;; of a more efficient way to use it, I will.
+(global-set-key (kbd "C-/") 'hippie-expand)
+(global-set-key (kbd "M-/") 'dabbrev-expand)
+
+;;
+;; This might be the way to go.
+;;
+(setq hippie-expand-try-functions-list
+      (append hippie-expand-try-functions-list '(slime-complete-symbol)))
+(setq smart-tab-completion-functions-alist
+      '((emacs-lisp-mode . lisp-complete-symbol)
+        (text-mode . dabbrev-completion)
+        (slime-repl-mode . slime-complete-symbol)))
+
 
 ;; ;; pick a font.
 ;; ;; set fond size, etc. etc.
@@ -585,14 +654,6 @@
 ;;   (add-hook mode (lambda ()
 ;;                    (electric-pair-local-mode -1))))
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Hippie Expand ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; ;; For now I'm just going to set hippie expand to take over M-/, since
-;; ;; that should be similar to what I have now.
-;; ;; It looks like ac/yas will share the tab in a reasonable way, if I think
-;; ;; of a more efficient way to use it, I will.
-;; (global-set-key (kbd "C-/") 'hippie-expand)
-;; (global-set-key (kbd "M-/") 'dabbrev-expand)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Text Mode configuration
@@ -650,6 +711,15 @@
   :interpreter "ruby")
 (use-package inf-ruby
   :mode "\\.rb\\'")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Php Config
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(with-eval-after-load 'php-mode
+  (add-hook 'php-mode-hook (lambda ()
+                             (subword-mode 1)
+                             (setq-local show-trailing-whitespace t))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Calc Mode Settings.
@@ -910,15 +980,6 @@
 
 ;; ;; from http://joost.zeekat.nl/2010/06/03/slime-hints-3-interactive-completions-and-smart-tabs/
 
-;; ;;
-;; ;; This might be the way to go.
-;; ;;
-;; ;; (setq hippie-expand-try-functions-list
-;; ;;       (append hippie-expand-try-functions-list '(slime-complete-symbol)))
-;; ;; (setq smart-tab-completion-functions-alist
-;; ;;       '((emacs-lisp-mode . lisp-complete-symbol)
-;; ;;         (text-mode . dabbrev-completion)
-;; ;;         (slime-repl-mode . slime-complete-symbol)))
 
 ;; ;; Turn on auto completion.
 ;; (require 'auto-complete-config)
