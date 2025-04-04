@@ -24,12 +24,12 @@
 ;; new ideas for kv:
 ;; 1. create and updated fields, to allow proper function of ybl
 ;; 2. type? So you can convert each field?
-;; 3. Metadata table?  
+;; 3. Metadata table?
 ;;    name, creation date, data type?
 ;;
 
 (defun kv-create (store-name)
-  (store-create-store 
+  (store-create-store
    store-name
    :schema
    (format "CREATE TABLE %s (key TEXT PRIMARY KEY,
@@ -37,14 +37,14 @@
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
 
-            CREATE TRIGGER kv_update_trigger AFTER UPDATE ON %s 
+            CREATE TRIGGER kv_update_trigger AFTER UPDATE ON %s
             BEGIN
                 UPDATE kv SET update_time = CURRENT_TIME WHERE key = new.key;
             END;"
            kv--table-name kv--table-name)))
 
 (defconst kv-upsert-string "INSERT INTO kv(key, value) VALUES (?, ?)
-                            ON CONFLICT (key) DO UPDATE SET 
+                            ON CONFLICT (key) DO UPDATE SET
                             value=excluded.value")
 
 (defun kv-set (store-name key value)
@@ -94,17 +94,21 @@
 ;;
 ;; TODO: switch to using sets for this, to handle
 ;; large data sets better.
-;; 
+;;
 (defun kv--select-statement-single-value (store-name statement)
   (with-store store-name
     (mapcar #'first (sqlite-select db statement))))
 
-(cl-defun kv-list-cb (store-name cb)
-  (with-store-select-set (store-name "SELECT key, value from kv;")
+(defun kv-list-core-cb (store-name keys cb)
+  (with-store-select-set (store-name (format "SELECT %s from kv;"
+                                             (string-join keys ", ")))
       (cl-loop while (sqlite-more-p stmt) do
                (let ((data (sqlite-next stmt)))
                  (when data
-                   (funcall cb (first data) (second data)))))))
+                   (apply cb data))))))
+
+(cl-defun kv-list-cb (store-name cb)
+  (kv-list-core-cb store-name (list "key" "value") cb))
 
 (cl-defun kv-list (store-name)
   (let ((output))
@@ -113,28 +117,46 @@
                   (pushcons key value output)))
     (nreverse output)))
 
-;; Don't add offset a limit.  they don't make sense for a kv store 
-(cl-defun kv-list-json (store-name)
-  (let ((output))
-    (kv-list-cb store-name
-                (fn (key value)
-                  (pushcons key (json-read-from-string value) output)))
-    output))
-
+;; Don't add offset a limit.  they don't make sense for a kv store
 (cl-defun kv-list-json-cb (store-name cb)
   (kv-list-cb store-name
-              (fn (key  value)
-                (funcall cb key (json-read-from-string value)))))
+              (fn (key value)
+                (funcall cb key (when value
+                                  (json-read-from-string value))))))
+
+(cl-defun kv-list-json (store-name)
+  (let ((output))
+    (kv-list-json-cb store-name
+                     (fn (key value)
+                       (pushcons key value output)))
+    output))
+
+
+(defun kv-list-pp-cb (store-name cb)
+  (kv-list-cb store-name
+              (fn (key value)
+                (funcall cb key (when value
+                                  (read value))))))
+(cl-defun kv-list-pp (store-name)
+  (let ((output))
+    (kv-list-pp-cb store-name
+                   (fn (key value)
+                     (pushcons key value output)))
+    output))
 
 (defun kv-keys (store-name)
   (kv--select-statement-single-value store-name "SELECT key from kv;"))
 
+(defun kv-keys-cb (store-name cb)
+  (kv-list-core-cb store-name (list "key") cb))
+
 (defun kv-values (store-name)
   (kv--select-statement-single-value store-name "SELECT value from kv;"))
+
+(defun kv-values-cb (store-name cb)
+  (kv-list-core-cb store-name (list "value") cb))
 
 (defun kv-values-json (store-name)
   (mapcar #'json-read-from-string (kv-values store-name)))
 
 (provide 'kv)
-
-

@@ -8,10 +8,6 @@
 
 (defconst m-url-cache-store-name "url-cache")
 
-(defun m-url-cache-init ()
-  (when (not (store-exists-p m-url-cache-store-name))
-    (kv-create m-url-cache-store-name)))
-
 (defun m-url-cache-current-time-sec ()
   (time-to-seconds (current-time)))
 
@@ -37,7 +33,8 @@
         nil))))
 
 (defun m-url-cache-forget (url)
-  (kv-delete m-url-cache-store-name url))
+  (kv-delete m-url-cache-store-name url)
+  (message "m-url-cache-forget %s" url))
 
 (defun m-url-cache-prefix (m-url-prefix)
   (cl-loop for url in (kv-keys m-url-cache-store-name)
@@ -50,5 +47,29 @@
     (when-let (resp (funcall fetch-fn))
       (m-url-cache-set url resp ttl-sec)
       resp)))
+
+(defun m-url-cache--find-entries-to-purge ()
+  (let ((to-delete))
+    (kv-list-pp-cb m-url-cache-store-name
+                   (fn (url entry)
+                     (when (m-url-cache-entry-expired entry)
+                       (push url to-delete))))
+    to-delete))
+
+(defun m-url-cache--list-timer-functions ()
+  (mapcar #'timer--function timer-list))
+
+(defun m-url-cache-purge ()
+  (message "Purge url cache.")
+  (dolist (expire-url (m-url-cache--find-entries-to-purge))
+    (m-url-cache-forget expire-url)))
+
+(defun m-url-cache-init ()
+  (when (not (store-exists-p m-url-cache-store-name))
+    (kv-create m-url-cache-store-name))
+
+  (let ((purge-fn #'m-url-cache-purge))
+    (unless (member purge-fn (m-url-cache--list-timer-functions))
+      (run-at-time "60min" (* 60 60) purge-fn))))
 
 (provide 'm-url-cache)
