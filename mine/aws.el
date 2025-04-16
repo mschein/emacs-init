@@ -987,7 +987,7 @@ doesn't deal with paging yet."
 ;; aws-route53-list-hosted-zones-cached
 (memoize-fn aws-route53-list-hosted-zones 600)
 
-(defun aws-route53-list-resources-record-sets (hosted-zone-id)
+(defun aws-route53-list-resource-record-sets (hosted-zone-id)
   (assoc1 '(:json ResourceRecordSets) (aws-route53 "list-resource-record-sets" "--hosted-zone-id" hosted-zone-id)))
 
 ;; aws-route53-list-resource-record-sets-cached
