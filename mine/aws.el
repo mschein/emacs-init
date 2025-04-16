@@ -991,7 +991,7 @@ doesn't deal with paging yet."
   (assoc1 '(:json ResourceRecordSets) (aws-route53 "list-resource-record-sets" "--hosted-zone-id" hosted-zone-id)))
 
 ;; aws-route53-list-resource-record-sets-cached
-(memoize-fn aws-route53-list-resources-record-sets 600)
+(memoize-fn aws-route53-list-resource-record-sets 600)
 
 (defun aws-route53-list-all-records ()
   (cl-loop for zone across (aws-route53-list-hosted-zones-cached)
