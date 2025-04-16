@@ -342,9 +342,9 @@
 (use-package yaml-mode :ensure (:wait t) :demand t)
 (use-package scala-mode :ensure (:wait t) :demand t)
 (use-package php-mode :ensure (:wait t) :demand t)
-(use-package flymake-php :ensure (:wait t) :demand t)
 (use-package package-lint :ensure (:wait t) :demand t)
 (use-package cape :ensure (:wait t) :demand t)
+(use-package docker-compose-mode :ensure (:wait t) :demand t)
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
@@ -358,12 +358,17 @@
 (use-package cider :ensure (:wait t) :demand t)
 (use-package clojure-essential-ref :ensure (:wait t) :demand t)
 
+;; For Python Dev
+(use-package flymake-easy :ensure (:wait t) :demand t)
+(use-package yapfify :ensure (:wait t) :demand t)
+
 ;; clojure-snippets?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs packages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'flyspell)
+(require 'term)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Completion
@@ -436,6 +441,17 @@
 
 ;; This is deprecated
 (require 'cl)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Early Functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun font-lock-width-keyword (width)
+  "Return a font-lock style keyword for a string beyond width WIDTH
+that uses 'font-lock-warning-face'."
+  `((,(format "^%s\\(.+\\)" (make-string width ?.))
+     (1 font-lock-warning-face t))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Setup keyboard.
@@ -602,10 +618,12 @@
 ;;
 (setq hippie-expand-try-functions-list
       (append hippie-expand-try-functions-list '(slime-complete-symbol)))
+
+;; Fix this?
 (setq smart-tab-completion-functions-alist
       '((emacs-lisp-mode . lisp-complete-symbol)
         (text-mode . dabbrev-completion)
-        (slime-repl-mode . slime-complete-symbol)))
+        (slime-mode . slime-fuzzy-complete-symbol)))
 
 
 ;; ;; pick a font.
@@ -726,14 +744,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (setq calc-algebraic-mode t)
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Javascript Configuration
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Clojure setup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (add-to-list 'load-path "~/emacs-init/javascript")
-;; (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
-;; (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
-;; (add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Javascript Configuration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(add-to-list 'load-path "~/emacs-init/javascript")
+(add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
+(add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
+(add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
 
 
 ;; (autoload 'javascript-mode "javascript" nil t)
@@ -847,14 +869,34 @@
 ;; (add-hook 'web-mode-hook 'js-type-hooks)
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Shell Mode options
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Shell Mode options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ;; Emacs now supports colors :-)
-;; (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
-;; ;; But it doesn't support less, so turn the pager off.
+;; Emacs now supports colors :-)
+(add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+;; But it doesn't support less, so turn the pager off.
 (setenv "GIT_PAGER" "")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Generic Programming Mode options
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; (use-package lsp-mode
+;;   :hook (java-mode . lsp)
+;;   :hook (ruby-mode . lsp)
+;;   :hook (go-mode . lsp)
+;;   :hook (python-mode . lsp)
+;;   ;;
+;;   ;; python mode gets setup below, to make sure
+;;   ;; everything works with virtualenvs
+;;   ;;
+;;   :commands lsp)
+
+;; (use-package lsp-ui :commands lsp-ui-mode)
+;; (use-package company-lsp :commands company-lsp)
+;; (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+;; (use-package dap-mode)
 
 ;; ;;
 ;; ;; Turn on red highlighting for characters outside of the 80/100 char limit
@@ -864,10 +906,11 @@
 ;;   `((,(format "^%s\\(.+\\)" (make-string width ?.))
 ;;      (1 font-lock-warning-face t))))
 
-;; (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
-;; (font-lock-add-keywords 'python-mode (font-lock-width-keyword 99))
-;; (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
-;; (add-hook 'java-mode 'subword-mode)
+
+(add-hook 'java-mode 'subword-mode)
+
+(font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
+(font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1141,9 +1184,14 @@
 
 
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; Setting up the Python IDE
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Setting up the Python IDE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(font-lock-add-keywords 'python-mode (font-lock-width-keyword 120))
+
+(yapf-mode -1)
+(add-hook 'python-mode-hook #'yapf-mode)
 
 ;; ;;
 ;; ;; Info additions
@@ -1164,22 +1212,6 @@
 ;; ;;
 ;; ;; TODO: switch to the new mode.
 ;; ;;
-
-;; (use-package lsp-mode
-;;   :hook (java-mode . lsp)
-;;   :hook (ruby-mode . lsp)
-;;   :hook (go-mode . lsp)
-;;   :hook (python-mode . lsp)
-;;   ;;
-;;   ;; python mode gets setup below, to make sure
-;;   ;; everything works with virtualenvs
-;;   ;;
-;;   :commands lsp)
-
-;; (use-package lsp-ui :commands lsp-ui-mode)
-;; (use-package company-lsp :commands company-lsp)
-;; (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
-;; (use-package dap-mode)
 
 ;; ;;
 ;; ;; Python Mode stuff.
@@ -1243,9 +1275,6 @@
 ;;                                   (if (guess-python-version-3)
 ;;                                       (setq python-shell-interpreter "python3")
 ;;                                     (setq python-shell-interpreter "python"))))))
-
-;; (global-set-key [f10] 'flymake-goto-prev-error)
-;; (global-set-key [f11] 'flymake-goto-next-error)
 
 ;; (yapf-mode -1)
 
