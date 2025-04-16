@@ -899,7 +899,7 @@ that uses 'font-lock-warning-face'."
 ;; (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
 ;; (use-package dap-mode)
 
-(add-hook 'java-mode 'subword-mode)
+(add-hook 'java-mode-hook #'subword-mode)
 
 (font-lock-add-keywords 'c++-mode (font-lock-width-keyword 80))
 (font-lock-add-keywords 'java-mode (font-lock-width-keyword 100))
@@ -1184,6 +1184,8 @@ that uses 'font-lock-warning-face'."
 
 (yapf-mode -1)
 (add-hook 'python-mode-hook #'yapf-mode)
+(add-hook 'python-mode-hook #'subword-mode)
+
 
 ;; ;;
 ;; ;; Info additions
