@@ -972,6 +972,7 @@ doesn't deal with paging yet."
                 (cons "default"
                       (assoc1-to-assoc '(("aws_access_key_id" AccessKeyId)
                                          ("aws_secret_access_key" SecretAccessKey)
+                                         ("aws_session_token" SessionToken)
                                          ("aws_credential_expiration" Expiration))
                                        (assoc1 :json (aws-configure-export-credentials :profile profile)))))
                credential-file)
