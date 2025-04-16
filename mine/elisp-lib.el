@@ -138,7 +138,7 @@ the setter work."
        ;; Originally I used "function" here, but
        ;; it doesn't play well with "symbol", so now
        ;; just use a list to indicate a function call.
-       (listp (setf data (funcall (car step) data)))
+       (list (setf data (funcall (car step) data)))
        (string (setf data (assoc1 step data))))
      finally return data))
 
@@ -1418,6 +1418,7 @@ Use this likely in leu of `buffer-string'."
 ;; How do I make this switch to the current file directory?
 (defun shell-open-dir (dir)
   "Create a shell in the given directory"
+
   (with-open-dir dir (lambda (name)
                        (shell name))))
 
@@ -1427,7 +1428,8 @@ Use this likely in leu of `buffer-string'."
   (shell-open-dir default-directory))
 
 (defun run-shell-command (cmd &rest args)
-  (insertf "%s %s" cmd (string-join (mapcar #'shell-quote-argument args) " "))
+  ;; Trying to exit after running the command.
+  (insertf "%s %s; exit" cmd (string-join (mapcar #'shell-quote-argument args) " "))
   (comint-send-input nil t))
 
 (defun shell-open-run-command (dir cmd &optional name)
@@ -1671,7 +1673,7 @@ Use this likely in leu of `buffer-string'."
 
 Example:
   (directory-last-dirname \"/a/b/c.txt\") -> \"b\""
-  (-> path directory-file-name split-path last-car))
+  (-> path file-name-parent-directory f-split last-car))
 
 (cl-defun list-directory-entries (dir &key full ignore match nosort files-only dirs-only filter)
   "Return only the files in `dir' with some options.
@@ -2342,13 +2344,11 @@ Returns a list of alists."
 ;; ini files
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconst ini-section-template
-  "
-#
+  "#
 # %s
 #
 [%s]
-%s
-")
+%s")
 
 (defun ini-string (ini-lisp)
   ;;
@@ -3003,6 +3003,18 @@ conflict with dir/subdir/project.")
                         (do-cmd "git" "push" "origin" "--force" "--all")))
        :throw t))))
 
+(defun git-file-path-from-repo-root (path)
+  "Get the path of a file relative tot he root of the current git repo."
+  (cl-assert (file-name-absolute-p path))
+
+  (let ((repo-root (git-project-root)))
+    (cl-assert (directory-file-under-dir repo-root path))
+    (string-remove-prefix repo-root path)))
+
+(defun git-buffer-path-from-repo-root ()
+  "Return the path from the root of the git repo to the file held in the current buffer."
+  (git-file-path-from-repo-root (buffer-file-name)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Groovy Commands
@@ -3604,6 +3616,9 @@ https://www.ietf.org/rfc/rfc2849.txt."
   (with-overwrite-buffer-pp "+docker-ps+"
     (docker-list-processes)))
 
+(defun docker-list-container-ids ()
+  (mapcar (| assoc1 "CONTAINER ID" %) (docker-list-processes)))
+
 (defalias 'docker-ps #'docker-list-processes-pp)
 
 (defun docker-list-images-pp ()
@@ -3625,9 +3640,11 @@ https://www.ietf.org/rfc/rfc2849.txt."
 
     (insertf-send "docker exec -it %s /bin/sh" container-id)))
 
-(defun docker-connect-to-running-image (container-id)
-  )
+(defun docker-connect (container-id)
+  "Note that this is redundant of what you can do with tramp directly, but it helps me remember."
+  (interactive (list (completing-read "container-id: " (docker-list-container-ids) nil t)))
 
+  (find-file "/docker:%s:/" container-id))
 
 ;;
 ;; Should add some support for port mapping:
@@ -3643,6 +3660,12 @@ https://www.ietf.org/rfc/rfc2849.txt."
   (if-let (image-id (assoc1 "IMAGE ID" (car (docker-list-images))))
       (docker-run-image image-id)
     (error "Could not find an image to run")))
+
+;; (defun docker-connect-to-image-at-point ()
+;;   (interactive)
+
+;;   (docker-run-image-at-point))
+
 
 (defun docker-image-prune ()
   (interactive))
@@ -4285,12 +4308,12 @@ rm -f ${ATTACHMENT}
 
   (let ((buffer (generate-new-buffer (format "*term-%s-term*" name))))
     (with-current-buffer buffer
-        (term-mode)
-        (term-exec buffer "terminal" "/bin/bash" nil nil)
-        (insertf "%s" input-script)
-        (term-char-mode))
+      (term-mode)
+      (term-exec buffer "terminal" "/bin/bash" nil nil)
+      (insertf "%s" input-script)
+      (term-char-mode))
     (switch-to-buffer buffer)
-   buffer))
+    buffer))
 
 (defun host-info-to-login (host-or-ip &optional user)
   (concat (if user (concat user "@") "")
