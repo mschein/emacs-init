@@ -943,11 +943,21 @@ doesn't deal with paging yet."
     (with-shell-buffer default-directory (format "*aws-sh-%s-%s-sh-aws*" profile region) t
       (current-buffer))))
 
-(defun aws-list-profile-names-from-file (config-file)
+(defun aws-profile-load-entries (config-file)
   (cl-loop for entry in (ini-parse (slurp config-file))
            for (type name) = (string-split " " (car entry))
-           when (equal type "profile")
-               collect name))
+           collect (cons name
+                         (cons (cons "type" type)
+                               (rest entry)))))
+
+(defun aws-profile-list-names-from-file (config-file)
+  (assoc-keys (aws-profile-load-entries config-file)))
+
+(defun aws-profile-get-from-file (config-file profile-name)
+  (assoc1 profile-name (aws-profile-load-entries config-file)))
+
+(defun aws-profile-get-account-id-from-file (config-file profile-name)
+  (assoc1 "sso_account_id" (aws-profile-get-from-file config-file profile-name)))
 
 (cl-defun aws-configure-export-credentials (&key profile format)
   (apply #'aws-configure "export-credentials"
@@ -955,6 +965,67 @@ doesn't deal with paging yet."
                (list "--profile" profile))
            ,@(when format
                (list "--format" format)))))
+
+(defun aws-configure-write-credentials (profile)
+  (let ((credential-file (expand-file-name "~/.aws/credentials")))
+    (ini-write (list
+                (cons "default"
+                      (assoc1-to-assoc '(("aws_access_key_id" AccessKeyId)
+                                         ("aws_secret_access_key" SecretAccessKey)
+                                         ("aws_credential_expiration" Expiration))
+                                       (assoc1 :json (aws-configure-export-credentials :profile profile)))))
+               credential-file)
+    (chmod credential-file #o600 t)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Route53
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun aws-route53-list-hosted-zones ()
+  (assoc1 '(:json HostedZones) (aws-route53 "list-hosted-zones")))
+
+;; aws-route53-list-hosted-zones-cached
+(memoize-fn aws-route53-list-hosted-zones 600)
+
+(defun aws-route53-list-resources-record-sets (hosted-zone-id)
+  (assoc1 '(:json ResourceRecordSets) (aws-route53 "list-resource-record-sets" "--hosted-zone-id" hosted-zone-id)))
+
+;; aws-route53-list-resource-record-sets-cached
+(memoize-fn aws-route53-list-resources-record-sets 600)
+
+(defun aws-route53-list-all-records ()
+  (cl-loop for zone across (aws-route53-list-hosted-zones-cached)
+           collect (cons (assoc1 'Name zone)
+                         (aws-route53-list-resource-record-sets-cached (assoc1 'Id zone)))))
+
+;; aws-route53-list-all-records-cached
+(memoize-fn aws-route53-list-all-records 600)
+
+(defun aws-route53--get-resource-record (record)
+  (when (assoc-get 'ResourceRecords record)
+    (assoc1-traverse '(ResourceRecords 0 Value) record)))
+
+(defun aws-route53-list-all-records-names-only ()
+  (cl-loop for zone across (aws-route53-list-hosted-zones-cached)
+           collect (cons (assoc1 'Name zone)
+                         (cl-loop for record across (aws-route53-list-resource-record-sets-cached (assoc1 'Id zone))
+                                  collect (list (assoc1 'Name record)
+                                                (assoc1 'Type record)
+                                                (aws-route53--get-resource-record record))))))
+
+;;
+;; This is doable, but complex
+;;
+;; (defconst *reverse-dns-table* (ht))
+
+;; (defun aws-route53-list-ip-addresses ()
+
+;;   )
+
+;; (defun aws-route53-build-reverse-cache ())
+
+;; (defun aws-route53-reverse-dns (ip))
+
 
 ;; describe-container-instances can get you the ami id.
 
