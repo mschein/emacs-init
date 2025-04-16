@@ -875,6 +875,7 @@ that uses 'font-lock-warning-face'."
 
 ;; Emacs now supports colors :-)
 (add-hook 'shell-mode-hook 'ansi-color-for-comint-mode-on)
+
 ;; But it doesn't support less, so turn the pager off.
 (setenv "GIT_PAGER" "")
 
@@ -897,15 +898,6 @@ that uses 'font-lock-warning-face'."
 ;; (use-package company-lsp :commands company-lsp)
 ;; (use-package lsp-treemacs :commands lsp-treemacs-errors-list)
 ;; (use-package dap-mode)
-
-;; ;;
-;; ;; Turn on red highlighting for characters outside of the 80/100 char limit
-;; (defun font-lock-width-keyword (width)
-;;   "Return a font-lock style keyword for a string beyond width WIDTH
-;; that uses 'font-lock-warning-face'."
-;;   `((,(format "^%s\\(.+\\)" (make-string width ?.))
-;;      (1 font-lock-warning-face t))))
-
 
 (add-hook 'java-mode 'subword-mode)
 
