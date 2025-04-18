@@ -752,7 +752,6 @@ that uses 'font-lock-warning-face'."
 ;; Javascript Configuration
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(add-to-list 'load-path "~/emacs-init/javascript")
 (add-to-list 'auto-mode-alist '("\\.js\\'" . javascript-mode))
 (add-to-list 'auto-mode-alist '("\\.jsx\\'" . web-mode))
 (add-to-list 'auto-mode-alist '("\\.json\\'" . js-mode))
@@ -760,14 +759,14 @@ that uses 'font-lock-warning-face'."
 
 ;; (autoload 'javascript-mode "javascript" nil t)
 
-;; ;; flymake stuff is done later.
-;; (let ((js-basic-offset 2))
-;;   (setq js2-basic-offset js-basic-offset)
-;;   (setq-default web-mode-markup-indent-offset js-basic-offset)
-;;   (setq-default web-mode-css-indent-offset js-basic-offset)
-;;   (setq-default web-mode-code-indent-offset js-basic-offset)
-;;   (setq js-indent-level js-basic-offset)
-;;   (setq sqml-basic-offset js-basic-offset))
+;; flymake stuff is done later.
+(let ((js-basic-offset 2))
+  (setq js2-basic-offset js-basic-offset)
+  (setq-default web-mode-markup-indent-offset js-basic-offset)
+  (setq-default web-mode-css-indent-offset js-basic-offset)
+  (setq-default web-mode-code-indent-offset js-basic-offset)
+  (setq js-indent-level js-basic-offset)
+  (setq sqml-basic-offset js-basic-offset))
 
 ;; ;; Enable flymake
 ;; (require 'flymake)
@@ -1015,23 +1014,14 @@ that uses 'font-lock-warning-face'."
 
 ;; ;; from http://joost.zeekat.nl/2010/06/03/slime-hints-3-interactive-completions-and-smart-tabs/
 
-
-;; ;; Turn on auto completion.
-;; (require 'auto-complete-config)
-;; (add-to-list 'ac-dictionary-directories "~/emacs-init/contrib/ac-dict")
+;; Turn on auto completion.
+;; (require 'auto-complete-mode)
 ;; (ac-config-default)
+;; (global-auto-complete-mode t)
 ;; (ac-flyspell-workaround)
 
-
-;; ;; default to better frame titles
-;; (setq frame-title-format
-;;       (concat  "%b - emacs@" (system-name)))
-
-;; ;; default to unified diffs
-;; (setq diff-switches "-u")
-
-;; ;;; uncomment for CJK utf-8 support for non-Asian users
-;; ;; (require 'un-define)
+;; default to better frame titles
+(setq frame-title-format (concat  "%b - emacs@" (system-name)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Org mode customizations.
@@ -1051,7 +1041,6 @@ that uses 'font-lock-warning-face'."
 ;;
 ;; C-c C-o (open a thing at point)
 ;;
-
 (require 'org)
 (require 'ox-html)
 ;; recommended key bindings from the manual.
@@ -1333,33 +1322,6 @@ that uses 'font-lock-warning-face'."
 ;; ;; (require 'confluence)
 ;; ;; (add-to-list 'auto-mode-alist '("\\.wiki\\'" . confluence-mode))
 ;; ;; (put 'set-goal-column 'disabled nil)
-
-
-;; ;; Get Hy
-;; (add-to-list 'load-path "~/emacs-init/emacs-packages/hy-mode")
-;; (require 'hy-mode)
-;; (custom-set-variables
-;;  ;; custom-set-variables was added by Custom.
-;;  ;; If you edit it by hand, you could mess it up, so be careful.
-;;  ;; Your init file should contain only one such instance.
-;;  ;; If there is more than one, they won't work right.
-;;  '(custom-safe-themes
-;;    '("80d5a22931c15756b00fb258b80c93b8bc5096bb698dadfb6155ef3550e1c8fb" default))
-;;  '(dosbox-always-config '(nil))
-;;  '(dosbox-exec "/Applications/dosbox/dosbox.app/Contents/MacOS/DOSBox")
-;;  '(dosbox-games "/Users/mike/Documents/games/dos/")
-;;  '(dosbox-global-config "~/Library/Preferences/DOSBox 0.74-3-3 Preferences")
-;;  '(ignored-local-variable-values '((Base . 10) (Package . CL-USER) (Syntax . COMMON-LISP)))
-;;  '(package-selected-packages
-;;    '(org-magit magit transient terraform-mode company-lsp dracula-theme lsp-mode dap-mode lsp-java lsp-ui anaphora puppet-mode flymake-shellcheck flymake-python-pyflakes yapfify ryo-modal posframe flymake-diagnostic-at-point ini-mode ac-cider ac-emacs-eclim ac-html ac-slime company-jedi company-shell use-package hyperbole osx-browse osx-lib package pass password-store python-info svg ace-isearch ace-jump-mode closql smartparens yaml-mode s-buffer jinja2-mode daemons pipenv python-pytest magit-popup jira ldap-mode rdp sicp syslog-mode wget wolfram markdown-mode+ markdown-preview-mode macrostep dockerfile-mode auto-complete clojure-mode epl flycheck-perl6 flymake-go go-autocomplete go-guru go-mode go-playground go-snippets gotest json-mode let-alist perl6-mode pkg-info queue seq web-mode web-mode-edit-element which-key yasnippet google-this cider))
-;;  '(sly-complete-symbol-function 'sly-simple-completions))
-
-;; (custom-set-faces
-;;  ;; custom-set-faces was added by Custom.
-;;  ;; If you edit it by hand, you could mess it up, so be careful.
-;;  ;; Your init file should contain only one such instance.
-;;  ;; If there is more than one, they won't work right.
-;;  )
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Go Mode Settings  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
