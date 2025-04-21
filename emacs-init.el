@@ -364,6 +364,15 @@
 
 ;; clojure-snippets?
 
+;; sly mode
+(use-package sly :ensure (:wait t) :demand t)
+(use-package sly-asdf :ensure (:wait t) :demand t)
+(use-package sly-hello-world  :ensure (:wait t) :demand t)
+(use-package sly-macrostep  :ensure (:wait t) :demand t)
+(use-package sly-named-readtables :ensure (:wait t) :demand t)
+(use-package sly-overlay  :ensure (:wait t) :demand t)
+(use-package sly-quicklisp :ensure (:wait t) :demand t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emacs packages.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -380,8 +389,8 @@
   ;; Optional customizations
   :custom
   (corfu-cycle t)                   ;; Enable cycling for `corfu-next/previous'
-  ;; (corfu-quit-at-boundary nil)   ;; Never quit at completion boundary
-  ;; (corfu-quit-no-match nil)      ;; Never quit, even if there is no match
+  (corfu-quit-at-boundary t)   ;; Never quit at completion boundary
+  (corfu-quit-no-match t)      ;; Never quit, even if there is no match
   ;; (corfu-preview-current nil)    ;; Disable current candidate preview
   ;; (corfu-preselect 'prompt)      ;; Preselect the prompt
   ;; (corfu-on-exact-match nil)     ;; Configure handling of exact matches
@@ -395,7 +404,13 @@
   ;; be used globally (M-/).  See also the customization variable
   ;; `global-corfu-modes' to exclude certain modes.
   :init
-  (global-corfu-mode))
+  (setq tab-always-indent 'complete)
+  (global-corfu-mode)
+
+  (use-package dabbrev
+    ;; Swap M-/ and C-M-/
+    :bind (("M-/" . dabbrev-completion)
+           ("C-M-/" . dabbrev-expand))))
 
 ;; A few more useful configurations...
 (use-package emacs
@@ -1152,8 +1167,6 @@ that uses 'font-lock-warning-face'."
 ;;   (define-key slime-repl-mode-map
 ;;     (read-kbd-macro paredit-backward-delete-key) nil))
 ;; (add-hook 'slime-repl-mode-hook 'override-slime-repl-bindings-with-paredit)
-
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
