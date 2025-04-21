@@ -742,7 +742,7 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 
     (apply #'aws-s3api args)))
 
-(cl-defun aws-s3-get-object-contents (bukcet key &key etag)
+(cl-defun aws-s3-get-object-contents (bucket key &key etag)
   "Get the contents of an object from s3."
   (with-tempdir (:root-dir "/tmp")
     (let ((file "data-file"))
