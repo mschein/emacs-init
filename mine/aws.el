@@ -723,19 +723,53 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 (defun aws-list-account-aliases ()
   (aws-iam "list-account-aliases"))
 
+(defun aws-s3-head-object (bucket key)
+  (let ((-aws-return-json t))
+    (aws-s3api "head-object" "--bucket" bucket "--key" key)))
+
+(defun aws-s3-object-exists-p (bucket key)
+  (ignore-errors
+    (not (not (aws-s3-head-object bucket key)))))
+
 (cl-defun aws-s3-get-object (bucket key output-file &key etag)
-  (let ((args (list "aws" "s3api" "get-object" "--bucket" bucket "--key" key)))
+  "Get the contents of an object from s3, and store it in output-file."
+  (let ((-aws-return-json t)
+        (args (list "get-object" "--bucket" bucket "--key" key)))
+
     (when etag
       (append! args (list "--if-none-match" etag)))
     (append-atom! args output-file)
 
-    (when-let ((res (do-cmd args :stdout 'string :stderr 'string)))
-      (cons (cons :json (ignore-errors (json-read-from-string (assoc1 :stdout res))))
-            res))))
+    (apply #'aws-s3api args)))
+
+(cl-defun aws-s3-get-object-contents (bukcet key &key etag)
+  "Get the contents of an object from s3."
+  (with-tempdir (:root-dir "/tmp")
+    (let ((file "data-file"))
+      (aws-s3-get-object bucket key file :etag etag)
+      (slurp file))))
+
+(cl-defun aws-s3-put-object (bucket key file &key no-overwrite)
+  "Upload a file to s3."
+  (if (and no-overwrite (aws-s3-object-exists-p bucket key))
+      (error "Object %s exists in bucket %s" key bucket)
+    (aws-s3api "put-object"
+               "--bucket" bucket
+               "--key" key
+               "--body" file)))
+
+(cl-defun aws-s3-put-object-contents (bucket key data &key no-overwrite)
+  (with-tempdir (:root-dir "/tmp")
+    (let ((file "data-file"))
+      (barf data file)
+      (aws-s3-put-object bucket key file :no-overwrite no-overwrite))))
 
 (defun aws-s3-bucket-exists-p (bucket)
   (ignore-errors
     (do-cmd-succeeded-p (aws-s3api "head-bucket" "--bucket" bucket))))
+
+(defun aws-s3-delete-object (bucket key)
+  (aws-s3api "delete-object" "--bucket" bucket "--key" key))
 
 (defun aws-describe-service (service)
   (aws-ecs-describe-services (aws-find-service-cluster service) service))
