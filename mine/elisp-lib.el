@@ -3350,6 +3350,17 @@ in the keyring."
     (set-exec-path-to-bash-path)
     (message "In virtualenv %s" (getenv "VIRTUAL_ENV"))))
 
+(defun run-python-in-venv-dir (dir)
+  "Run the special emacs python interpreter inside the venv in this dir."
+  (interactive "Ddir: ")
+
+  (pushd dir
+    (let ((python-interpreter (path-join
+                               (assoc1 "VIRTUAL_ENV"
+                                       (find-venv-variables (git-project-root))) "bin/python")))
+      (message "Run python interpreter: %s" python-interpreter)
+      (run-python python-interpreter t))))
+
 (defun run-python-in-venv ()
   "Run the special emacs python interpreter inside a venv associated with the buffer."
   (interactive)
@@ -3357,12 +3368,7 @@ in the keyring."
   ;;
   ;; First, get to the root of the project, because that will make the imports nicer.
   ;;
-  (pushd (python-get-project-root)
-    (let ((python-interpreter (path-join
-                               (assoc1 "VIRTUAL_ENV"
-                                       (find-venv-variables (git-project-root))) "bin/python")))
-      (message "Run python interpreter: %s" python-interpreter)
-      (run-python python-interpreter t))))
+  (run-python-in-venv-dir (python-get-project-root)))
 
 
 (defun clear-virtualenv-emacs ()
