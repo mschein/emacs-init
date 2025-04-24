@@ -777,6 +777,16 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 (defun aws-ssm-delete-parameter (name)
   (aws-ssm "delete-parameter" "--name" name))
 
+(defun aws-ssm-get-parameter (name &key with-decryption)
+  (let ((-aws-return-json t))
+    (assoc1 'Parameter (apply #'aws-ssm
+                              `("get-parameter"
+                                "--name" ,name ,@(when with-decryption
+                                                   (list "--with-decryption")))))))
+
+(defun aws-ssm-get-parameter-value (name &key with-decryption)
+  (assoc1 'Value (aws-ssm-get-parameter name :with-decryption with-decryption)))
+
 (defun aws-lambda-exists (name)
   (do-cmd-succeeded-p (do-cmd (list "aws" "lambda" "get-function" "--function-name" name))))
 
