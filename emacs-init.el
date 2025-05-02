@@ -451,9 +451,6 @@
 (require 'elisp-lib)
 (require 'one-off-scripts)
 
-;; Run our custom slime code
-(require 'slime-lisp)
-
 ;; This is deprecated
 (require 'cl)
 
@@ -628,17 +625,11 @@ that uses 'font-lock-warning-face'."
 (global-set-key (kbd "C-/") 'hippie-expand)
 (global-set-key (kbd "M-/") 'dabbrev-expand)
 
-;;
-;; This might be the way to go.
-;;
-(setq hippie-expand-try-functions-list
-      (append hippie-expand-try-functions-list '(slime-complete-symbol)))
-
 ;; Fix this?
 (setq smart-tab-completion-functions-alist
       '((emacs-lisp-mode . lisp-complete-symbol)
         (text-mode . dabbrev-completion)
-        (slime-mode . slime-fuzzy-complete-symbol)))
+        ))
 
 
 ;; ;; pick a font.
@@ -944,7 +935,6 @@ that uses 'font-lock-warning-face'."
 
 (defalias 'cr 'comment-region)
 (defalias 'ucr 'uncomment-region)
-(defalias 'scc 'slime-connect-clj)
 (defalias 'shd 'shell-dir)
 (defalias 'sl 'sort-lines)
 (defalias 'ucr 'uncomment-region)
