@@ -1058,6 +1058,38 @@ doesn't deal with paging yet."
                                                 (assoc1 'Type record)
                                                 (aws-route53--get-resource-record record))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DynamoDB
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun aws-dynamodb-connect (table-name)
+  )
+
+(defmacro aws-with-dynamodb-table ()
+  )
+
+(defun aws-dynamodb-get-item (key)
+  )
+
+(defun aws-dynamodb-put-item (key value)
+  )
+
+(defun aws-dynamodb-delete-item (key)
+  )
+
+(defun aws-dynamodb-query-item (query)
+  )
+
+(defun aws-dynamodb-create-table (name spec)
+  )
+
+(defun aws-dynamodb-delete-table (name)
+  )
+
+(defun aws-dynamodb-list-tables ()
+  )
+
+
 ;;
 ;; This is doable, but complex
 ;;

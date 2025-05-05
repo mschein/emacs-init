@@ -663,6 +663,9 @@ This should be used to write find-x-at-point functions.
           thing
         (error "Unable to find valid %s.  Start: %d End: %d Len: %d" thing-name start end len)))))
 
+(defun find-url-at-point ()
+  (find-thing-at-point "[^A-Za-z0-9-._~:/?#@!$&'*+,;%]"))
+
 (cl-defun make-counter (&optional (start 0) (inc 1))
   "Create a stateful counter."
   (let ((amount start))
@@ -3883,6 +3886,13 @@ Be sure to url encode the parameters.
     (apply #'libxml-parse-html-region (point-min) (point-max)
            parse-args)))
 
+(defun web-request--alist-to-cookies (alist)
+  (string-join
+   (mapcar (fn ((key . value))
+             (format "%s=%s" key value))
+           alist)
+   "; "))
+
 (defun web-request--handle-auth (auth)
   (if (cl-search ":" auth)
       auth
@@ -3917,7 +3927,7 @@ rm -f ${ATTACHMENT}
 
 ")
 
-;; webrequest dynamic variables.
+;; web-request dynamic variables.
 (defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
 (defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
 (defvar +debug-request+ nil "Enter the debugger before the request is sent.")
@@ -3957,6 +3967,7 @@ rm -f ${ATTACHMENT}
                        insecure
                        user-agent
                        cookie-jar
+                       cookies
                        output-file
                        referer
                        retry
@@ -3994,6 +4005,7 @@ rm -f ${ATTACHMENT}
    `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
    `user-agent': Set the user agent string.
    `cookie-jar': A place to send and receive cookies.
+   `cookies': An alist of cookies to send.
    `output-file': Dump the output to this file instead of stdout.
    `referer': Set the referer header for the request.
    `retry': Number of times to attempt the command
@@ -4053,6 +4065,12 @@ rm -f ${ATTACHMENT}
     (assert (not (assoc-get "Authorization" headers-secret)))
     (push (cons "Authorization" (format "Bearer %s" bearer-auth))
           headers-secret))
+
+  ;; Is there a better way to do this?
+  (when cookies
+    (when-let (cookie-str (web-request--alist-to-cookies cookies))
+      (push (cons "Cookie" cookie-str)
+            headers-secret)))
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
