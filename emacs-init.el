@@ -1133,6 +1133,8 @@ that uses 'font-lock-warning-face'."
 
 (add-hook 'emacs-lisp-mode-hook #'flymake-mode)
 
+(when (which "sbcl")
+  (setq inferior-lisp-program "sbcl"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Common Lisp options

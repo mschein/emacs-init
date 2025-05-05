@@ -236,19 +236,6 @@ the setter work."
          (setq index (length str))))
     out))
 
-(cl-defmacro m-when-let ((name test) &rest body)
-  "Provides a (when) macro with a let binding.
-When-let binds a name to the result of the a test for use inside the BODY.
-
-So (m-when-let (res (+ 1 2 3))
-     (print res)
-     (- res 1))
-returns 5 and prints 6.  res is the name, and (+ 1 2 3) is the
-test.  If the test returned nil, then the body will not execute."
-  (declare (indent 2))
-  `(let ((,name ,test))
-     (when ,name ,@body)))
-
 ;; (unless (fboundp 'assert)
 ;;   (defalias 'assert #'cl-assert))
 
@@ -303,28 +290,30 @@ test.  If the test returned nil, then the body will not execute."
                  (reverse test-bindings)
                  :initial-value pos))))
 
-(defmacro when-let* (test-bindings &rest forms)
-  ;; Would it be better to do this with a regular loop, to get rid of the
-  ;; "car"
-  (declare (indent defun))
-  (car
-   (cl-reduce (fn (prev-bindings binding)
-                `((m-when-let ,binding
-                      ,@prev-bindings)))
-              (reverse test-bindings)
-              :initial-value forms)))
+(unless (fboundp 'when-let*)
+  (defmacro when-let* (test-bindings &rest forms)
+    ;; Would it be better to do this with a regular loop, to get rid of the
+    ;; "car"
+    (declare (indent defun))
+    (car
+     (cl-reduce (fn (prev-bindings binding)
+                  `((when-let ,binding
+                        ,@prev-bindings)))
+                (reverse test-bindings)
+                :initial-value forms))))
 
-(defmacro acond (&rest clauses)
-  "An anaphoric cond.  Each test binds its result to it
+(unless (fboundp 'acond)
+  (defmacro acond (&rest clauses)
+    "An anaphoric cond.  Each test binds its result to it
   for use in the corresponding clause."
-  (cl-labels ((process (clauses)
-                (when clauses
+    (cl-labels ((process (clauses)
+                  (when clauses
                     (destructuring-bind ((test &rest body) . rest) clauses
                       `(if-let (it ,test)
                            (progn
                              ,@body)
                          ,(process rest))))))
-    (process clauses)))
+      (process clauses))))
 
 (defun append-if (test list)
   (if-let (res test)
@@ -4567,5 +4556,17 @@ rm -f ${ATTACHMENT}
 
 (defun dump-defined-variables ()
   (message "Variables: %s" (list-all-defined-variables)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Common Lisp RPC with inferior lisp mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar +common-lisp-buffer+ "*inferior-lisp*")
+
+(defun clrpc-send (form)
+  (with-current-buffer +common-lisp-buffer+
+    (end-of-buffer)
+    (insert (print form))))
+
 
 (provide 'elisp-lib)
