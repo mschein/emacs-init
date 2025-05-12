@@ -2161,6 +2161,17 @@ Returns a list of alists."
   (with-overwrite-buffer-pp "+bookmarked-urls+"
     (list-bookmark-data)))
 
+(defmacro make-orgfile-bookmark (function-name file-path)
+  "Define an interactive `FUNCTION-NAME' that opens `FILE-PATH'"
+  (assert (not (and (boundp function-name) (fboundp function-name))))
+  (assert (stringp file-path))
+
+  `(defun ,function-name ()
+     ,(format "Open the `%s' file in org-mode." function-name)
+     (interactive)
+     (find-file ,(expand-file-name file-path))
+     (org-mode)))
+
 (defun replace-string-in-region (begin end new-string)
   "Given a region defined with begin and end, replace
    That region with the new-string"
