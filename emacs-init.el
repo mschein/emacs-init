@@ -598,6 +598,11 @@ that uses 'font-lock-warning-face'."
 ;; If we can't exec stuff from /usr/local/bin
 ;; (setf exec-path (append exec-path '("/usr/local/bin")))
 
+;;
+;; Make it so the ielm pretty printer works properly.
+;; it's funky now on version 30, this makes assoc lists print one cons per line.
+;;
+(setf pp-default-function 'pp-28)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Save Hook Stuff
