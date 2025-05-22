@@ -1180,8 +1180,8 @@ output is passed to the callback-fn."
             (kill-buffer-query-functions nil))
         (unless got-error
           ;; Don't delete the buffers if we got an error... maybe make this an option?
-          (when process-buffer
-            (kill-buffer process-buffer))
+          (when-let (pb (process-buffer proc))
+            (kill-buffer pb))
           (when stderr-buffer
             (kill-buffer stderr-buffer)))))))
 
