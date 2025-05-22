@@ -975,22 +975,27 @@ each character in the string `chars'."
               (setq stderr-string (slurp stderr-file))
               (delete-file stderr-file))
 
-            ;; Check for any errors, do we need to throw?
-            (when (and (not (equal resp 0))
-                       throw)
-              (error "Command %s %s failed, code: %s, msg: \'%s\'"
-                     program arguments resp (if stderr-string
-                                                (string-trim (s-truncate 1024 stderr-string))
-                                              "")))
-            ;; return the result
-            (let ((output '()))
-              (push (cons :code resp) output)
-              (when stdout-buffer
-                (with-current-buffer stdout-buffer
-                  (pushcons :stdout (buffer->string) output)))
-              (when stderr-string
-                (pushcons :stderr stderr-string output))
-              output))
+            (let ((stdout-string (if stdout-buffer
+                                   (with-current-buffer stdout-buffer
+                                     (buffer->string))
+                                   "")))
+
+              ;; Check for any errors, do we need to throw?
+              (when (and (not (equal resp 0))
+                         throw)
+                (error "Command %s %s failed, code: %s, msg: \'%s\'"
+                       program arguments resp
+                       (if-let (error-str (or (string-trim (s-truncate 1024 stderr-string))
+                                              (string-trim (s-truncate 1024 stdout-string))))
+                           error-str
+                         "")))
+
+              ;; return the result
+              (let ((output '()))
+                (push (cons :code resp) output)
+                (pushcons :stdout stdout-string output)
+                (pushcons :stderr stderr-string output)
+                output)))
         ;; Always cleanup the stdout buffer we created.
         ;; all cleanup code should go there.
         (when stdout-buffer
@@ -1098,8 +1103,7 @@ output is passed to the callback-fn."
     ;;
 
     (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output-%s" program (uuidgen-4))))
-          (stderr-buffer (when (equal 'string stderr)
-                           (generate-new-buffer (format "<cmd-stderr-buffer-%s-output-%s" program (uuidgen-4)))))
+          (stderr-buffer (generate-new-buffer (format "<cmd-stderr-buffer-%s-output-%s" program (uuidgen-4))))
           (do-cmd-id (next-do-cmd-id)))
 
       (with-current-buffer stdout-buffer
@@ -1143,29 +1147,41 @@ output is passed to the callback-fn."
                  (output))
 
             (setf got-error (and throw (not (equal 0 code))))
+
+            (message "Stdout buffer: %s  stderr-buffer: %s" (process-buffer proc) stderr-buffer)
+            (let ((process-buffer (process-buffer proc))
+                  (stdout-string (if (equal stdout 'string)
+                                     (or (buffer->string) "")
+                                   ""))
+                  (stderr-string  (with-current-buffer stderr-buffer
+                                    (buffer->string))))
             (when got-error
-              (error "-> FAILED! Async Command: %s %s" program (cmd-to-shell-string args)))
+              (error "-> FAILED! Async Command: %s %s.  Check buffers: %s and %s.  Error msg: %s"
+                     program (cmd-to-shell-string args)
+                     process-buffer stderr-buffer
+                     (if-let (error-str (or (string-trim (s-truncate 1024 stderr-string))
+                                            (string-trim (s-truncate 1024 stdout-string))))
+                           error-str
+                         "")))
 
-            (when (equal stdout 'string)
-              (pushcons :stdout (buffer->string) output))
-
-            (when (and (equal stderr 'string) stderr-buffer)
-              (pushcons :stderr (with-current-buffer stderr-buffer
-                                  (buffer->string))
-                        output))
+            (pushcons :stdout stdout-string output)
+            (pushcons :stderr (if (eql stderr 'string)
+                                  stderr-string
+                                "")
+                      output)
             (pushcons :code code output)
 
             (message "do-cmd-async[%s]: -> finished :(%s): %s %s" do-cmd-id code program (cmd-to-shell-string args))
             (when callback-fn
-              (funcall callback-fn output))))
+              (funcall callback-fn output)))))
       (let ((stderr-buffer (with-current-buffer (process-buffer proc)
                              stderr-buffer))
             ;; Setting this to nil eliminates the query.
             (kill-buffer-query-functions nil))
         (unless got-error
           ;; Don't delete the buffers if we got an error... maybe make this an option?
-          (when-let (pb (process-buffer proc))
-            (kill-buffer pb))
+          (when process-buffer
+            (kill-buffer process-buffer))
           (when stderr-buffer
             (kill-buffer stderr-buffer)))))))
 
@@ -2817,14 +2833,31 @@ If you have a remote branch, you need to merge, if you don't have remote changes
 rebase."
   (interactive)
   (let ((local-branch (git-current-branch)))
-    (assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
+    (cl-assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
     (run "git" "checkout" remote-branch)
     (run "git" "fetch" "-p" "origin")
     (run "git" "merge" (path-join "origin/" remote-branch))
     (run "git" "checkout" local-branch)
     (if (git-branch-tracks-remote-p)
         (run "git" "merge" remote-branch)
-      (run "git" "pull" "--rebase"))
+      (run "git" "pull" "--rebase" remote-branch local-branch))
+    (magit-status)))
+
+(cl-defun git-sync-branch-from-master ()
+  "Attempt to bring the current git branch in sync with origin/master.
+
+If you have a remote branch, you need to merge.  If you don't have remote changes
+you can rebase."
+  (interactive)
+
+  (let ((local-branch (git-current-branch)))
+    (cl-assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
+    (run "git" "fetch")
+    (if (git-branch-tracks-remote-p)
+        (progn
+          (run "git" "merge" "origin/master")
+          (run "git" "push"))
+      (run "git" "pull" "--rebase" "origin/master" local-branch))
     (magit-status)))
 
 (defun git-get-origin-info ()
@@ -3944,6 +3977,7 @@ rm -f ${ATTACHMENT}
 (defvar +debug-request+ nil "Enter the debugger before the request is sent.")
 (defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
 (defvar +proxy-auth+ nil "The auth to use with the proxy to use for making web requests.")
+(defvar +webrequest-keep-directory+ nil "Don't delete the temp directory web request uses.")
 
 (let ((web-request-async-counter (make-counter)))
   (defun next-web-request-id ()
@@ -4085,13 +4119,14 @@ rm -f ${ATTACHMENT}
 
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
-  (with-tempdir (:root-dir "/tmp")
+  (with-tempdir (:root-dir "/tmp" :leave-dir t)
     (let* ((cmd (list "curl" "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
            (proxy-auth (or proxy-auth +proxy-auth+))
            (web-request-id (next-web-request-id))
+           (web-temp-dir default-directory)
            ;;
            ;; I should probably clean this up...
            ;; consolidate quoting and how we create values,
@@ -4115,6 +4150,8 @@ rm -f ${ATTACHMENT}
                            input-file-path)))
            (final-url (url-build url params))
            (use-caching +webrequest-cache-urls+))
+
+      (message "Running in tempdir: %s" web-temp-dir)
 
       ;; Dump out the json to a file, if needed.
       (when json
@@ -4208,6 +4245,14 @@ rm -f ${ATTACHMENT}
                       (not (not callback-fn)))
                     (handle-response-fn (resp)
                       "Handle a `resp' response structure either from the url cache or from do-cmd/do-cmd-async"
+
+                      ;;
+                      ;; Cleanup the tempdir now that the requestion should be finished.
+                      ;;
+                      (when (and (file-exists-p web-temp-dir)
+                                 (not +webrequest-keep-directory+))
+                        (message "Deleting web temp directory: %s" web-temp-dir)
+                        (delete-directory web-temp-dir t))
 
                       ;; Try to share the cache updating code between sync and async mode
                       (when use-caching
@@ -4587,15 +4632,21 @@ rm -f ${ATTACHMENT}
   (message "Variables: %s" (list-all-defined-variables)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; General Inferior Mode Handling
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Common Lisp RPC with inferior lisp mode
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defvar +common-lisp-buffer+ "*inferior-lisp*")
 
 (defun clrpc-send (form)
-  (with-current-buffer +common-lisp-buffer+
-    (end-of-buffer)
-    (insert (print form))))
+  (let ((proc (inferior-lisp-proc)))
+    (comint-send-string proc (prin1-to-string form))
+    (comint-send-string proc "\n")))
+
+
 
 
 (provide 'elisp-lib)

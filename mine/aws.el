@@ -774,9 +774,6 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 (defun aws-describe-service (service)
   (aws-ecs-describe-services (aws-find-service-cluster service) service))
 
-(defun aws-ssm-delete-parameter (name)
-  (aws-ssm "delete-parameter" "--name" name))
-
 (cl-defun aws-ssm-get-parameter (name &key with-decryption)
   (let ((-aws-return-json t))
     (assoc1 'Parameter (apply #'aws-ssm
@@ -786,6 +783,35 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 
 (cl-defun aws-ssm-get-parameter-value (name &key with-decryption)
   (assoc1 'Value (aws-ssm-get-parameter name :with-decryption with-decryption)))
+
+(cl-defun aws-ssm-put-parameter (name value &key overwrite (type "String"))
+  (aws-ssm "put-parameter"
+           "--name" name
+           "--value" value
+           "--type" type
+           (if overwrite
+               "--overwrite"
+             "--no-overwrite")))
+
+(cl-defun aws-ssm-put-parameter-from-buffer (name value &key overwrite)
+  (let ((param (with-current-buffer buffer-name
+                 (buffer->string))))
+    (cl-assert (string-has-value-p param))
+
+    (aws-ssm-put-parameter name param :overwrite overwrite)))
+
+(cl-defun aws-ssm-put-parameter-from-file (name file-path &key overwrite)
+  (if (file-exists-p file-path)
+      (let ((param (slurp file-path)))
+        (cl-assert (string-has-value-p param))
+
+        (aws-ssm-put-parameter name param :overwrite overwrite))
+    (error "File %s does not exist" file-path)))
+
+(defun aws-ssm-delete-parameter (name &optional no-prompt)
+  (if (or no-prompt (y-or-n-p (format "Delete param %s?: "name)))
+      (aws-ssm "delete-parameter" "--name" name)
+    (message "Skipping parameter delete for param %s" name)))
 
 (defun aws-lambda-exists (name)
   (do-cmd-succeeded-p (do-cmd (list "aws" "lambda" "get-function" "--function-name" name))))
