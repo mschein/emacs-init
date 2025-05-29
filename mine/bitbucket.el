@@ -197,7 +197,7 @@
   ;;
   ;; search for a repo across all projects.
   ;;
-  (let ((+webrequest-cache-urls+ (* 60 60 24 1)))
+  (let ((*web-request-cache-urls* (* 60 60 24 1)))
     (let ((result
            (cl-loop for project in (bitbucket-list-project-names bb) do
                     (condition-case nil

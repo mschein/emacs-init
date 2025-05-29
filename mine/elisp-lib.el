@@ -3972,12 +3972,12 @@ rm -f ${ATTACHMENT}
 ")
 
 ;; web-request dynamic variables.
-(defvar +preserve-request+ nil "Turn the web-request into a script in addition to sending it.")
-(defvar +webrequest-cache-urls+ nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
-(defvar +debug-request+ nil "Enter the debugger before the request is sent.")
-(defvar +proxy-url+ nil "The url of the proxy to use for making web requests.")
-(defvar +proxy-auth+ nil "The auth to use with the proxy to use for making web requests.")
-(defvar +webrequest-keep-directory+ nil "Don't delete the temp directory web request uses.")
+(defvar *web-request-preserve-request* nil "Turn the web-request into a script in addition to sending it.")
+(defvar *web-request-cache-urls* nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
+(defvar *web-request-debug-request* nil "Enter the debugger before the request is sent.")
+(defvar *web-request-proxy-url* nil "The url of the proxy to use for making web requests.")
+(defvar *web-request-proxy-auth* nil "The auth to use with the proxy to use for making web requests.")
+(defvar *web-request-keep-directory* nil "Don't delete the temp directory web request uses.")
 
 (let ((web-request-async-counter (make-counter)))
   (defun next-web-request-id ()
@@ -4064,13 +4064,13 @@ rm -f ${ATTACHMENT}
    `proxy': Provide a url as an argument to --proxy.
 
    Dynamic Global Variables
-   `+preserve-request+': Instead of making the request, dump everything to a script to run for
+   `*web-request-preserve-request*': Instead of making the request, dump everything to a script to run for
                          testing.
-   `+debug-request+': Enter the debugger before sending the request.
-   `+webrequest-cache-urls+': Use the url cache to save lookup time.  Can be nil, :forever, or a timeout in sec.
-   `+proxy-url+': Provide the url as an argument to --proxy.  Can also be a function which will
+   `*web-request-debug-request*': Enter the debugger before sending the request.
+   `*web-request-cache-urls*': Use the url cache to save lookup time.  Can be nil, :forever, or a timeout in sec.
+   `*web-request-proxy-url*': Provide the url as an argument to --proxy.  Can also be a function which will
                   be called with the url as its argument.
-   `+proxy-auth+': Provide auth for a proxy, a la proxy user.  Can also be a function.
+   `*web-request-proxy-auth*': Provide auth for a proxy, a la proxy user.  Can also be a function.
 
    Returns:
    An alist with the following information:
@@ -4094,7 +4094,7 @@ rm -f ${ATTACHMENT}
       (assert (integerp timeout)))
 
   ;; I need to move the web-request stuff its own module
-  (when +webrequest-cache-urls+
+  (when *web-request-cache-urls*
     (require 'm-url-cache)
     (m-url-cache-init))
 
@@ -4124,7 +4124,7 @@ rm -f ${ATTACHMENT}
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
-           (proxy-auth (or proxy-auth +proxy-auth+))
+           (proxy-auth (or proxy-auth *web-request-proxy-auth*))
            (web-request-id (next-web-request-id))
            (web-temp-dir default-directory)
            ;;
@@ -4149,7 +4149,7 @@ rm -f ${ATTACHMENT}
                                  input-file-path)
                            input-file-path)))
            (final-url (url-build url params))
-           (use-caching +webrequest-cache-urls+))
+           (use-caching *web-request-cache-urls*))
 
       (message "Running in tempdir: %s" web-temp-dir)
 
@@ -4218,10 +4218,10 @@ rm -f ${ATTACHMENT}
         (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
         (append-option t (| list final-url ))
 
-        (let ((proxy-url (or proxy +proxy-url+)))
+        (let ((proxy-url (or proxy *web-request-proxy-url*)))
           (append-option proxy-url (| `("--proxy" ,proxy-url))))
 
-        (when +preserve-request+
+        (when *web-request-preserve-request*
           (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
             (message "web-req[%d]: Preserve request here: %s" web-request-id output-file)
 
@@ -4230,7 +4230,7 @@ rm -f ${ATTACHMENT}
                           (string-join cmd " "))
                   output-file)
             (chmod output-file #o700)))
-        (when +debug-request+
+        (when *web-request-debug-request*
           (debug))
 
         ;;
@@ -4250,7 +4250,7 @@ rm -f ${ATTACHMENT}
                       ;; Cleanup the tempdir now that the requestion should be finished.
                       ;;
                       (when (and (file-exists-p web-temp-dir)
-                                 (not +webrequest-keep-directory+))
+                                 (not *web-request-keep-directory*))
                         (message "Deleting web temp directory: %s" web-temp-dir)
                         (delete-directory web-temp-dir t))
 
