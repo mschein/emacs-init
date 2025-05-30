@@ -771,6 +771,15 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 (defun aws-s3-delete-object (bucket key)
   (aws-s3api "delete-object" "--bucket" bucket "--key" key))
 
+;; Add the prefix command
+(defun aws-s3-list-buckets ()
+  (let ((-aws-return-json t))
+    (assoc1 'Bucket (as-s3api "list-buckets"))))
+
+(defun aws-s3-ls ()
+  (cl-loop for bucket across (aws-s3-list-buckets)
+           collect (assoc1 'Name bucket)))
+
 (defun aws-describe-service (service)
   (aws-ecs-describe-services (aws-find-service-cluster service) service))
 
@@ -919,19 +928,32 @@ doesn't deal with paging yet."
         (ignore-errors
           (aws-sts-get-caller-identity)))))
 
+(defconst +aws-credentials-cached-file+ (expand-file-name "~/.aws-cred-time-keeper"))
+
+
 (defun aws-has-credentials-p ()
-  (let ((time-keeping-file (expand-file-name "~/.aws-cred-time-keeper"))
-        (credential-timeout (seconds-to-time (* 4 60))))
-    (let ((result (if (time-less-p (time-add (if (file-exists-p time-keeping-file)
-                                                 (get-file-modification-time time-keeping-file)
-                                               0)
-                                             credential-timeout)
-                                   (current-time))
-                      (aws-has-credentials-no-cache-p)
-                    t)))
-      (when result
-        (touch time-keeping-file))
-      result)))
+  (let ((credential-timeout (seconds-to-time (* 4 60))))
+    (when (file-exists-p +aws-credentials-cached-file+)
+      (or  (time-less-p (current-time)
+                        (time-add (get-file-modification-time time-keeping-file)
+                                  credential-timeout))
+           (aws-has-credentials-no-cache-p)))))
+
+(defun aws-load-credentials-cached (profile)
+  "Load aws credentials for `PROFILE', but we maintain a cache on the check.
+
+We can diversify the check, but the idea is to cache the credential
+check so switching profiles, setting up credentials, etc is faster.
+
+This could be converted to a more generic caching method, like memoize."
+  (unless (aws-has-credentials-p)
+    (aws-sso-login profile)
+    (barf profile +aws-credentials-cached-file+)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Elastic Search
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun aws-elasticsearch-list-domain-names ()
   (let ((-aws-return-json t))
@@ -948,7 +970,6 @@ doesn't deal with paging yet."
     (if-let (end-point (assoc-get 'Endpoint ds))
         end-point
       (assoc1 '(Endpoints vpc) ds))))
-
 
 (defun aws-elasticsearch-is-encrypted-p (domain-name)
   (not (eql :json-false
@@ -1004,8 +1025,7 @@ doesn't deal with paging yet."
            (,gregion ,region))
        (with-env-vars `(("AWS_PROFILE" . ,,gprofile)
                         ("AWS_DEFAULT_REGION" . ,,gregion))
-         (unless (aws-has-credentials-p)
-           (aws-sso-login ,gprofile))
+         (aws-load-credentials-cached ,gprofile))
          ,@body))))
 
 (defun aws--open-profile-shell (profile region)
@@ -1047,6 +1067,13 @@ doesn't deal with paging yet."
                                        (assoc1 :json (aws-configure-export-credentials :profile profile)))))
                credential-file)
     (chmod credential-file #o600 t)))
+
+(defun aws-configure-list ()
+  "Return a list of assocs containing information about your aws credentials."
+  (rest (csv-split-text (assoc1 :stdout (aws-configure "list"))
+                        :split-regex "\s\s+")))
+
+(defalias 'aws-where-are-my-credentials #'aws-configure-list)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Route53
