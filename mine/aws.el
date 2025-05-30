@@ -930,12 +930,11 @@ doesn't deal with paging yet."
 
 (defconst +aws-credentials-cached-file+ (expand-file-name "~/.aws-cred-time-keeper"))
 
-
 (defun aws-has-credentials-p ()
   (let ((credential-timeout (seconds-to-time (* 4 60))))
     (when (file-exists-p +aws-credentials-cached-file+)
       (or  (time-less-p (current-time)
-                        (time-add (get-file-modification-time time-keeping-file)
+                        (time-add (get-file-modification-time +aws-credentials-cached-file+)
                                   credential-timeout))
            (aws-has-credentials-no-cache-p)))))
 
