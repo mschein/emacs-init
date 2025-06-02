@@ -2311,7 +2311,6 @@ Returns a list of alists."
              (progn
                (make-directory ,dir-name t)
                (pushd ,dir-name
-
                  (let ((,gresult
                         (progn ,@body)))
                    (when ,gdelay-cleanup-sec
@@ -3806,9 +3805,58 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 ;; web-request functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun firefox-extract-cookies ()
-  (with-tempdir (:root-dir "/tmp")
-    ~/.mozilla/firefox/*/cookies.sqlite))
+
+(defconst +firefox-profile-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/Profiles"))
+(defconst +firefox-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/"))
+(defconst +firefox-profiles-ini+ (path-join +firefox-dir-osx+ "profiles.ini"))
+
+(defun firefox-get-default-profile-osx ()
+  (when-let (default-profile (first (filter (fn (entry)
+                                              (and (string-starts-with "Profile" (car entry))
+                                                   (equal "1" (assoc-get "Default" entry ""))))
+                                            (ini-load-file +firefox-profiles-ini+))))
+    (basename (assoc1 "Path" default-profile))))
+
+(defun firefox-extract-all-cookies (profile-name)
+  (let* ((cookie-db (sqlite-open (expand-file-name (path-join +firefox-profile-dir-osx+ profile-name "cookies.sqlite"))))
+         (param-list (cl-loop for column in '("host" "name" "value" "path"
+                                              "originAttributes" "expiry" "isSecure" "isHttpOnly")
+                              for i from 0
+                              collect (cons column i)))
+         (select-names (string-join (mapcar #'car param-list) ", ")))
+
+    (sqlite-select cookie-db (format "SELECT %s FROM moz_cookies" select-names) nil 'full)))
+
+(defun firefox-select-cookies (hosts &optional profile-name)
+  (let* ((profile-name (or profile-name
+                           (firefox-get-default-profile-osx)))
+         (cookie-db (sqlite-open (expand-file-name (path-join +firefox-profile-dir-osx+ profile-name "cookies.sqlite"))))
+         (param-list (cl-loop for column in '("name" "value")
+                              for i from 0
+                              collect (cons column i)))
+         (select-names (string-join (mapcar #'car param-list) ", ")))
+
+    (cl-loop for cookie in (sqlite-select cookie-db (format "SELECT %s FROM moz_cookies WHERE host in (%s)"
+                                                            select-names
+                                                            (string-join (repeat-elm (length hosts) "?") ", "))
+                                          hosts)
+             collect (cons (elt cookie (assoc1 "name" param-list))
+                           (elt cookie (assoc1 "value" param-list))))))
+
+(defun web-cookies--url-to-cookie-hosts (url)
+  (let ((parts (string-split "\\." (url-host (url-generic-parse-url url)))))
+    (mapcar (| string-join % ".")
+            (cl-loop for p = parts then (rest p)
+                     while (>= (length p) 2)
+                     collect (cons "" p)
+                     collect p))))
+
+(defun firefox-find-cookies-for-url (url)
+  (firefox-select-cookies
+   (web-cookies--url-to-cookie-hosts url)))
+
+(defun chrome-extract-cookies ()
+  )
 
 (defun url-encode-params (params)
   "Doc encode an alist into url parameters.  Nil implies a single param."
@@ -3893,7 +3941,6 @@ Be sure to url encode the parameters.
 
 (defun parse-http-header-block (curl-header-block)
   "Parse a response header block from curl\'s stderr"
-
   (let ((status-line)
         (headers)
         (found-real-status))
@@ -3917,10 +3964,11 @@ Be sure to url encode the parameters.
           ;; Assume that once we get through the redirects, the first status is
           ;; the start of something legit.
           ;;
-          (unless (http-code-is-redirect-p (assoc1 :status-code parsed-line))
-              (assert (not headers) t "You shouldn't have a status line after you start looking at headers")
-              (setf status-line parsed-line)
-              (setf found-real-status t))))))
+          (unless (or (http-code-is-informational-p (assoc1 :status-code parsed-line))
+                      (http-code-is-redirect-p (assoc1 :status-code parsed-line)))
+            (assert (not headers) t "You shouldn't have a status line after you start looking at headers")
+            (setf status-line parsed-line)
+            (setf found-real-status t))))))
     `((:status-line . ,status-line)
       (:headers . ,(coalesce-alist headers)))))
 
@@ -3944,17 +3992,23 @@ Be sure to url encode the parameters.
 
 (defconst *webrequest-http-error-msg-len* 256)
 
-(defun http-code-is-redirect-p (code)
-  "Return true of `code' represents an http redirect"
-  (<= 300 code 399))
-
 (defun http-classify-status-code (code)
   (cond
    ((< code 0) :unknown-error)
+   ((<= 100 code 199) :informational)
+   ((<= 200 code 299) :success)
    ((<= 300 code 399) :redirect)
    ((<= 400 code 499) :client-error)
    ((<= 500 code 599) :server-error)
-   (t :success)))
+   (t :unknown-error)))
+
+(defun http-code-is-redirect-p (code)
+  "Return true if `CODE' represents an http redirect"
+  (eql :redirect (http-classify-status-code code)))
+
+(defun http-code-is-informational-p (code)
+  "Return t if `CODE' represents an http redirect"
+  (eql :informational (http-classify-status-code code)))
 
 (defun content-type-html-p (header)
   (not (not (cl-search "text/html" (downcase header)))))
@@ -4013,6 +4067,7 @@ rm -f ${ATTACHMENT}
                        user-agent
                        cookie-jar
                        cookies
+                       use-firefox-cookies
                        output-file
                        referer
                        retry
@@ -4111,6 +4166,11 @@ rm -f ${ATTACHMENT}
     (push (cons "Authorization" (format "Bearer %s" bearer-auth))
           headers-secret))
 
+  (when use-firefox-cookies
+    (unless user-agent
+      (setf user-agent "Mozilla/5.0 (platform; rv:gecko-version) Gecko/gecko-trail Firefox/firefox-version"))
+    (setf cookies (concatenate 'list (firefox-find-cookies-for-url url) cookies)))
+
   ;; Is there a better way to do this?
   (when cookies
     (when-let (cookie-str (web-request--alist-to-cookies cookies))
@@ -4143,7 +4203,7 @@ rm -f ${ATTACHMENT}
                                                            (when proxy-auth
                                                              (list (format "proxy-user = %s" (quote-str (web-request--handle-auth proxy-auth)))))
                                                            (cl-loop for (name . value) in headers-secret
-                                                                    collect (format "Header = %s" (quote-str
+                                                                    collect (format "header = %s" (quote-str
                                                                                                    (concat name ": " value)))))
                                               "\n")
                                  input-file-path)
@@ -4645,8 +4705,5 @@ rm -f ${ATTACHMENT}
   (let ((proc (inferior-lisp-proc)))
     (comint-send-string proc (prin1-to-string form))
     (comint-send-string proc "\n")))
-
-
-
 
 (provide 'elisp-lib)
