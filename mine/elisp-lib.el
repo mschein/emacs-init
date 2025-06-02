@@ -4081,63 +4081,63 @@ rm -f ${ATTACHMENT}
   "Make a web request with curl.
 
    Params:
-   `url': The url to fetch
+   `URL': The url to fetch
 
    Optional Params:
-   `method': Which http operation/method to perform, (defaults to GET).
-   `params': An alist of url parameters.  A nil value means only send the key
-   `auth': Auth can be: a user name with no colon, which will trigger a prompt for
+   `METHOD': Which http operation/method to perform, (defaults to GET).
+   `PARAMS': An alist of url parameters.  A nil value means only send the key
+   `AUTH': Auth can be: a user name with no colon, which will trigger a prompt for
            a password, or a full curl auth string like \"user:password\".
-   `proxy-auth': Can be: a user name with no colon, which will trigger a prompt for
+   `PROXY-AUTH': Can be: a user name with no colon, which will trigger a prompt for
                  a password, or a full curl auth string like \"user:password\".
-   `bearer-auth': An api token string for use in the Authorization header as Bearer.
-   `token-auth': An api token string, for use in the Authorization header as Token.
-   `body': A string that will be sent as a data body to the server.  Uses --data-raw.
-   `json': An alist that will be converted to json and sent to the server.
-   `data': An alist that will be url-encoded and sent to the server in a request body.
-   `form': An alist that will be sent as a multi-part form body.
-   `headers': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
-   `content-type': A string, set the content-type header to this value.
-   `headers-secret': An alist of headers you don't want shown in the *messages* buffer.
-   `no-redirect': Don't follow redirects for this request.
-   `file': A file to upload to the server.
-   `timeout': A time in seconds to wait for the request to finish before giving up.
-   `insecure': Don't verify ssl certificates.  (only use if you know what you're doing.)
-   `user-agent': Set the user agent string.
-   `cookie-jar': A place to send and receive cookies.
-   `cookies': An alist of cookies to send.
-   `output-file': Dump the output to this file instead of stdout.
-   `referer': Set the referer header for the request.
-   `retry': Number of times to attempt the command
-   `retry-delay-sec': Time to wait betwey retries in seconds.
-   `throw': If `t' raise an error when something goes wrong, otherwise just return
+   `BEARER-AUTH': An api token string for use in the Authorization header as Bearer.
+   `TOKEN-AUTH': An api token string, for use in the Authorization header as Token.
+   `BODY': A string that will be sent as a data body to the server.  Uses --data-raw.
+   `JSON': An alist that will be converted to json and sent to the server.
+   `DATA': An alist that will be url-encoded and sent to the server in a request body.
+   `FORM': An alist that will be sent as a multi-part form body.
+   `HEADERS': An alist of headers to override any headers to send on the request.  See *man curl* for rules.
+   `CONTENT-TYPE': A string, set the content-type header to this value.
+   `HEADERS-SECRET': An alist of headers you don't want shown in the *messages* buffer.
+   `NO-REDIRECT': Don't follow redirects for this request.
+   `FILE': A file to upload to the server.
+   `TIMEOUT': A time in seconds to wait for the request to finish before giving up.
+   `INSECURE': Don't verify ssl certificates.  (only use if you know what you're doing.)
+   `USER-AGENT': Set the user agent string.
+   `COOKIE-JAR': A place to send and receive cookies.
+   `COOKIES': An alist of cookies to send.
+   `USE-FIREFOX-COOKIES': Try to read cookies from Firefox and send them with a request.
+   `OUTPUT-FILE': Dump the output to this file instead of stdout.
+   `REFERER': Set the referer header for the request.
+   `RETRY': Number of times to attempt the command
+   `RETRY-DELAY-SEC': Time to wait betwey retries in seconds.
+   `THROW': If `T' raise an error when something goes wrong, otherwise just return
             the error code.
-   `upload-file': The path to a file to upload to the target.
-   `map-fn': Apply the function to the data before handing back to the callback.
-   `async': Don't block, but also don't worry about calling a callback.
-   `callback-fn': Don't return anything, and call the callback-fn when the result returns.
-   `proxy': Provide a url as an argument to --proxy.
+   `UPLOAD-FILE': The path to a file to upload to the target.
+   `MAP-FN': Apply the function to the data before handing back to the callback.
+   `ASYNC': Don't block, but also don't worry about calling a callback.
+   `CALLBACK-FN': Don't return anything, and call the callback-fn when the result returns.
+   `PROXY': Provide a url as an argument to --proxy.
 
    Dynamic Global Variables
-   `*web-request-preserve-request*': Instead of making the request, dump everything to a script to run for
+   `*WEB-REQUEST-PRESERVE-REQUEST*': Instead of making the request, dump everything to a script to run for
                          testing.
-   `*web-request-debug-request*': Enter the debugger before sending the request.
-   `*web-request-cache-urls*': Use the url cache to save lookup time.  Can be nil, :forever, or a timeout in sec.
-   `*web-request-proxy-url*': Provide the url as an argument to --proxy.  Can also be a function which will
+   `*WEB-REQUEST-DEBUG-REQUEST*': Enter the debugger before sending the request.
+   `*WEB-REQUEST-CACHE-URLS*': Use the url cache to save lookup time.  Can be nil, :forever, or a timeout in sec.
+   `*WEB-REQUEST-PROXY-URL*': Provide the url as an argument to --proxy.  Can also be a function which will
                   be called with the url as its argument.
-   `*web-request-proxy-auth*': Provide auth for a proxy, a la proxy user.  Can also be a function.
+   `*WEB-REQUEST-PROXY-AUTH*': Provide auth for a proxy, a la proxy user.  Can also be a function.
 
    Returns:
    An alist with the following information:
-   `:resp': The unparse response text from the server.
-   `:code': The return code from calling curl. 0 is success.
-   `:http-code': The http code returned by the request, if available.
-   `:headers': An alist of the http headers.  Duplicated headers are coalesced into
+   `:RESP': The unparse response text from the server.
+   `:CODE': The return code from calling curl. 0 is success.
+   `:HTTP-CODE': The http code returned by the request, if available.
+   `:HEADERS': An alist of the http headers.  Duplicated headers are coalesced into
                list.
-   `:stderr': Anything curl returns on stderr.
-   `:json': An alist representing any JSON returned by the server.
-   `:html': The parsed version of an html page.
-   "
+   `:STDERR': Anything curl returns on stderr.
+   `:JSON': An alist representing any JSON returned by the server.
+   `:HTML': The parsed version of an html page."
 
   ;; Check the args
   (assert url)
