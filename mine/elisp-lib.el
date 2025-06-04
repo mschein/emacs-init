@@ -3747,9 +3747,12 @@ https://www.ietf.org/rfc/rfc2849.txt."
                     (let ((key (cl-first (string-find "${\\([^}]+\\)}" matched-var))))
                       (assert key)
                       (message "Substitute key %s" key)
-                      (assoc1 key vars))))
+                      (if-let (value (or (assoc-get key vars)
+                                         (assoc-get (intern key) vars)))
+                          value
+                        (error "Unable to find substitute for key %s" key)))))
     (cl-loop for (k . v) in vars
-             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9_]+}" #'sub-fn template t)))
+             do (setf template (replace-regexp-in-string "${[a-zA-Z0-9_:]+}" #'sub-fn template t)))
     template))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
