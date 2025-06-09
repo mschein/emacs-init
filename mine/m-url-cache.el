@@ -70,7 +70,7 @@
 
   (let ((purge-fn #'m-url-cache-purge))
     (unless (member purge-fn (m-url-cache--list-timer-functions))
-      (run-at-time "60min" (* 60 60) purge-fn))))
+      (run-at-time "120min" (* 2 60 60) purge-fn))))
 
 (defun m-url-cache-list ()
   (kv-keys m-url-cache-store-name))

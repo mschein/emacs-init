@@ -335,7 +335,7 @@ the setter work."
 
 
 ;; (defmacro printf (fmt &rest args)
-;;   (with-fmt print fmt args))
+;;   (with-fmt (print fmt) args))
 
 (defmacro if-test-val (test-fn val &rest forms)
   "run the first argument against val.  If val is true
@@ -847,7 +847,7 @@ each character in the string `chars'."
 ;; Emacs utils
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro with-fmt (fun str &rest args)
+(cl-defmacro with-fmt ((fun str) &rest args)
   (declare (indent defun))
   `(,fun (format ,str ,@args)))
 
@@ -1456,7 +1456,13 @@ Use this likely in leu of `buffer-string'."
   (shell-open-dir default-directory))
 
 (defmacro insertf (fmt &rest args)
-  `(with-fmt insert ,fmt ,@args))
+  `(with-fmt (insert ,fmt)
+     ,@args))
+
+(defmacro insertf-send (fmt &rest args)
+  `(progn
+     (insertf ,fmt ,@args)
+     (comint-send-input nil t)))
 
 (defun get-current-line ()
   "Return the line under the cursor, with properties."
@@ -1743,7 +1749,16 @@ Note that this includes start-dir itself."
   "Write a file to disk."
   (with-temp-buffer
     (insert str)
-    (write-region (point-min) (point-max) path append)))
+    (write-region nil nil path append)))
+
+(defun barf-binary (data path)
+  "Write a binary blob to disk."
+  (let ((coding-system-for-write 'no-conversion))
+    (with-temp-buffer
+      (toggle-enable-multibyte-characters -1)
+      (set-buffer-file-coding-system 'raw-text)
+      (insert data)
+      (write-region nil nil path))))
 
 (defun overwrite (str path)
   (assert (file-regular-p path))
@@ -2289,7 +2304,7 @@ Returns a list of alists."
              ,@body)
          (setf default-directory ,gold-dir)))))
 
-(cl-defmacro with-tempdir ((&key root-dir
+(cl-defmacro with-tempdir ((&key (root-dir "/tmp")
                                  leave-dir
                                  delay-cleanup-sec)
                         &rest body)
@@ -2320,6 +2335,8 @@ Returns a list of alists."
                       (file-exists-p ,dir-name))
              (delete-directory ,dir-name t))))))
 
+(cl-defun generate-temp-file-name (&key (root-dir "/tmp"))
+  (path-join root-dir (uuidgen-4)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Math Functions
@@ -3457,6 +3474,15 @@ in the keyring."
 (defun parse-yaml-file (path)
   (json-read-from-string (run-python-pipe path "import sys, json, yaml; print(json.dumps(yaml.load(sys.stdin, Loader=yaml.FullLoader)))")))
 
+(defun json-pretty-print-file (path)
+  (with-tempdir (:root-dir "/tmp")
+    (let ((temp-file "pretty-file.js"))
+      (do-cmd (list "python3" "-m" "json.tool")
+              :throw t
+              :input path
+              :stdout (list :file temp-file))
+      (rename-file temp-file path t))))
+
 (defun pip-install (&rest library-options)
   (apply #'run "pip" "install" library-options))
 
@@ -3646,8 +3672,10 @@ https://www.ietf.org/rfc/rfc2849.txt."
 ;; Docker Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun docker-list-processes ()
-  (csv-split-text (run-to-str "docker" "ps") :split-regex "[ \t][ \t]+"))
+(defun docker-list-processes (&optional all)
+  (csv-split-text (apply #'run-to-str "docker" "ps" `(,@(when all
+                                                          (list "-a"))))
+                  :split-regex "[ \t][ \t]+"))
 
 (defun docker-list-images ()
   (csv-split-text (run-to-str "docker" "images") :split-regex "[ \t][ \t]+"))
@@ -3660,6 +3688,20 @@ https://www.ietf.org/rfc/rfc2849.txt."
 (defun docker-list-container-ids ()
   (mapcar (| assoc1 "CONTAINER ID" %) (docker-list-processes)))
 
+(defun docker-find-container-name (name)
+  (filter (| equal name (assoc1 "NAMES" %))
+          (docker-list-processes)))
+
+(defun docker-find-started-container-name (name)
+  (filter (| equal name (assoc1 "PORTS" %))
+          (docker-list-processes t)))
+
+(defun docker-container-started-p (name)
+  (not (not (docker-find-started-container-name name))))
+
+(defun docker-container-running-p (name)
+  (not (not (docker-find-container-name name))))
+
 (defalias 'docker-ps #'docker-list-processes-pp)
 
 (defun docker-list-images-pp ()
@@ -3667,14 +3709,41 @@ https://www.ietf.org/rfc/rfc2849.txt."
   (with-overwrite-buffer-pp "+docker-images+"
     (docker-list-images)))
 
-(defun docker-run-image (image-id)
-  (with-shell-buffer "~" (format "*sh-docker-image-%s" image-id)
+(defun docker--arg-join (arg0name alist separator)
+  (string-join (mapcar (fn ((key . value))
+                         (format "%s %s%s%s" arg-name
+                                 (shell-quote-argument key)
+                                 separator
+                                 (shell-quote-argument value)))
+                       alist)
+
+               " "))
+
+(defun docker-volume-join (volumes-alist)
+  (docker--arg-join "--volume" volumes-alist ":"))
+
+(defun docker--env-vars-join (env-vars)
+  (docker--arg-join "--env" env-vars "="))
+
+(cl-defun docker-run-image (image-id &key name env-vars file-map)
+  "Run a docker image denoted by `IMAGE-ID'.
+
+Also support naming the image for future reference with `NAME'.
+
+`ENV-VARS': an alist of any environment variables you want set.
+`FILE-MAP': An alist of local -> image file mounts."
+  (with-shell-buffer "~" (format "*docker-container-%s-%s-docker*" image-id (or name ""))
     (insertf "# To install bash in Apline, do: apk add bash\n")
-    (insertf "docker run -it %s /bin/sh" image-id)
+    (insertf "docker run %s %s %s -it %s /bin/sh"
+             (when name
+               (format "--name %s" name))
+             (docker--env-vars-join env-vars)
+             (docker--volume-join file-map)
+             image-id)
     (comint-send-input nil t)))
 
 (defun docker-exec-to-container (container-id)
-  (with-shell-buffer "~" (format "*sh-docker-container-%s" container-id)
+  (with-shell-buffer "~" (format "*docker-container-%s-docker*" container-id)
     (insertf "# To install bash in Apline do: apk add bash\n")
     (insertf "# To isntall stuff in aws use yum\n")
     (comint-send-input nil t)
@@ -3709,7 +3778,16 @@ https://www.ietf.org/rfc/rfc2849.txt."
 
 
 (defun docker-image-prune ()
-  (interactive))
+  (interactive)
+  (run-async (list "docker" "image" "prune")))
+
+(defun docker-stop (container-id)
+  (run-async (list "docker" "stop" container-id)))
+
+(defun docker-stop-at-point ()
+  (interactive)
+
+  (docker-stop (find-thing-at-point "[^a-z0-9]")))
 
 ;  docker image prune
 ;;
@@ -3746,7 +3824,6 @@ https://www.ietf.org/rfc/rfc2849.txt."
                     ;;
                     (let ((key (cl-first (string-find "${\\([^}]+\\)}" matched-var))))
                       (assert key)
-                      (message "Substitute key %s" key)
                       (if-let (value (or (assoc-get key vars)
                                          (assoc-get (intern key) vars)))
                           value
@@ -3813,6 +3890,10 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 (defconst +firefox-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/"))
 (defconst +firefox-profiles-ini+ (path-join +firefox-dir-osx+ "profiles.ini"))
 
+(defconst +chrome-profile-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/Profiles"))
+(defconst +chrome-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/"))
+(defconst +chrome-profiles-ini+ (path-join +firefox-dir-osx+ "profiles.ini"))
+
 (defun firefox-get-default-profile-osx ()
   (when-let (default-profile (first (filter (fn (entry)
                                               (and (string-starts-with "Profile" (car entry))
@@ -3845,6 +3926,11 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
                                           hosts)
              collect (cons (elt cookie (assoc1 "name" param-list))
                            (elt cookie (assoc1 "value" param-list))))))
+
+(defun chrome-get-cookie-password-osx ()
+  (osx-security-get-cached-password "Chrome Safe Storage" "Chrome"))
+
+
 
 (defun web-cookies--url-to-cookie-hosts (url)
   (let ((parts (string-split "\\." (url-host (url-generic-parse-url url)))))
