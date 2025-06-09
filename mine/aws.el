@@ -774,7 +774,7 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 ;; Add the prefix command
 (defun aws-s3-list-buckets ()
   (let ((-aws-return-json t))
-    (assoc1 'Buckets (as-s3api "list-buckets"))))
+    (assoc1 'Buckets (aws-s3api "list-buckets"))))
 
 (defun aws-s3-ls ()
   (cl-loop for bucket across (aws-s3-list-buckets)
