@@ -3886,13 +3886,12 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconst +firefox-profile-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/Profiles"))
 (defconst +firefox-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/"))
+(defconst +firefox-profile-dir-osx+ (path-join +firefox-dir-osx+ "Profiles"))
 (defconst +firefox-profiles-ini+ (path-join +firefox-dir-osx+ "profiles.ini"))
 
-(defconst +chrome-profile-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/Profiles"))
 (defconst +chrome-dir-osx+ (expand-file-name "~/Library/Application Support/Firefox/"))
-(defconst +chrome-profiles-ini+ (path-join +firefox-dir-osx+ "profiles.ini"))
+(defconst +chrome-profile-dir-osx+ +chrome-dir-osx+)
 
 (defun firefox-get-default-profile-osx ()
   (when-let (default-profile (first (filter (fn (entry)
@@ -3927,6 +3926,10 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
              collect (cons (elt cookie (assoc1 "name" param-list))
                            (elt cookie (assoc1 "value" param-list))))))
 
+;; get chrome db version:
+;; version < 24 don't have the domain prefix
+;;
+
 (defun chrome-get-cookie-password-osx ()
   (osx-security-get-cached-password "Chrome Safe Storage" "Chrome"))
 
@@ -3945,18 +3948,19 @@ See: https://en.wikipedia.org/wiki/Reservoir_sampling
    (web-cookies--url-to-cookie-hosts url)))
 
 (defun chrome-extract-cookies ()
-  )
+  (let ((cookie-db (path-join +chrome-profile-dir-osx+ "Default" "Cookies")))
+    cookie-db
+  ))
 
 (defun url-encode-params (params)
   "Doc encode an alist into url parameters.  Nil implies a single param."
   (string-join
    (loop for (k . v) in params
-         collect (string-join (cons
-                               (url-hexify-string (format "%s" k))
-                               (when v
-                                 (cons (url-hexify-string (format "%s" v))
-                                       nil)))
-                               "="))
+         collect (format "%s=%s"
+                         (url-hexify-string (format "%s" k))
+                         (if v
+                             (url-hexify-string (format "%s" v))
+                           "")))
    "&"))
 
 (defun url-build (url params)
