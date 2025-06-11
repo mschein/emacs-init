@@ -4515,6 +4515,20 @@ rm -f ${ATTACHMENT}
                :throw t
                :auth auth))
 
+(cl-defun download-file (url &key (target-dir (expand-file-name "~/Downloads")) cb-fn name)
+  (let ((target-file (or name (url-basename url))))
+    (cl-assert (not (string-nil-or-empty-p target-file))
+               "Invalid target file")
+
+    (let ((output-file-path (path-join target-dir target-file)))
+      (web-request url
+                   :output-file output-file-path
+                   :throw t
+                   :async t)
+      (when cb-fn
+        (funcall cb-fn output-file-path))
+      output-file-path)))
+
 (defun normalize-dir-path (path)
   (concat (string-remove-suffix "/" (expand-file-name path)) "/"))
 
