@@ -4524,9 +4524,10 @@ rm -f ${ATTACHMENT}
       (web-request url
                    :output-file output-file-path
                    :throw t
-                   :async t)
-      (when cb-fn
-        (funcall cb-fn output-file-path))
+                   :callback-fn (lambda (resp)
+                                  (when cb-fn
+                                    (message "Downloaded file %s" output-file-path)
+                                    (funcall cb-fn output-file-path))))
       output-file-path)))
 
 (defun normalize-dir-path (path)
