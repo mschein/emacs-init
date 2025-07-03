@@ -1956,6 +1956,28 @@ Returns a list of alists."
 (defun ip-addr-to-list (ip-addr)
   (mapcar #'string-to-number (split-string ip-addr "\\.")))
 
+(defun osx-list-hal-plugins ()
+  (cl-loop for dir in (list "/Library/Audio/Plug-Ins/HAL/"
+                            (expand-file-name "~/Library/Audio/Plug-Ins")
+                            "/System/Library/Audio/Plug-Ins/HAL/")
+           when (file-exists-p dir)
+           append (list-directory-entries dir :full t)))
+
+(defun osx-list-bluetooth-info ()
+  (run-to-str "system_profiler" "SPBluetoothDataType"))
+
+(defconst +osx-coreaudio-program+ "com.apple.audio.coreaudiod")
+
+(defun osx-launchctl (cmd program)
+  (let ((default-directory "/sudo::"))
+    (run "launchctl" (symbol-name cmd) program)))
+
+(defun osx-stop-coreaudio ()
+  (osx-launchctl 'stop +osx-coreaudio-program+))
+
+
+;; sudo launchctl stop com.apple.audio.coreaudiod
+
 
 ;;
 ;; Work on these later.

@@ -11,6 +11,17 @@
 ;;
 ;; A guide: https://img.ly/blog/ultimate-guide-to-ffmpeg/
 ;;
+;;
+;; stuff to support:
+;;
+;; chop parts of a video
+;; turn parts of a video into a gif.
+;; convert video from one format to another
+;; get the audio from a video file.
+;;
+;; might want a way to pass around standard options
+;;  - like an options alist or something.
+;;
 
 (require 'elisp-lib)
 
@@ -19,15 +30,20 @@
 ;;
 
 (defun ffmpeg-binary-path ()
+  "Is ffmpeg available in our path?"
   (which "ffmpeg"))
 
-(defun ffmpeg-is-installed ()
+(defun ffmpeg-is-installed-p ()
+  "Is ffmpeg installed?"
   (not (not (ffmpeg-binary-path))))
 
-(assert (ffmpeg-is-installed) nil "Please install ffmpeg before using this module.
+(assert (ffmpeg-is-installed-p) nil "Please install ffmpeg before using this module.
    Try brew or another package manager.")
 
 (defun ffmpeg--clip-time-to-seconds (time)
+  "Convert a string `TIME' like 12:45 to seconds.
+
+So 12:45 -> 765."
   (cl-loop for num in (reverse (mapcar #'string-to-number
                                        (split-string time ":")))
            for operand = 1 then (* operand 60)
@@ -84,6 +100,38 @@
                         (delete-file video-file))
                       (message "Finished concat into %s" output-file))))))
 
+;;
+;; mkv -> mp4
+;;
+;;  ffmpeg -i input.mkv -codec copy output.mp4
+;;
+
+;; Add an optional end time instead of length
+(cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length overwrite-output)
+  "Get a slice from a video."
+  (let ((output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file)))
+        (seconds (+ seconds (or (* 60 minutes) 0))))
+    (when (and overwrite-output
+               (file-exists-p output-file))
+      (delete-file output-file t))
+
+    (do-cmd-async
+     (list "ffmpeg"
+           "-ss" (format "%s" seconds)
+           "-t"  (format "%s" length)
+           "-i" input-file
+           "-c" "copy"
+           output-file)
+     :callback-fn (lambda (&rest foo)
+                    (message "Finished processing %s" input-file))
+     :throw t)
+    output-file))
+
+(cl-defun ffmpeg-remove-segment (path &key start-time end-time)
+  )
+
+(cl-defun ffmpeg-remove-segments (path segment-lists)
+  )
 
 ;;
 
@@ -136,6 +184,11 @@
    ;; ffmpeg -i sample.avi -q:a 0 -map a sample.mp3
    )
 
+;;
+;; Audio to single image movie.
+;;
+;; ffmpeg -f image2 -loop 1 -i picture.png -i music.mp3 -c:v libx264 -tune stillimage -c:a copy -shortest movie.mp4
+;;
 (cl-defun ffmpeg-to-audio (input-file &optional output-file)
   (let ((audio-suffix ".aac"))
     (when output-file
@@ -152,59 +205,6 @@
              do (progn
                   (message "Process file %s" file)
                   (ffmpeg-to-audio file)))))
-;;
-;; Audio to single image movie.
-;;
-;; ffmpeg -f image2 -loop 1 -i picture.png -i music.mp3 -c:v libx264 -tune stillimage -c:a copy -shortest movie.mp4
-;;
-
-;;
-;; -filters
-;; -codecs
-;;
-
-
-;;
-;; stuff to support:
-;;
-;; chop parts of a video
-;; turn parts of a video into a gif.
-;; convert video from one format to another
-;; get the audio from a video file.
-;;
-;; might want a way to pass around standard options
-;;  - like an options alist or something.
-;;
-
-;;
-;; mkv -> mp4
-;;
-;;  ffmpeg -i input.mkv -codec copy output.mp4
-;;
-
-;; Add an optional end time instead of length
-(cl-defun ffmpeg-slice (input-file &key (minutes 0) seconds length overwrite-output)
-  "Get a slice from a video."
-  (let ((output-file (concat (file-name-sans-extension input-file) "-out." (file-name-extension input-file)))
-        (seconds (+ seconds (or (* 60 minutes) 0))))
-    (when (and overwrite-output
-               (file-exists-p output-file))
-      (delete-file output-file t))
-
-    (do-cmd-async
-     (list "ffmpeg"
-           "-ss" (format "%s" seconds)
-           "-t"  (format "%s" length)
-           "-i" input-file
-           "-c" "copy"
-           output-file)
-     :callback-fn (lambda (&rest foo)
-                    (message "Finished processing %s" input-file))
-     :throw t)
-    output-file))
-
-(cl-defun ffmpeg-remove-segment (path &key start end)
-  )
 
 (defun ffmpeg-get-movie-metadata (path)
   (run-to-json "ffprobe" "-v" "quiet" "-print_format" "json" "-show_format" path))
