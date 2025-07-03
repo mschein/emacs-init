@@ -666,11 +666,49 @@ This should be used to write find-x-at-point functions.
 (defun find-url-at-point ()
   (find-thing-at-point "[^A-Za-z0-9-._~:/?#@!$&'*+,;%]"))
 
+(defun find-number-at-point ()
+  (find-thing-at-point "[^0-9]"))
+
 (cl-defun make-counter (&optional (start 0) (inc 1))
   "Create a stateful counter."
   (let ((amount start))
     (fn ()
         (cl-incf amount inc))))
+
+(unless (fboundp 'curry)
+  (defun curry (fn &rest orig-args)
+    "Do a partial application of a function `FN'.
+
+Example: (funcall (curry #' 1 2 3 4) 5 6))"
+    (lambda (&rest rest-args)
+      (apply fn (append orig-args rest-args)))))
+
+(unless (fboundp 'curry*)
+  (cl-defmacro curry* ((fn &rest args))
+    "Use `curry' without modifying the function call."
+    `(curry (function ,fn) ,@args)))
+
+(unless (fboundp 'rcurry)
+  (defun rcurry (fn &rest orig-args)
+    "Do a partial application of a function `FN'.
+
+Example: (funcall (rcurry #'- 10) 5)) -> -5"
+    (lambda (&rest rest-args)
+      (apply fn (append rest-args orig-args)))))
+
+(unless (fboundp 'rcurry*)
+  (cl-defmacro rcurry* ((fn &rest args))
+    "Use `rcurry' without modifying the function call."
+    `(rcurry (function ,fn) ,@args)))
+
+(unless (fboundp 'compose)
+  (defun compose (&rest fns)
+    (let ((fns (reverse fns)))
+      (lambda (&rest args)
+        (cl-reduce (lambda (val f)
+                     (funcal f val))
+                   (rest fns)
+                   :inital-value (apply (first fns) args))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
@@ -743,6 +781,32 @@ each character in the string `chars'."
   "Quote a string, escaping '\" and \\"
   (concat "\"" (escape-string str "\"\'\\") "\""))
 
+(defun string-no-nil (value)
+  "If `VALUE' is nil, return empty string.
+
+This is to make working with some string processing code easier."
+  (if value value ""))
+
+(cl-defmacro string-when (test &body body)
+  "A `when' function that returns \"\" on nil"
+  (declare (indent defun))
+
+  `(string-no-nil (when ,test
+                    ,@body)))
+
+(cl-defmacro string-when-let (test &body body)
+  "A `when-let' function that returns \"\" on nil"
+  (declare (indent defun))
+
+  `(string-no-nil (when-let ,test
+                    ,@body)))
+
+(cl-defmacro string-when-let* (test &body body)
+  "A `when-let' function that returns \"\" on nil"
+  (declare (indent defun))
+
+  `(string-no-nil (when-let* ,test
+                    ,@body)))
 ;;
 ;; Not working just yet :p.
 ;;
@@ -897,7 +961,7 @@ each character in the string `chars'."
 ;; TODO(mls): is it useful to have an :input-string flag,
 ;;            to save having to create the file first?
 ;;
-(cl-defun do-cmd (cmd &key input stdout stderr throw ssh)
+(cl-defun do-cmd (cmd &key input stdout stderr throw ssh sudo)
   ;; Add an async function
   "Be a main entry point for running shell commands.
 
@@ -999,7 +1063,8 @@ each character in the string `chars'."
         ;; Always cleanup the stdout buffer we created.
         ;; all cleanup code should go there.
         (when stdout-buffer
-          (kill-buffer stdout-buffer))))))
+          (let ((kill-buffer-query-functions nil))
+            (kill-buffer stdout-buffer)))))))
 
 (defun do-cmd-succeeded-p (results)
   (= 0 (assoc1 :code results)))
@@ -1368,11 +1433,11 @@ Use this likely in leu of `buffer-string'."
 
     `(let* ((,old-buffer (current-buffer))
             (,new-buffer (generate-new-buffer ,name-prefix)))
-     (switch-to-buffer ,new-buffer)
-     (unwind-protect
-         (progn
-           ,@body)
-       (switch-to-buffer ,old-buffer)))))
+       (switch-to-buffer ,new-buffer)
+       (unwind-protect
+           (progn
+             ,@body)
+         (switch-to-buffer ,old-buffer)))))
 
 (defmacro with-overwrite-buffer (name &rest body)
   (declare (indent defun))
@@ -1389,7 +1454,8 @@ Use this likely in leu of `buffer-string'."
   `(with-overwrite-buffer ,name
      (lisp-mode)
      (insert (pp-to-string
-              ,@body))))
+              (progn
+                ,@body)))))
 
 ;; (defun shell-open-with-command (dir cmd &optional name)
 ;;   "Open a new shell buffer and run a command in it."
@@ -2864,7 +2930,7 @@ end tell
                                           (basename current-branch-ref))))
       (not (not (string-ends-with potential-remote-branch-name upstream))))))
 
-(cl-defun git-sync-branch (&optional (remote-branch "master"))
+(cl-defun git-sync-branch (&optional (remote-branch "origin/master"))
   "Attempt to bring the current git branch up to date.
 
 If you have a remote branch, you need to merge, if you don't have remote changes, you can
@@ -2874,11 +2940,12 @@ rebase."
     (cl-assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
     (run "git" "checkout" remote-branch)
     (run "git" "fetch" "-p" "origin")
-    (run "git" "merge" (path-join "origin/" remote-branch))
+    (run "git" "merge" remote-branch)
     (run "git" "checkout" local-branch)
     (if (git-branch-tracks-remote-p)
         (run "git" "merge" remote-branch)
-      (run "git" "pull" "--rebase" remote-branch local-branch))
+      (cl-destructuring-bind (origin branch)
+          (string-find "^\\([^/]+\\)/\\(.+\\)$" remote-branch)))
     (magit-status)))
 
 (cl-defun git-sync-branch-from-master ()
@@ -2892,9 +2959,7 @@ you can rebase."
     (cl-assert (not (string-ends-with "master" local-branch)) nil "Don't run this command on master.")
     (run "git" "fetch")
     (if (git-branch-tracks-remote-p)
-        (progn
-          (run "git" "merge" "origin/master")
-          (run "git" "push"))
+        (run "git" "merge" "origin/master")
       (run "git" "pull" "--rebase" "origin/master" local-branch))
     (magit-status)))
 
