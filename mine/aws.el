@@ -742,6 +742,13 @@ See: https://docs.aws.amazon.com/cli/latest/reference/ec2/run-instances.html
 
     (apply #'aws-s3api args)))
 
+(defun aws-s3-cp (src dest)
+  (aws-s3 "cp" src dest))
+
+(defun aws-s3-download-s3-path (s3-path output-path)
+  (aws-s3-cp s3-path output-path)
+  output-path)
+
 (cl-defun aws-s3-get-object-contents (bucket key &key etag)
   "Get the contents of an object from s3."
   (with-tempdir (:root-dir "/tmp")
