@@ -3783,6 +3783,9 @@ https://www.ietf.org/rfc/rfc2849.txt."
   (filter (| equal name (assoc1 "PORTS" %))
           (docker-list-processes t)))
 
+(defun docker-start-container (container)
+  (run "docker" "start" container))
+
 (defun docker-container-started-p (name)
   (not (not (docker-find-started-container-name name))))
 
