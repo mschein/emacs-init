@@ -2146,7 +2146,7 @@ Returns a list of alists."
        (error "unable to parse arglist"))))
 
 (defun set-default-directory (dir)
-  (interactive "sdir: ")
+  (interactive "fdir: ")
   (setq default-directory dir))
 
 (defun jump-to-abbrev (handler abbrev table)
