@@ -362,6 +362,9 @@
 (use-package flymake-easy :ensure (:wait t) :demand t)
 (use-package yapfify :ensure (:wait t) :demand t)
 
+;; for talking to common lisp
+(use-package glue :ensure (:wait t) :demand t)
+
 ;; clojure-snippets?
 
 ;; sly mode
@@ -1184,6 +1187,24 @@ that uses 'font-lock-warning-face'."
 (yapf-mode -1)
 (add-hook 'python-mode-hook #'yapf-mode)
 (add-hook 'python-mode-hook #'subword-mode)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Sly Mode setup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Add the sly stepper.
+;;
+;; If this is not available, it can be cloned from:
+;; https://github.com/joaotavora/sly-stepper
+;;
+;; mkdir -p contrib
+;; cd contrib
+;; git clone https://github.com/joaotavora/sly-stepper.git
+;;
+(let ((sly-stepper-path (expand-file-name "~/emacs-init/contrib/sly-stepper")))
+  (when (file-directory-p sly-stepper-path)
+    (add-to-list 'load-path sly-stepper-path)
+    (require 'sly-stepper-autoloads)))
 
 
 ;; ;;

@@ -4721,11 +4721,8 @@ rm -f ${ATTACHMENT}
           (lookup)))))
 
 (defmacro memoize-fn (func &optional timeout-sec name)
-  (let ((memoized-fn (gensym)))
-    ;; Only use ,timeout-sec once!
-    `(let ((,memoized-fn (memoize #',func ,timeout-sec)))
-       (defun ,(or name (symbol-rename func (| concat % "-cached"))) (&rest args)
-         (apply ,memoized-fn args)))))
+  `(defalias ',(or name (symbol-rename func (| concat % "-cached")))
+     (memoize #',func ,timeout-sec)))
 
 ;; TODO: Work on this.
 ;; It would be nice if it filled in the file names with
