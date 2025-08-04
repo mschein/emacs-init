@@ -997,83 +997,82 @@ This is to make working with some string processing code easier."
   "
   ;; TODO: Consider switching to with-tempdir, and using
   ;; it to cleanup the stderr file, and generate/cleanup the input file.
-  (pushd (expand-file-name "~")
-    (let* ((program (cl-first cmd))
-           (arguments (cdr cmd))
-           (stdout-buffer (when (equal stdout 'string)
-                            (generate-new-buffer "*do-cmd-stdout*")))
-           ;; We always save stderr.
-           (stderr-file (make-temp-file "do-cmd-stderr"))
-           (stdout (if stdout-buffer t stdout))
-           (stderr (if stderr-file stderr-file stderr))
+  (let* ((program (cl-first cmd))
+         (arguments (cdr cmd))
+         (stdout-buffer (when (equal stdout 'string)
+                          (generate-new-buffer "*do-cmd-stdout*")))
+         ;; We always save stderr.
+         (stderr-file (make-temp-file "do-cmd-stderr"))
+         (stdout (if stdout-buffer t stdout))
+         (stderr (if stderr-file stderr-file stderr))
 
-           ;; Add a section to remap stderr/stdout
-           (stderr (cl-case stderr
-                     (stdout t)
-                     (current-buffer t)
-                     (otherwise stderr)))
-           (stdout (cl-case stdout
-                     (current-buffer t)
-                     (otherwise stdout)))
-           (resp)
-           (stderr-string))
+         ;; Add a section to remap stderr/stdout
+         (stderr (cl-case stderr
+                   (stdout t)
+                   (current-buffer t)
+                   (otherwise stderr)))
+         (stdout (cl-case stdout
+                   (current-buffer t)
+                   (otherwise stdout)))
+         (resp)
+         (stderr-string))
 
-      (cl-assert (<= (length (filter #'identity (list ssh sudo)))
-                     1))
+    (cl-assert (<= (length (filter #'identity (list ssh sudo)))
+                   1))
 
-      ;; Deal with ssh commands
-      (when ssh
-        (setf program "ssh")
-        (setf arguments (append (list ssh "-c" cmd))))
+    ;; Deal with ssh commands
+    (when ssh
+      (setf program "ssh")
+      (setf arguments (append (list ssh "-c" cmd))))
 
-      (when sudo
-        ;; (setf input (read-user-password "sudo-password: " "user-password"))
-        (setf program "sudo")
-        (setf arguments (append (list "-n" "-A") cmd)))
+    (when sudo
+      ;; (setf input (read-user-password "sudo-password: " "user-password"))
+      (setf program "sudo")
+      (setf arguments (append (list "-n" "-A") cmd)))
 
-      (cl-flet ((my-call-process ()
-                  (message "cmd: %s %s" program (cmd-to-shell-string arguments))
-                  (setf resp (apply #'call-process program input (list stdout stderr) nil arguments))))
-        ;; Use unwind protect here, so we always cleanup the stdout buffer.
-        (unwind-protect
-            (progn
-              ;; Do the execution.
-              (if stdout-buffer
-                  (with-current-buffer stdout-buffer
-                    (my-call-process))
-                (my-call-process))
+    (cl-flet ((my-call-process ()
+                (message "cmd: %s %s" program (cmd-to-shell-string arguments))
+                (setf resp (apply #'call-process program input (list stdout stderr) nil arguments))))
+      ;; Use unwind protect here, so we always cleanup the stdout buffer.
+      (unwind-protect
+          (progn
+            ;; Do the execution.
+            (if stdout-buffer
+                (with-current-buffer stdout-buffer
+                  (my-call-process))
+              (my-call-process))
 
-              ;; Handle stderr output.
-              (when (and stderr-file (file-exists-p stderr-file))
-                (setq stderr-string (slurp stderr-file))
-                (delete-file stderr-file))
+            ;; Handle stderr output.
+            (when (and stderr-file (file-exists-p stderr-file))
+              (setq stderr-string (slurp stderr-file))
+              (delete-file stderr-file))
 
-              (let ((stdout-string (if stdout-buffer
-                                       (with-current-buffer stdout-buffer
-                                         (buffer->string))
-                                     "")))
+            (let ((stdout-string (if stdout-buffer
+                                     (with-current-buffer stdout-buffer
+                                       (buffer->string))
+                                   "")))
 
-                ;; Check for any errors, do we need to throw?
-                (when (and (not (equal resp 0))
-                           throw)
-                  (error "Command %s %s failed, code: %s, msg: \'%s\'"
-                         program arguments resp
-                         (if-let (error-str (or (string-trim (s-truncate 1024 stderr-string))
-                                                (string-trim (s-truncate 1024 stdout-string))))
-                             error-str
-                           "")))
+              ;; Check for any errors, do we need to throw?
+              (when (and (not (equal resp 0))
+                         throw)
+                (error "Command %s %s failed, code: %s, msg: \'%s\'"
+                       program arguments resp
+                       (if-let (error-str (or (string-trim (s-truncate 1024 stderr-string))
+                                              (string-trim (s-truncate 1024 stdout-string))))
+                           error-str
+                         "")))
 
-                ;; return the result
-                (let ((output '()))
-                  (push (cons :code resp) output)
-                  (pushcons :stdout stdout-string output)
-                  (pushcons :stderr stderr-string output)
-                  output)))
-          ;; Always cleanup the stdout buffer we created.
-          ;; all cleanup code should go there.
-          (when stdout-buffer
-            (let ((kill-buffer-query-functions nil))
-              (kill-buffer stdout-buffer))))))))
+              ;; return the result
+              (let ((output '()))
+                (push (cons :code resp) output)
+                (pushcons :stdout stdout-string output)
+                (pushcons :stderr stderr-string output)
+                output)))
+        ;; Always cleanup the stdout buffer we created.
+        ;; all cleanup code should go there.
+        (when stdout-buffer
+          (let ((kill-buffer-query-functions nil))
+            (kill-buffer stdout-buffer)))))))
 
 (defun do-cmd-succeeded-p (results)
   (= 0 (assoc1 :code results)))
@@ -1164,55 +1163,53 @@ output: (list
          (:stderr . \"string\")) ; if any
 
 output is passed to the callback-fn."
+  (let* ((program (cl-first cmd))
+         (args (rest cmd)))
+    ;;
+    ;; make a buffer.
+    ;;
+    ;; save local variables:
+    ;; 1. stdout options
+    ;; 2. stderr options
+    ;; 3. throw
+    ;;
 
-  (pushd (expand-file-name "~")
-    (let* ((program (cl-first cmd))
-           (args (rest cmd)))
-      ;;
-      ;; make a buffer.
-      ;;
-      ;; save local variables:
-      ;; 1. stdout options
-      ;; 2. stderr options
-      ;; 3. throw
-      ;;
+    (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output-%s" program (uuidgen-4))))
+          (stderr-buffer (generate-new-buffer (format "<cmd-stderr-buffer-%s-output-%s" program (uuidgen-4))))
+          (do-cmd-id (next-do-cmd-id)))
 
-      (let ((stdout-buffer (generate-new-buffer (format "<cmd-buffer-%s-output-%s" program (uuidgen-4))))
-            (stderr-buffer (generate-new-buffer (format "<cmd-stderr-buffer-%s-output-%s" program (uuidgen-4))))
-            (do-cmd-id (next-do-cmd-id)))
+      (with-current-buffer stdout-buffer
+        (set (make-local-variable 'args) args)
+        (set (make-local-variable 'stdout) stdout)
+        (set (make-local-variable 'stderr) stderr)
+        (set (make-local-variable 'stderr-buffer) stderr-buffer)
+        (set (make-local-variable 'throw) throw)
+        (set (make-local-variable 'program) program)
+        (set (make-local-variable 'callback-fn) callback-fn)
+        (set (make-local-variable 'do-cmd-id) do-cmd-id)
 
-        (with-current-buffer stdout-buffer
-          (set (make-local-variable 'args) args)
-          (set (make-local-variable 'stdout) stdout)
-          (set (make-local-variable 'stderr) stderr)
-          (set (make-local-variable 'stderr-buffer) stderr-buffer)
-          (set (make-local-variable 'throw) throw)
-          (set (make-local-variable 'program) program)
-          (set (make-local-variable 'callback-fn) callback-fn)
-          (set (make-local-variable 'do-cmd-id) do-cmd-id)
+        ;;
+        ;; I don't know that I need to set both buffer local and the global default diretory
+        ;; I'm possibly being overly paranoid.
+        ;;
+        (let ((default-directory (or cwd default-directory)))
+          (setq-local default-directory default-directory)
 
-          ;;
-          ;; I don't know that I need to set both buffer local and the global default diretory
-          ;; I'm possibly being overly paranoid.
-          ;;
-          (let ((default-directory (or cwd default-directory)))
-            (setq-local default-directory default-directory)
+          (message "do-cmd-async[%d]: %s %s in %s -> " do-cmd-id program
+                   (cmd-to-shell-string args) default-directory)
 
-            (message "do-cmd-async[%d]: %s %s in %s -> " do-cmd-id program
-                     (cmd-to-shell-string args) default-directory)
+          (let ((proc (make-process :name program
+                                    :buffer stdout-buffer
+                                    :stderr stderr-buffer
+                                    :command (cons program args)
+                                    :connection-type 'pipe
+                                    :sentinel #'ignore)))
+            (when (or input input-str)
+              (process-send-string proc (or input-str (slurp input)))
+              (process-send-eof proc))
 
-            (let ((proc (make-process :name program
-                                      :buffer stdout-buffer
-                                      :stderr stderr-buffer
-                                      :command (cons program args)
-                                      :connection-type 'pipe
-                                      :sentinel #'ignore)))
-              (when (or input input-str)
-                (process-send-string proc (or input-str (slurp input)))
-                (process-send-eof proc))
-
-              (set-process-sentinel proc #'do-cmd-async-finish)
-              proc)))))))
+            (set-process-sentinel proc #'do-cmd-async-finish)
+            proc))))))
 
 (cl-defun do-cmd-async-finish (proc change-desc)
   (let ((got-error))
