@@ -1228,7 +1228,7 @@ This could be converted to a more generic caching method, like memoize."
           response)))
 
 (cl-defun aws-athena-query-to-s3 (catalog database query &key cb-fn)
-  (let ((execution-id (aws-athena-start-query-execution catalog databasae query)))
+  (let ((execution-id (aws-athena-start-query-execution catalog database query)))
     (if cb-fn
         (aws-athena--collect-result-in-s3-async execution-id cb-fn)
       (aws-athena--collect-result-in-s3 execution-id))))
