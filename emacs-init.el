@@ -1376,7 +1376,7 @@ that uses 'font-lock-warning-face'."
     (load local-only-code)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Trusted Content ;;;;;;;;;;;;;;;;;;;;;
-(setf trusted-content '("~/emacs-init/local" "~/emacs-init/mine"))
+(setf trusted-content '("~/emacs-init/local/" "~/emacs-init/mine/"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  JSON Parsing stuff  ;;;;;;;;;;;;;;;;;;;;
 (require 'json)
