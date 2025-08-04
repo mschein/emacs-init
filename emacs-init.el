@@ -1375,5 +1375,8 @@ that uses 'font-lock-warning-face'."
   (when (file-exists-p local-only-code)
     (load local-only-code)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  Trusted Content ;;;;;;;;;;;;;;;;;;;;;
+(setf trusted-content '("~/emacs-init/local" "~/emacs-init/mine"))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  JSON Parsing stuff  ;;;;;;;;;;;;;;;;;;;;
 (require 'json)
