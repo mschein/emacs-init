@@ -1118,6 +1118,161 @@ This could be converted to a more generic caching method, like memoize."
                                                 (aws-route53--get-resource-record record))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Athena
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defvar *aws-athena-default-catalog* nil)
+
+(defun aws-athena-list-data-catalogs ()
+  (let ((-aws-return-json t))
+    (assoc1 'DataCatalogsSummary
+            (aws-athena "list-data-catalogs"))))
+
+(defun aws-athena-list-databases (catalog)
+  (let ((-aws-return-json t))
+    (assoc1 'DatabaseList
+            (aws-athena "list-databases" "--catalog-name" catalog))))
+
+(defun aws-athena-list-database-names (catalog)
+  (mapcar (| assoc1 'Name %) (aws-athena-list-databases catalog)))
+
+(cl-defun aws-athena-list-table-metadata (catalog database &key simplified)
+  (let ((result (assoc1 '(:json TableMetadataList)
+                        (aws-athena "list-table-metadata"
+                                    "--catalog-name" catalog
+                                    "--database-name" databasename))))
+    (if simplified
+        (cl-loop for table across result
+                 collect (cons (assoc1 'Name table)
+                               (cl-loop for value across (assoc-get 'Columns table [])
+                                        collect (cons (assoc1 'Name value)
+                                                      (assoc1 'Type value)))))
+      result)))
+
+(cl-defun aws-athena-list-tables (catalog database)
+  (mapcar (| assoc1 'Name %)
+          (aws-athena-list-table-metadata catalog database)))
+(defun aws-athena-start-query-execution (catalog database query)
+  (let ((-aws-return-json t))
+    (assoc1 'QueryExecutionId
+            (aws-athena "start-query-execution"
+                        "--query-execution-context" (json-encode
+                                                     `(("Catalog" . ,catalog)
+                                                       ("Database" . ,database)))
+                        "--query-string" query))))
+
+(defun aws-athena-get-query-execution (query-execution-id)
+  (let ((result (aws-athena "get-query-execution"
+                            "--query-execution-id" query-execution-id)))
+    (assoc1 '(:json QueryExecution) result)))
+
+(defun aws-athena-query-status (query-response)
+  (assoc1 '(Status State) query-response))
+
+(defun aws-athena-query-succeeded-p (query-response)
+  (equal (aws-athena-query-status query-response) "SUCCEEDED"))
+
+(defun aws-athena-query-response-says-finished-p (query-response)
+  (when (member (aws-athena-query-status query-response) '("SUCCEEDED" "FAILED"))
+    query-response))
+
+(defun aws-athena-error-message (query-response)
+  (assoc1 '(Status AthenaError ErrorMessage) query-response))
+
+(defun aws-athena-query-finished-p (execution-id)
+  (when-let (response (aws-athena-query-response-says-finished-p
+                       (aws-athena-get-query-execution execution-id)))
+    (unless (aws-athena-query-succeeded-p response)
+      (error "Query failed: %s" (aws-athena-error-message response)))
+    response))
+
+;;
+;; See how much we can unify these.
+;; Do we need to pass the failures up to the callback?
+;;
+(defun aws-athena--collect-result-in-s3-async (execution-id cb-fn)
+  (message "Start async checking Athena query id %s" execution-id)
+
+  ;;
+  ;; We have to remember our AWS environment so we can reference
+  ;; it in the callback.
+  ;;
+  (let ((profile (getenv "AWS_PROFILE"))
+        (region (getenv "AWS_REGION")))
+    (cl-labels ((poll-for-results ()
+                  (message "Poll Athena query id %s" execution-id)
+                  (with-aws--profile (profile region)
+                    (if-let (response (aws-athena-query-finished-p execution-id))
+                        (progn
+                          (message "-> Finished Athena query %s" (with-output-to-string
+                                                                   (pprint response)))
+                          (funcall cb-fn
+                                   (assoc1 '(ResultConfiguration OutputLocation) response)
+                                   response))
+                      (run-at-time 5 nil #'poll-for-results)))))
+      (run-at-time 1 nil #'poll-for-results)))
+  nil)
+
+(defun aws-athena--collect-result-in-s3 (execution-id)
+  (message "Start checking athena query id %s" execution-id)
+
+  (when-let (response (cl-loop for response = (aws-athena-query-finished-p execution-id)
+                               when response
+                                 return response
+                               for i below 30
+                               do (let ((sleep-sec 3))
+                                    (message "No results yet, sleep for %s" sleep-sec)
+                                    (sleep-for sleep-sec))))
+    (message "-> Finished Athena query %s" (with-output-to-string
+                                             (pprint response)))
+    (list (assoc1 '(ResultConfiguration OutputLocation) response)
+          response)))
+
+(cl-defun aws-athena-query-to-s3 (catalog database query &key cb-fn)
+  (let ((execution-id (aws-athena-start-query-execution catalog databasae query)))
+    (if cb-fn
+        (aws-athena--collect-result-in-s3-async execution-id cb-fn)
+      (aws-athena--collect-result-in-s3 execution-id))))
+
+(defun aws-athena--clean-csv-file (path)
+  (cl-loop for row in (csv-split-text (slurp-path))
+           collect (cl-loop for (k . v) in row
+                            collect (cons (dequote-str k)
+                                          (dequote-str v)))))
+
+(cl-defun aws-athena-query (catalog database query &key output)
+  (pushd "/tmp"
+    (cl-destructuring-bind (&optional remote-s3-path response)
+        (apply #'aws-athena-query-to-s3 catalog database query
+               (when output
+                 (list :cb-fn (lambda (remote-s3-path result-info)
+                                (with-tempdir (:root-dir (expand-file-name "~/Downloads"))
+                                  (let ((s3-file (path-join default-directory "s3-file")))
+                                    (aws-s3-download-s3-path remote-s3-path s3-file)
+                                    (if (functionp output)
+                                        (funcall output (aws-athena--clean-csv-file s3-file))
+                                      (cl-destructuring-bind (type target) output
+                                        (ecase type
+                                          (:buffer
+                                           (with-overwrite-buffer-pp target
+                                             ;;
+                                             ;; Not sure if this is the way to do this,
+                                             ;; but the disk file will get deleted.
+                                             ;;
+                                             (aws-athena--clean-csv-file s3-file))
+                                           (switch-to-buffer target))
+                                          (:file
+                                           (rename-file s3-file target)))))))))))
+      ;; should this be a separate function?
+      (when (and remote-s3-path response)
+        (with-tempdir (:root-dir (expand-file-name "~/Downloads"))
+          (let ((s3-file "s3-file"))
+            (aws-s3-download-s3-path remote-s3-path s3-file)
+            (aws-athena--clean-csv-file s3-file)))))))
+
+(defun aws-athena-build-query-fn (catalog database)
+  (curry* (aws-athena-query catalog database)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; DynamoDB
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
