@@ -1234,7 +1234,7 @@ This could be converted to a more generic caching method, like memoize."
       (aws-athena--collect-result-in-s3 execution-id))))
 
 (defun aws-athena--clean-csv-file (path)
-  (cl-loop for row in (csv-split-text (slurp-path))
+  (cl-loop for row in (csv-split-text (slurp path))
            collect (cl-loop for (k . v) in row
                             collect (cons (dequote-str k)
                                           (dequote-str v)))))
