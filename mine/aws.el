@@ -1031,8 +1031,8 @@ This could be converted to a more generic caching method, like memoize."
            (,gregion ,region))
        (with-env-vars `(("AWS_PROFILE" . ,,gprofile)
                         ("AWS_DEFAULT_REGION" . ,,gregion))
-         (aws-load-credentials-cached ,gprofile))
-         ,@body)))
+         (aws-load-credentials-cached ,gprofile)
+         ,@body))))
 
 (defun aws--open-profile-shell (profile region)
   (with-aws--profile (profile region)
