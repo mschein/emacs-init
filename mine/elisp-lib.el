@@ -708,7 +708,7 @@ Example: (funcall (rcurry #'- 10) 5)) -> -5"
         (cl-reduce (lambda (val f)
                      (funcal f val))
                    (rest fns)
-                   :inital-value (apply (first fns) args))))))
+                   :initial-value (apply (first fns) args))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; String functions
