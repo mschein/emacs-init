@@ -706,7 +706,7 @@ Example: (funcall (rcurry #'- 10) 5)) -> -5"
     (let ((fns (reverse fns)))
       (lambda (&rest args)
         (cl-reduce (lambda (val f)
-                     (funcal f val))
+                     (funcall f val))
                    (rest fns)
                    :initial-value (apply (first fns) args))))))
 
