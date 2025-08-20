@@ -183,6 +183,14 @@ the setter work."
 ;; Make it so you can use assoc1 with setf.
 (gv-define-setter assoc1 (value &rest args) `(setcdr (--assoc1-common ,@args) ,value))
 
+(defun plist-get1 (plist key)
+  (if-let (value (plist-get plist key #'equal))
+      value
+    (error "Key \'%s\' not found in plist" key)))
+
+(gv-define-setter plist-get1 (value plist key)
+  `(plist-put ,plist ,key ,value #'equal))
+
 (defun identity (arg)
   arg)
 
@@ -368,11 +376,12 @@ the setter work."
   (car (last list)))
 
 ;; TODO(mls): Why not use subseq?
-(defun take (n seq)
-  "Take `n' from the start of `seq'.  Note that this
+(unless (fboundp 'take)
+  (defun take (n seq)
+    "Take `n' from the start of `seq'.  Note that this
   is not implemented efficiently, so only use when n is small."
-  (cl-loop for x below (min n (length seq))
-           collect (elt seq x)))
+    (cl-loop for x below (min n (length seq))
+             collect (elt seq x))))
 
 (defun drop (n seq)
   "Drop the first `n' elements from `seq'.
