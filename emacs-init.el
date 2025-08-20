@@ -345,6 +345,8 @@
 (use-package package-lint :ensure (:wait t) :demand t)
 (use-package cape :ensure (:wait t) :demand t)
 (use-package docker-compose-mode :ensure (:wait t) :demand t)
+(use-package csv :ensure (:wait t) :demand t)
+
 
 ;; Larger packages
 (use-package transient :ensure (:wait t) :demand t)
