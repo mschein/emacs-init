@@ -3732,6 +3732,12 @@ and dirty parsing of command output."
                          field-names
                          (--split-line line)))
               lines))))
+(unless (fboundp 'csv-parse-file)
+  (cl-defun csv-parse-file (path &optional (first-line-contains-keys t) (coding-system "utf-8"))
+    "Parse a csv file on disk and return it's contents as an alist."
+    (with-temp-buffer
+      (insert-file-contents path)
+      (csv-parse-buffer first-line-contains-keys nil coding-system))))
 
 ;; (defun assoc-transpose (alist)
 ;;   )
