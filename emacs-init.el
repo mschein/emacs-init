@@ -1208,6 +1208,12 @@ that uses 'font-lock-warning-face'."
     (add-to-list 'load-path sly-stepper-path)
     (require 'sly-stepper-autoloads)))
 
+;; don't forget:
+;; M-x sly-setup
+;; M-x sly-enable-contrib
+;;
+(require 'sly-named-readtables-autoloads)
+
 
 ;; ;;
 ;; ;; Info additions

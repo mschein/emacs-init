@@ -2056,6 +2056,83 @@ Returns a list of alists."
 (defun osx-stop-coreaudio ()
   (osx-launchctl 'stop +osx-coreaudio-program+))
 
+(defun osx-list-applications ()
+  (cl-labels ((recurser (dir)
+                (mapcan (fn (thing)
+                          (if (string-match-p ".app$" thing)
+                              (list thing)
+                            (recurser thing)))
+                        (list-directory-entries dir :dirs-only t :full t))))
+    (cl-concatenate 'list
+                    (recurser "/System/Applications/")
+                    (recurser "/Applications/")
+                    (recurser (expand-file-name "~/Applications/")))))
+
+;; Check ports on a server
+(defun osx-check-open-port (server-ip-or-host port)
+  (do-cmd-succeeded-p (do-cmd (list "nc" "-vz" server-ip-or-host (format "%s" port)))))
+
+(cl-defun osx-scan-port-range (server-ip-or-host &key (start-port "1") (end-port "1024") cb-fn)
+  (do-cmd-async (list "nc" "-vz" server-ip-or-host (format "%s-%s" start-port end-port))
+                :stderr 'string
+                :callback-fn (lambda (resp)
+                               (let ((results (mapcar (fn ((port status))
+                                                        (list (string-to-number port)
+                                                              (if (equal "succeeded!" status)
+                                                                  :open
+                                                                :closed)))
+                                                      (mapcar (fn (line)
+                                                                (string-find "port \\([0-9]+\\).*? \\(succeeded!\\|refused\\)" line))
+                                                              (string->list (assoc1 :stderr resp))))))
+                                 (if cb-fn
+                                     (funcall cb-fn results)
+                                   (message "Port results for %s: " server-ip-or-host (string-join results "\n")))))))
+
+(defun osx-list-open-ports (server-ip-or-host port)
+  (do-cmd-succeeded-p (do-cmd (list "nc" "-vz" server-ip-or-host (format "%s" port)))))
+
+;;
+(defun osx-xattr-cmd (path &optional args)
+  "Run the  xattr command.  Display and manipulate extended attributes"
+  (let* ((cmd `("xattr" ,@(when args
+                            (to-list args)) ,path)))
+    (apply #'run-to-str cmd)))
+
+(cl-defun osx-xattr-list (path &key return-values)
+  "List the xattr attributes."
+
+  (let ((results (string->list
+                  (if return-values
+                      (osx-xattr-cmd path "-l")
+                    (osx-xattr-cmd path)))))
+    (if return-values
+        (mapcar (| split-string % ":\s*") results)
+      results)))
+
+(defun osx-xattr-get-value (path key)
+  (string-trim-right (osx-xattr-cmd path (list "-p" key))))
+
+(defun osx-xattr-value-set-p (path key)
+  (ignore-errors (osx-xattr-get-value path key)))
+
+(defun osx-xattr-delete-value (path key)
+  "Use xatter to set an extended attribute on `path'"
+  (osx-xattr-cmd path (list "-d" key)))
+
+(defun osx-xattr-set-value (path key value)
+  (osx-xattr-cmd path (list "-w" key value)))
+
+;; xattr -d com.apple.quarantine /path/to/app.app
+
+(defun osx-app-is-quarantined (path)
+  (osx-xattr-value-set-p path "com.apple.quarantine"))
+
+(defun osx-allow-app-to-run (path)
+  "Use xatter to set an extended attribute on `path'"
+  (interactive (list (completing-read "Application: " (osx-list-applications) nil t)))
+
+  (when (y-or-n-p (format "Are you sure you want to make %s executable?: " path))
+      (osx-xattr-delete-value path "com.apple.quarantine")))
 
 ;; sudo launchctl stop com.apple.audio.coreaudiod
 
@@ -3710,6 +3787,7 @@ Algorithm:
 
 Note this is not all of csv, so it won't work on all files.  It's more for a quick
 and dirty parsing of command output."
+  (declare (obsolete nil "08-28-2025"))
   (cl-flet ((--split-line (line)
               (cond
                (split-regex (string-split split-regex line))
