@@ -476,7 +476,20 @@ Specify license
 (defconst *cl-package* ";;;; package.lisp
 
 (defpackage #:${name}
-  (:use #:cl #:mu))
+  (:use #:cl)
+
+  (:import-from #:mu
+                #:slurp
+                #:assoc1
+                #:string-case
+                #:ht-to-alist
+                #:ht-keys
+                #:ht-count
+                #:ht-dohash
+                #:if-let
+                #:when-let
+                #:assoc-get)
+)
 ")
 
 (defconst *cl-gitignore* "*.fasl

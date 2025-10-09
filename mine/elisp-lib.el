@@ -2128,11 +2128,15 @@ Returns a list of alists."
   (osx-xattr-value-set-p path "com.apple.quarantine"))
 
 (defun osx-allow-app-to-run (path)
-  "Use xatter to set an extended attribute on `path'"
+  "Use xatter to set an extended attribute on `path'
+
+Mark an app as being runnable.
+"
   (interactive (list (completing-read "Application: " (osx-list-applications) nil t)))
 
   (when (y-or-n-p (format "Are you sure you want to make %s executable?: " path))
       (osx-xattr-delete-value path "com.apple.quarantine")))
+
 
 ;; sudo launchctl stop com.apple.audio.coreaudiod
 
