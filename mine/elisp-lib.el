@@ -4432,7 +4432,7 @@ rm -f ${ATTACHMENT}
   ;; Check the args
   (assert url)
   (let ((bjff (mapcar (fn (elm) (if elm 1 0))
-                     (list body data json form file))))
+                      (list body data json form file))))
     (assert (<= (sum bjff) 1) nil
             (format "You must only chose one of :body, :data, :json, :file, or :form: %s" bjff)))
   (if timeout
@@ -4500,200 +4500,203 @@ rm -f ${ATTACHMENT}
                            input-file-path)))
            (final-url (url-build url params))
            (use-caching *web-request-cache-urls*))
+      (cl-flet ((web-log (fmt &rest args)
+                  (message "web-req[%d] %s" web-request-id (apply #'format fmt args))))
 
-      (message "Running in tempdir: %s" web-temp-dir)
 
-      ;; Dump out the json to a file, if needed.
-      (when json
-        (barf (if (typep json 'string)
-                  json
-                (json-encode json))
-              json-file))
+        (web-log "Running in tempdir: %s" web-temp-dir)
 
-      ;; Dump url-encoded data, if needed.
-      (when data
-        (barf (url-encode-params data) data-file))
+        ;; Dump out the json to a file, if needed.
+        (when json
+          (barf (if (typep json 'string)
+                    json
+                  (json-encode json))
+                json-file))
 
-      (cl-flet ((append-option (arg value-fn)
-                  (when arg
-                    (setf cmd (append cmd (funcall value-fn))))))
+        ;; Dump url-encoded data, if needed.
+        (when data
+          (barf (url-encode-params data) data-file))
 
-        ;; TODO(mls): do I need append option, now that I have append!?
-        ;; I guess the check for validity is nice.
-        (unless no-redirect
-          (append-atom! cmd "-L"))
-        (append-option method (| (list (upcase (format "-X%s" method)))))
-        (append-option input-file (| '("-K" "-")))
-        (append-option retry (| (list "--retry" (number-to-string retry))))
-        (append-option retry-delay-sec (| (list "--retry-delay" (number-to-string retry-delay-sec))))
-        (append-option user-agent (| `("-A" ,user-agent)))
-        (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
-        (append-option insecure (| `("--insecure")))
-        (append-option output-file (| list "--output" output-file))
-        (append-option referer (| list "--referer" referer))
-        (append-option upload-file (| list "--upload-file" upload-file))
+        (cl-flet ((append-option (arg value-fn)
+                    (when arg
+                      (setf cmd (append cmd (funcall value-fn))))))
 
-        ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
-        (when form
-          (cl-loop for (name . value) in form
-                   for i from 0
-                   do
-            (let ((filename (format "form-file-%s" i)))
-              ;; Write the value out to a file, just so we don't
-              ;; overwhelm the arg list.
-              (cond
-               ((atom value) (barf value filename))
-               ((equal :file (cl-first value))
-                (setf filename (second value)))
-               (t (error "Invalid form value: %s" value)))
+          ;; TODO(mls): do I need append option, now that I have append!?
+          ;; I guess the check for validity is nice.
+          (unless no-redirect
+            (append-atom! cmd "-L"))
+          (append-option method (| (list (upcase (format "-X%s" method)))))
+          (append-option input-file (| '("-K" "-")))
+          (append-option retry (| (list "--retry" (number-to-string retry))))
+          (append-option retry-delay-sec (| (list "--retry-delay" (number-to-string retry-delay-sec))))
+          (append-option user-agent (| `("-A" ,user-agent)))
+          (append-option cookie-jar (| `("--cookie" ,cookie-jar "--cookie-jar" ,cookie-jar)))
+          (append-option insecure (| `("--insecure")))
+          (append-option output-file (| list "--output" output-file))
+          (append-option referer (| list "--referer" referer))
+          (append-option upload-file (| list "--upload-file" upload-file))
 
-              (append! cmd (list "-F" (format "%s=@%s" name filename))))))
-        (append-option body (| `("--data-raw" ,body)))
-        (cl-loop for (name . value) in headers do
-                 (append-option t (| `("-H" ,(format "%s: %s" name value)))))
+          ;; https://gist.github.com/joyrexus/524c7e811e4abf9afe56
+          (when form
+            (cl-loop for (name . value) in form
+                     for i from 0
+                     do
+                     (let ((filename (format "form-file-%s" i)))
+                       ;; Write the value out to a file, just so we don't
+                       ;; overwhelm the arg list.
+                       (cond
+                        ((atom value) (barf value filename))
+                        ((equal :file (cl-first value))
+                         (setf filename (second value)))
+                        (t (error "Invalid form value: %s" value)))
 
-        ;; Is there a nicer way to do this?
-        (when (or json data content-type)
-          (append-option t
-                         (fn ()
-                           (list "-H"
-                                 (format "Content-Type:%s"
-                                         (or content-type
-                                             (if json
-                                                 "application/json"
-                                               "application/x-www-form-urlencoded")))))))
-        (append-option json (| `("--data" ,(concat "@" json-file))))
-        (append-option data (| `("--data" ,(concat "@" data-file))))
-        (append-option file (| `("--data-binary" ,(concat "@" file))))
-        (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
-        (append-option t (| list final-url ))
+                       (append! cmd (list "-F" (format "%s=@%s" name filename))))))
+          (append-option body (| `("--data-raw" ,body)))
+          (cl-loop for (name . value) in headers do
+                   (append-option t (| `("-H" ,(format "%s: %s" name value)))))
 
-        (let ((proxy-url (or proxy *web-request-proxy-url*)))
-          (append-option proxy-url (| `("--proxy" ,proxy-url))))
+          ;; Is there a nicer way to do this?
+          (when (or json data content-type)
+            (append-option t
+                           (fn ()
+                             (list "-H"
+                                   (format "Content-Type:%s"
+                                           (or content-type
+                                               (if json
+                                                   "application/json"
+                                                 "application/x-www-form-urlencoded")))))))
+          (append-option json (| `("--data" ,(concat "@" json-file))))
+          (append-option data (| `("--data" ,(concat "@" data-file))))
+          (append-option file (| `("--data-binary" ,(concat "@" file))))
+          (append-option timeout (| `("--connect-timeout" ,(format "%d" timeout))))
+          (append-option t (| list final-url ))
 
-        (when *web-request-preserve-request*
-          (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
-            (message "web-req[%d]: Preserve request here: %s" web-request-id output-file)
+          (let ((proxy-url (or proxy *web-request-proxy-url*)))
+            (append-option proxy-url (| `("--proxy" ,proxy-url))))
 
-            (barf (format web-request-shell-script-template
-                          (slurp json-file)
-                          (string-join cmd " "))
-                  output-file)
-            (chmod output-file #o700)))
-        (when *web-request-debug-request*
-          (debug))
+          (when *web-request-preserve-request*
+            (let ((output-file (path-join "~" (concat (url-hexify-string url) ".sh"))))
+              (web-log "Preserve request here: %s" output-file)
 
-        ;;
-        ;; This gets complicated because we've elected to support async, sync, and caching
-        ;; in the same function.
-        ;;
-        ;; use cl-labels to break shared code in separate functions, so I can keep the
-        ;; 'if' complexity to a minimium.
-        ;;
-        (cl-labels ((is-async ()
-                      "Is this call async?  This is mostly for future proofing."
-                      (not (not callback-fn)))
-                    (handle-response-fn (resp)
-                      "Handle a `resp' response structure either from the url cache or from do-cmd/do-cmd-async"
+              (barf (format web-request-shell-script-template
+                            (slurp json-file)
+                            (string-join cmd " "))
+                    output-file)
+              (chmod output-file #o700)))
+          (when *web-request-debug-request*
+            (debug))
 
-                      ;;
-                      ;; Cleanup the tempdir now that the requestion should be finished.
-                      ;;
-                      (when (and (file-exists-p web-temp-dir)
-                                 (not *web-request-keep-directory*))
-                        (message "Deleting web temp directory: %s" web-temp-dir)
-                        (delete-directory web-temp-dir t))
-
-                      ;; Try to share the cache updating code between sync and async mode
-                      (when use-caching
-                        (message "web-req[%d]: handle-response cache url %s code %s" web-request-id final-url
-                                 (assoc1 :code resp))
-                        (m-url-cache-set final-url resp
-                                         (if (equal use-caching :forever)
-                                             nil
-                                           use-caching)))
-
-                      (let* ((curl-output (assoc1 :stdout resp))
-                             ;; Split out the '< content-type: application/json' headers
-                             ;; from curl, and turn them into an alist.
-                             (resp-block (parse-http-header-block (assoc1 :stderr resp)))
-                             (status-line (assoc1 :status-line resp-block))
-                             (curl-code (assoc1 :code resp))
-                             (http-code (if (and (= curl-code 0) status-line)
-                                            (assoc1 :status-code status-line)
-                                          -1))
-                             (http-error-type (http-classify-status-code http-code))
-                             (headers (assoc1 :headers resp-block))
-                             ;; I decided to always try to parse json, if only
-                             ;; because sometimes I deal with improperly implemented
-                             ;; web services.
-                             (resp-json (ignore-errors
-                                          (json-read-from-string (assoc1 :stdout resp))))
-                             (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
-                                          (ignore-errors
-                                            (parse-html-string curl-output)))))
-
-                        (message "web-req[%d]: finished: curl code: %s http code: %s"
-                                 web-request-id curl-code http-code)
+          ;;
+          ;; This gets complicated because we've elected to support async, sync, and caching
+          ;; in the same function.
+          ;;
+          ;; use cl-labels to break shared code in separate functions, so I can keep the
+          ;; 'if' complexity to a minimium.
+          ;;
+          (cl-labels ((is-async ()
+                        "Is this call async?  This is mostly for future proofing."
+                        (not (not callback-fn)))
+                      (handle-response-fn (resp)
+                        "Handle a `resp' response structure either from the url cache or from do-cmd/do-cmd-async"
 
                         ;;
-                        ;; Check to see if we're supposed to throw an error
+                        ;; Cleanup the tempdir now that the requestion should be finished.
                         ;;
-                        ;;
-                        (when throw
-                          (unless (eq http-error-type :success)
-                            (let ((error-message
-                                   (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
-                                           http-code (assoc1 :message status-line)
-                                           (string-truncate curl-output *webrequest-http-error-msg-len*))))
-                              (message "web-req[%d]: %s" web-request-id error-message)
-                              (error error-message))))
+                        (when (and (file-exists-p web-temp-dir)
+                                   (not *web-request-keep-directory*))
+                          (web-log "Deleting web temp directory: %s" web-temp-dir)
+                          (delete-directory web-temp-dir t))
 
-                        ;; If the alist gets so large it's annoying in ielm,
-                        ;; I could make separate functions for accessing
-                        ;; json or parsed html.
-                        (let* ((output `((:http-code . ,http-code)
-                                         (:http-status . ,http-error-type)
-                                         (:status-line . ,status-line)
-                                         (:headers . ,headers)
-                                         (:final-url . ,final-url)
-                                         (:method . ,method)
-                                         (:url . ,url)
-                                         (:params . ,params)
-                                         (:curl-code . ,curl-code)
-                                         (:stderr . ,(when curl-code
-                                                       (assoc1 :stderr resp)))
-                                         (:resp . ,curl-output)
-                                         (:output-file . ,output-file)
-                                         (:json . ,resp-json)
-                                         (:html . ,resp-html)))
-                               (output (if map-fn
-                                           (funcall map-fn output)
-                                         output)))
+                        ;; Try to share the cache updating code between sync and async mode
+                        (when use-caching
+                          (web-log "handle-response cache url %s code %s" final-url
+                                   (assoc1 :code resp))
+                          (m-url-cache-set final-url resp
+                                           (if (equal use-caching :forever)
+                                               nil
+                                             use-caching)))
+
+                        (let* ((curl-output (assoc1 :stdout resp))
+                               ;; Split out the '< content-type: application/json' headers
+                               ;; from curl, and turn them into an alist.
+                               (resp-block (parse-http-header-block (assoc1 :stderr resp)))
+                               (status-line (assoc1 :status-line resp-block))
+                               (curl-code (assoc1 :code resp))
+                               (http-code (if (and (= curl-code 0) status-line)
+                                              (assoc1 :status-code status-line)
+                                            -1))
+                               (http-error-type (http-classify-status-code http-code))
+                               (headers (assoc1 :headers resp-block))
+                               ;; I decided to always try to parse json, if only
+                               ;; because sometimes I deal with improperly implemented
+                               ;; web services.
+                               (resp-json (ignore-errors
+                                            (json-read-from-string (assoc1 :stdout resp))))
+                               (resp-html (when (content-type-html-p (assoc-get :content-type headers ""))
+                                            (ignore-errors
+                                              (parse-html-string curl-output)))))
+
+                          (web-log "finished: curl code: %s http code: %s"
+                                   curl-code http-code)
+
+                          ;;
+                          ;; Check to see if we're supposed to throw an error
+                          ;;
+                          ;;
+                          (when throw
+                            (unless (eq http-error-type :success)
+                              (let ((error-message
+                                     (format "HTTP Request Failed.  Code: %s, Status: (%s), Text: (%s)"
+                                             http-code (assoc1 :message status-line)
+                                             (string-truncate curl-output *webrequest-http-error-msg-len*))))
+                                (web-log "%s" error-message)
+                                (error error-message))))
+
+                          ;; If the alist gets so large it's annoying in ielm,
+                          ;; I could make separate functions for accessing
+                          ;; json or parsed html.
+                          (let* ((output `((:http-code . ,http-code)
+                                           (:http-status . ,http-error-type)
+                                           (:status-line . ,status-line)
+                                           (:headers . ,headers)
+                                           (:final-url . ,final-url)
+                                           (:method . ,method)
+                                           (:url . ,url)
+                                           (:params . ,params)
+                                           (:curl-code . ,curl-code)
+                                           (:stderr . ,(when curl-code
+                                                         (assoc1 :stderr resp)))
+                                           (:resp . ,curl-output)
+                                           (:output-file . ,output-file)
+                                           (:json . ,resp-json)
+                                           (:html . ,resp-html)))
+                                 (output (if map-fn
+                                             (funcall map-fn output)
+                                           output)))
+                            (if (is-async)
+                                (funcall callback-fn output)
+                              output))))
+                      (make-request-fn ()
+                        (let ((args (list :input input-file
+                                          :stdout 'string :stderr 'string :throw throw)))
                           (if (is-async)
-                              (funcall callback-fn output)
-                            output))))
-                    (make-request-fn ()
-                      (let ((args (list :input input-file
-                                        :stdout 'string :stderr 'string :throw throw)))
-                        (if (is-async)
-                            (apply #'do-cmd-async cmd :callback-fn #'handle-response-fn args)
-                          (handle-response-fn (apply #'do-cmd cmd args))))))
+                              (apply #'do-cmd-async cmd :callback-fn #'handle-response-fn args)
+                            (handle-response-fn (apply #'do-cmd cmd args))))))
 
-          ;;
-          ;; Actually make the web request, either async or not
-          ;; caching the output if needed.
-          ;;
-          (message "web-req[%d]: start %s request for %s" web-request-id method final-url)
+            ;;
+            ;; Actually make the web request, either async or not
+            ;; caching the output if needed.
+            ;;
+            (web-log "Start %s request for %s" method final-url)
 
-          (if use-caching
-              (if-let (resp (m-url-cache-get final-url))
-                  ;; We already have the cached response from the url cache.
-                  (progn
-                    (message "web-req[%d]: cache hit on %s" web-request-id final-url)
-                    (handle-response-fn resp))
-                (make-request-fn))
-            (make-request-fn)))))))
+            (if use-caching
+                (if-let (resp (m-url-cache-get final-url))
+                    ;; We already have the cached response from the url cache.
+                    (progn
+                      (web-log "Cache hit on %s" web-request-id final-url)
+                      (handle-response-fn resp))
+                  (make-request-fn))
+              (make-request-fn))))))))
 
 ;; TODO(mls): make this consistent with do-cmd-succeeded-p
 (defun web-request-success-p (resp)
