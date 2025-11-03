@@ -362,12 +362,12 @@ the setter work."
   "Convert thing to a list if it isnt already."
   (if (atom thing) (list thing) thing))
 
-(defun to-array (thing)
-  (etypecase thing
-    (string (vector thing))
-    (array thing)
-    (list (vconcat thing))
-    (t (vector thing))))
+(unless (fboundp 'to-vector)
+  (defun to-vector (thing)
+    (etypecase thing
+      (array thing)
+      (list (vconcat thing))
+      (t (vector thing)))))
 
 (defun vector-to-list (vec)
   (append vec nil))
@@ -2136,6 +2136,35 @@ Mark an app as being runnable.
 
   (when (y-or-n-p (format "Are you sure you want to make %s executable?: " path))
       (osx-xattr-delete-value path "com.apple.quarantine")))
+
+
+(defun osx-copy-and-delete (src dest &optional move-to-trash)
+  (interactive (list (read-file-name "source-file: ")
+                     (read-directory-name "destination-dir-or-file: ")
+                     (y-or-n-p "use-trash[y]? ")))
+
+  (unless (or (directory-name-p dest)
+              (and (file-exists-p dest)
+                   (y-or-n-p (format "Overwrite file %s? " dest))))
+    (error "Don't overwrite an existing file"))
+
+  (when (and (not (file-exists-p dest))
+             (y-or-n-p (format "Create directory %s?" dest)))
+    (ensure-makedirs dest))
+
+  (let ((src (expand-file-name src))
+        (dest (expand-file-name dest)))
+    (if (y-or-n-p (format "Cp and delete %s to %s? "
+                          src dest))
+        (do-cmd-async (list "cp" src dest)
+                      :callback-fn (fn (resp)
+                                     (cl-assert (do-cmd-succeeded-p resp))
+
+                                     (if move-to-trash
+                                         (osx-move-to-trash src)
+                                       (delete-file src)))
+                      :throw t)
+      (error "Don't do the copy."))))
 
 
 ;; sudo launchctl stop com.apple.audio.coreaudiod
