@@ -2137,6 +2137,17 @@ Mark an app as being runnable.
   (when (y-or-n-p (format "Are you sure you want to make %s executable?: " path))
       (osx-xattr-delete-value path "com.apple.quarantine")))
 
+(cl-defun osx--copy-and-delete (src dest &key move-to-trash cb)
+  (do-cmd-async (list "cp" src dest)
+                :callback-fn (fn (resp)
+                               (cl-assert (do-cmd-succeeded-p resp))
+
+                               (if move-to-trash
+                                   (osx-move-to-trash src)
+                                 (delete-file src))
+                               (when cb
+                                 (funcall cb)))
+                :throw t))
 
 (defun osx-copy-and-delete (src dest &optional move-to-trash)
   (interactive (list (read-file-name "source-file: ")
@@ -2156,16 +2167,17 @@ Mark an app as being runnable.
         (dest (expand-file-name dest)))
     (if (y-or-n-p (format "Cp and delete %s to %s? "
                           src dest))
-        (do-cmd-async (list "cp" src dest)
-                      :callback-fn (fn (resp)
-                                     (cl-assert (do-cmd-succeeded-p resp))
-
-                                     (if move-to-trash
-                                         (osx-move-to-trash src)
-                                       (delete-file src)))
-                      :throw t)
+        (osx--copy-and-delete src dest :move-to-trash move-to-trash)
       (error "Don't do the copy."))))
 
+(defun osx-copy-and-delete-multiple (src-dest &optional move-to-trash)
+  (do-list-async src-dest
+                 :fn (fn ((src dest) call-next-fn)
+                       (message "Copy %s -> %s" src dest)
+                       (osx--copy-and-delete src dest :move-to-trash move-to-trash :cb call-next-fn))))
+
+(defun osx-plist-print (plist-file)
+  (run-to-str "plutil" "-p" plist-file))
 
 ;; sudo launchctl stop com.apple.audio.coreaudiod
 
@@ -2844,16 +2856,20 @@ end tell
                                ""))))
 
 (defun osx-move-to-trash (files)
-  (do-cmd-succeeded-p (run-osascript (format "tell app \"Finder\" to move {%s} to trash"
-                         (string-join
-                          (mapcar (fn (path)
-                                    (format "the POSIX file %s"
-                                            (osascript-quote-str
-                                             (if (file-name-absolute-p path)
-                                                 path
-                                               (path-join default-directory path)))))
-                                  (to-list files))
-                          ", ")))))
+  (do-cmd-succeeded-p (do-cmd (cons "trash" files)
+                              :
+
+  ;; (do-cmd-succeeded-p (run-osascript (format "tell app \"Finder\" to move {%s} to trash"
+  ;;                        (string-join
+  ;;                         (mapcar (fn (path)
+  ;;                                   (format "the POSIX file %s"
+  ;;                                           (osascript-quote-str
+  ;;                                            (if (file-name-absolute-p path)
+  ;;                                                path
+  ;;                                              (path-join default-directory path)))))
+  ;;                                 (to-list files))
+  ;;                         ", "))))
+  )))
 
 (defun get-chrome-path ()
   (cl-ecase system-type
@@ -4347,7 +4363,8 @@ rm -f ${ATTACHMENT}
 ;; web-request dynamic variables.
 (defvar *web-request-preserve-request* nil "Turn the web-request into a script in addition to sending it.")
 (defvar *web-request-cache-urls* nil "Use the url-cache to save requests if possible.  Is a ttl-sec value.")
-(defvar *web-request-debug-request* nil "Enter the debugger before the request is sent.")
+(defvar *web-request-debug-request* nil "Enter the debugger before processing happens.")
+(defvar *web-request-debug-curl-args* nil "Enter the debugger right before calling curl.")
 (defvar *web-request-proxy-url* nil "The url of the proxy to use for making web requests.")
 (defvar *web-request-proxy-auth* nil "The auth to use with the proxy to use for making web requests.")
 (defvar *web-request-keep-directory* nil "Don't delete the temp directory web request uses.")
@@ -4363,6 +4380,10 @@ rm -f ${ATTACHMENT}
 ;; 1. Create a 'map-fn' argument that applies the function to the output
 ;;    befor handing it back to either the callback-fn or returning it.
 ;;
+
+(defconst *curl-command* (basename (or (which "curl-impersonate-ff")
+                                       (which "curl"))))
+(assert *curl-command*)
 
 (cl-defun web-request (url
                        &key
@@ -4460,6 +4481,10 @@ rm -f ${ATTACHMENT}
 
   ;; Check the args
   (assert url)
+
+  (when *web-request-debug-request*
+    (debug))
+
   (let ((bjff (mapcar (fn (elm) (if elm 1 0))
                       (list body data json form file))))
     (assert (<= (sum bjff) 1) nil
@@ -4499,7 +4524,7 @@ rm -f ${ATTACHMENT}
   ;; Build up the command list.  Use a tmpdir to
   ;; cleanup any files created.
   (with-tempdir (:root-dir "/tmp" :leave-dir t)
-    (let* ((cmd (list "curl" "--verbose" "--silent"))
+    (let* ((cmd (list *curl-command* "--verbose" "--silent"))
            (json-file "request-attachment.json")
            (data-file "url-encoded-data.txt")
            (callback-fn (or callback-fn  (when async #'identity)))
@@ -4612,9 +4637,6 @@ rm -f ${ATTACHMENT}
                             (string-join cmd " "))
                     output-file)
               (chmod output-file #o700)))
-          (when *web-request-debug-request*
-            (debug))
-
           ;;
           ;; This gets complicated because we've elected to support async, sync, and caching
           ;; in the same function.
@@ -4708,6 +4730,10 @@ rm -f ${ATTACHMENT}
                       (make-request-fn ()
                         (let ((args (list :input input-file
                                           :stdout 'string :stderr 'string :throw throw)))
+
+                          (when *web-request-debug-curl-args*
+                            (debug))
+
                           (if (is-async)
                               (apply #'do-cmd-async cmd :callback-fn #'handle-response-fn args)
                             (handle-response-fn (apply #'do-cmd cmd args))))))
@@ -4870,15 +4896,15 @@ rm -f ${ATTACHMENT}
   (interactive "sfile: ")
   (switch-to-buffer))
 
-;; (defun export-org-table ()
-;;   (interactive)
-;;   (unless (org-at-table-p)
-;;     (error "No table at the point."))
+(defun export-org-table ()
+  (interactive)
+  (unless (org-at-table-p)
+    (error "No table at the point."))
 
-;;   (save-excursion
-;;     (org-table-begin)
-;;     )
-;;   )
+  (save-excursion
+    (org-table-begin)
+    )
+  )
 
 (defun search-http-repo (url match-fn)
   ;; Find all of the links in the page.
@@ -5019,8 +5045,176 @@ rm -f ${ATTACHMENT}
 
 (defun list-all-defined-variables ()
   (cl-loop for x being the symbols
-        if (boundp x)
-        collect (symbol-name x)))
+           if (boundp x)
+           collect (symbol-name x)))
+
+(defun dump-defined-variables ()
+  (message "Variables: %s" (list-all-defined-variables)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; General Inferior Mode Handling
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Common Lisp RPC with inferior lisp mode
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defvar +common-lisp-buffer+ "*inferior-lisp*")
+
+(defun clrpc-send (form)
+  (let ((proc (inferior-lisp-proc)))
+    (comint-send-string proc (prin1-to-string form))
+    (comint-send-string proc "\n")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; sqlite shell commands
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;
+;; sqlite-clone database: .clone <file>
+;; csv parsing
+;;
+(defun search-http-repo (url match-fn)
+  ;; Find all of the links in the page.
+  (cl-loop for a-tag in (dom-by-tag (assoc1 :html (web-request url :throw t)) 'a)
+           with href = nil
+           do (setf href (assoc1 'href (dom-attributes a-tag)))
+           when (funcall match-fn href)
+           collect href))
+
+(defmacro time-this-code (&rest body)
+  "A timer function for functions."
+  `(let ((time (current-time)))
+     (unwind-protect
+         (progn
+           ,@body)
+       (message "%.06f" (float-time (time-since time))))))
+
+(defun current-clipboard ()
+  "Return the current contents of the OS's clipboard."
+  (with-temp-buffer
+    (clipboard-yank)
+    (buffer->string)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Firefox based commands.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconst +osx-firefox-headless-profile "headless")
+
+;; Note that these commands will shutdown a currently active firefox.
+(defun firefox-cmd (cmd &rest args)
+  (apply #'do-cmd-async (concatenate 'list
+                                     (list +osx-path-to-firefox+ "-P" +osx-firefox-headless-profile)
+                                     cmd)
+         args))
+
+(cl-defun firefox-screenshot (url &optional (output-dir (expand-file-name "~/Desktop/")))
+  (pushd output-dir
+    (firefox-cmd (list "--screenshot" url))))
+
+;;
+;; other interesting commands:
+;; --search
+;; --remote-debugging-port <port> Start the Firefox remote agent, which is
+;; a low-level debugging interface based on the CDP protocol.
+;; Defaults to listen on localhost:9222.
+;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; LDAP Lookup
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun ldap-query-to-string (query)
+  (cond
+   ((stringp query) query)
+   ((listp query)
+    (string-join
+     (cl-loop for (key . val) in query
+              collect (format "(%s=%s)" key val))
+     ""))
+   (t (error "The ldap query must be a list or a string."))))
+
+(cl-defun ldapsearch (&key ldap-server search-base bind-dn passwd-fn query)
+  "Use the ldapsearch command to bind to an ldap server and make a query.
+
+  `ldap-server': The server host name.
+  `search-base': The place in ldap to start looking, example: ou=users,dc=corp,dc=company,dc=com
+  `bind-dn': Name to use for authenticating against the server
+  `passwd-fn': Function will be called with no arguments.  It should return the bind-dn password.
+  `query': an alist or string of query parameters."
+  (let ((pw-file "pw.txt"))
+    (with-tempdir (:root-dir "/tmp")
+      (touch pw-file)
+      (chmod pw-file #o600)
+      (barf (funcall passwd-fn) pw-file)
+      (ldif-split-text (run-to-str "ldapsearch" "-LLL"
+                                   "-h" ldap-server
+                                   "-b" search-base
+                                   "-D" bind-dn
+                                   "-y" pw-file
+                                   (ldap-query-to-string query))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Security Functions.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; I could move these to their own module at some point.
+
+(defun osx-security-get-password (password-name user)
+  "Use the osx 'security' command to get a password from the keychain.
+
+   This may cause osx to prompt the caller to unlock the password.
+
+   Args:
+   `password-name': The name used when the password was created in the keychain.
+   `user': the user id associated with the `password-name'.
+
+   returns: the password string.
+"
+  ;; Don't use passwords
+  (string-trim (run-to-str "security" "find-generic-password" "-w" "-s" password-name "-a" user)
+               nil "\n"))
+
+;; Can I unify this with `read-user-password'?
+(defun osx-security-get-cached-password (password-name user)
+  "Cache a password from the osx 'security' command.
+
+   This may cause osx to prompt the caller to unlock the password.
+   Once the caller has allowed access, emacs will store it in the password-cache
+   for a user controlled amount of time.
+
+   Args:
+   `password-name': The name used when the password was created in the keychain.
+   `user': the user id associated with the `password-name'.
+
+   returns: the password string.
+"
+  (if (password-in-cache-p password-name)
+      (password-read-from-cache password-name)
+    (progn
+      (let ((password (osx-security-get-password password-name user)))
+        (password-cache-add password-name password)
+        password))))
+
+(defun common-lisp-insert-debug ()
+  (interactive)
+  ;;
+  ;; Note: Try C-M-x function and it may put the code in its own window.
+  ;; also C-u C-c C-c does the same thing
+  ;;
+  ;;
+  ;; (declaim (optimize (debug 2)
+  ;;          (sb-c::insert-step-conditions 0)
+  ;;          (sb-c::insert-debug-catch 0)))
+  ;;
+  (insertf "(declaim (optimize (speed 0) (space 0) (debug 3)))"))
+
+(defun list-all-defined-variables ()
+  (cl-loop for x being the symbols
+           if (boundp x)
+           collect (symbol-name x)))
 
 (defun dump-defined-variables ()
   (message "Variables: %s" (list-all-defined-variables)))

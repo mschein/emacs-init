@@ -74,26 +74,102 @@ So 12:45 -> 765."
      :throw t)
     output-file))
 
-(cl-defun ffmpeg-join-clips (clips output-file &key overwrite)
+;;
+;; (list "-filter_complex" (format "[0:v:0][0:a:0][1:v:0][1:a:0]concat=n=%d:v=1:a=1[outv][outa]" (length clips))
+;;                                "-map" "[outv]" "-map" "[outa]"
+;;                                "-c:v" "libx264"
+;;                                "-crf" "18"
+;;                                "-preset" "veryfast"
+;;                                "-pix_fmt" "yuv420p")
+;;
+
+(cl-defun ffmpeg-build-complex-filter-concat (&key width height (fps 30))
+  (string-template-fill "[0:v]scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease,pad=${${WIDTH}:-1920}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS}[v];[0:a]anull[a0];[a0]aformat=sample_rates=48000:channel_layouts=stereo[a];anullsrc=channel_layout=stereo:sample_rate=48000[sil];[a][sil]amerge=inputs=2:dropout_transition=3[mixa]"
+                        `((WIDTH . ,(number-to-string width))
+                          (HEIGHT . ,(number-to-string height))
+                          (FPS . ,(number-to-string fps)))))
+
+;; ffmpeg -f concat -safe 0 -i inputs.txt \
+;;   -filter_complex "[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30[v]; \
+;;                    [0:a]aformat=sample_rates=48000:channel_layouts=stereo[a]" \
+;;   -map "[v]" -map "[a]" \
+;;   -c:v libx264 -preset veryfast -crf 18 -pix_fmt yuv420p \
+;;   -c:a aac -b:a 192k -ar 48000 -ac 2 \
+;;   output.mp4
+
+;; ffmpeg -f concat -safe 0 -i inputs.txt \
+;;   -filter_complex "[0:v]scale=${WIDTH:-1920}:${HEIGHT:-1080}:force_original_aspect_ratio=decrease,pad=${WIDTH:-1920}:${HEIGHT:-1080}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS:-30}[v]; \
+;; [0:a]anull[a0]; \
+;; [a0]aformat=sample_rates=48000:channel_layouts=stereo[a]; \
+;; anullsrc=channel_layout=stereo:sample_rate=48000[sil]; \
+;; [a][sil]amerge=inputs=2:dropout_transition=3[mixa]" \
+;;   -map "[v]" -map "[mixa]" \
+;;   -c:v libx264 -crf ${CRF:-18} -preset ${PRESET:-veryfast} -pix_fmt yuv420p \
+;;   -c:a aac -b:a ${VBR_A:-192k} -ar 48000 -ac 2 \
+;;   -movflags +faststart \
+;;   output.mp4
+
+
+;; Env vars you can set
+
+;;     WIDTH / HEIGHT → output resolution (default 1920x1080)
+
+;;     FPS → output frame rate (default 30)
+
+;;     CRF → quality (lower = higher quality, default 18)
+
+;;     PRESET → encoding speed (ultrafast … veryslow, default veryfast)
+
+;;     VBR_A → audio bitrate (default 192k)
+
+
+(cl-defun ffmpeg-join-clips (clips output-file &key overwrite re-encode)
   (let ((clips (mapcar #'expand-file-name clips)))
     (assert (every #'file-exists-p clips))
+
+    ;;
+    ;; ffmpeg doesn't won't automatically stitch videos together
+    ;; if they aren't the same quality or dimension.
+    ;; I could add a check to see if everything is the same, and then
+    ;; convert if not.
+    ;;
+    (let ((dimensions (mapcar (fn (clip-path)
+                                (cons clip-path (ffmpeg-get-movie-dimensions clip-path))) clips)))
+      (message "dimensions: %s" dimensions)
+      )
 
     (when (file-exists-p output-file)
       (if overwrite
           (osx-move-to-trash output-file)
         (error "File %s exists" output-file)))
 
-    (let ((video-file (expand-file-name "~/videos.txt")))
+    (let* ((video-file (expand-file-name "~/videos.txt"))
+           (re-encode-args `("-filter_complex" ,(ffmpeg-build-complex-filter-concat :width 1920 :height 1080)
+                             "-map" "[v]"
+                             "-map" "[mixa]"
+                             "-c:v" "libx264"
+                             "-crf" "18"
+                             "-preset" "veryfast"
+                             "-pix_fmt" "yuv420p"
+                             "-c:a" "aac"
+                             "-b:a" "192k"
+                             "-ar" "48000"
+                             "-ac" "2"
+                             "-movflags" "+faststart"))
+           (copy-only-args '("-c" "copy"))
+           (args `("ffmpeg"
+                   "-f" "concat"
+                   "-safe" "0"
+                   "-i" ,video-file
+                   ,@(if re-encode
+                         re-encode-args
+                       copy-ony-args)
+                   ,output-file)))
+
       (barf (string-join (mapcar (| format "file '%s'" %) clips) "\n")
             video-file)
 
-      (do-cmd-async
-       (list "ffmpeg"
-             "-f" "concat"
-             "-safe" "0"
-             "-i" video-file
-             "-c" "copy"
-             output-file)
+      (do-cmd-async args
        :throw t
        :callback-fn (lambda (&rest foo)
                       (when (file-exists-p video-file)
