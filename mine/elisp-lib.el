@@ -2176,8 +2176,22 @@ Mark an app as being runnable.
                        (message "Copy %s -> %s" src dest)
                        (osx--copy-and-delete src dest :move-to-trash move-to-trash :cb call-next-fn))))
 
+
 (defun osx-plist-print (plist-file)
   (run-to-str "plutil" "-p" plist-file))
+
+(defun copy-files-async (src-dest)
+  (do-list-async src-dest
+                 :fn (fn ((src dest) call-next-fn)
+                       (message "Copy %s -> %s" src dest)
+                       (do-cmd-async (list "cp" src dest)
+                                     :callback-fn call-next-fn))))
+
+(defun copy-files-to-dir-async (files dest-dir)
+  (copy-files-async (mapcar (fn (file)
+                              (list file dest-dir))
+                            files)))
+
 
 ;; sudo launchctl stop com.apple.audio.coreaudiod
 
@@ -2856,20 +2870,7 @@ end tell
                                ""))))
 
 (defun osx-move-to-trash (files)
-  (do-cmd-succeeded-p (do-cmd (cons "trash" files)
-                              :
-
-  ;; (do-cmd-succeeded-p (run-osascript (format "tell app \"Finder\" to move {%s} to trash"
-  ;;                        (string-join
-  ;;                         (mapcar (fn (path)
-  ;;                                   (format "the POSIX file %s"
-  ;;                                           (osascript-quote-str
-  ;;                                            (if (file-name-absolute-p path)
-  ;;                                                path
-  ;;                                              (path-join default-directory path)))))
-  ;;                                 (to-list files))
-  ;;                         ", "))))
-  )))
+  (do-cmd-succeeded-p (do-cmd (cons "trash" (to-list files)))))
 
 (defun get-chrome-path ()
   (cl-ecase system-type
