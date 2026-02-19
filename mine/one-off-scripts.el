@@ -758,6 +758,26 @@ ${name}")
 
     ))
 
+
+
+(defun domain-exists (domain)
+  (do-cmd-succeeded-p (do-cmd (list "nslookup" domain))))
+
+
+(cl-defun osx-copy-and-delete-tree (root target regex &key move-to-trash)
+  (let* ((files (directory-files-recursively root regex))
+         (parent-root (file-name-parent-directory root))
+         (mappings (mapcar (fn (file)
+                             (list file (path-join target (string-remove-prefix parent-root file))))
+                           files)))
+    (assert mappings)
+    (message "Move Tree Mappings: %s" mappings)
+    (if (y-or-n-p (format "Approve Move %s\n :? " mappings))
+        (progn (loop for (_ target) in mappings
+                     do (ensure-makedirs (file-name-directory target)))
+               (osx-copy-and-delete-multiple mappings move-to-trash))
+      (error "Copy not approved"))))
+
 ;;(defun jenv-list-versions ()
 ;;  ())
 
