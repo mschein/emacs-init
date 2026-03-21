@@ -7,9 +7,13 @@
 ;; and https://github.com/kkroening/ffmpeg-python
 ;;  for a python example.
 ;;
-;; a tutorial: http://dranger.com/ffmpeg/tutorial01.html
+;; tutorials:
+;; - http://dranger.com/ffmpeg/tutorial01.html
+;; - https://github.com/leandromoreira/ffmpeg-libav-tutorial
 ;;
-;; A guide: https://img.ly/blog/ultimate-guide-to-ffmpeg/
+;; Guides:
+;; - https://img.ly/blog/ultimate-guide-to-ffmpeg/
+;; - https://blogs.igalia.com/llepage/ffmpeg-101/
 ;;
 ;;
 ;; stuff to support:
