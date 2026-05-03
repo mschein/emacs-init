@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t -*-
 ;; Mike's emacs file.
+;;
 
 ;;
 ;; I think it's easier to search longer files, and lisp lends itself well to
@@ -730,6 +731,13 @@ Example: (funcall (rcurry #'- 10) 5)) -> -5"
 (defun string-nil-or-empty-p (s)
   (= 0 (length s)))
 
+(defun string-is-number-p (s)
+  (when (string-match-p "^\\(-\\|\\)\\([0-9]+\\|[0-9]+\\.[0-9]+\\)+$" s)
+    (string-to-number s)))
+
+(defun string-is-integer-p (s)
+  (ignore-errors (cl-parse-integer s)))
+
 (defun string-has-value-p (s)
   (not (string-nil-or-empty-p s)))
 
@@ -1376,6 +1384,9 @@ So pass a list like:
              if (>= x (- len n))
              collect line)))
 
+(defun list->string (list)
+  (string-join list "\n"))
+
 (defun buffer->list ()
   "Convert the current buffer into a list."
   (string->list (buffer->string)))
@@ -1920,6 +1931,29 @@ by `do-cmd'
   (assert (which name) nil (or error-message (format "Program %s is not in the PATH." name))))
 
 ;;(defun find-and-grep )
+
+(defun unzip-list (zip-file)
+  "List the contents of the zip file path `ZIP-FILE'."
+  (filter (fn (entry)
+            (and (string-is-integer-p (assoc1 "Length" entry))
+                 (assoc-get "Name" entry)))
+          (csv-split-text (list->string (drop 1 (string->list
+                                                 (run-to-str "unzip" "-l" (expand-file-name zip-file)))))
+                          :split-regex " +")))
+
+(defun unzip-file (zip-file)
+  (let ((entries (unzip-list zip-file)))
+    (run "unzip" zip-file)
+
+    (osx-move-to-trash zip-file)))
+
+(cl-defun unzip (&optional (directory (expand-file-name "~/Downloads/")))
+  (interactive)
+  (pushd directory
+    (loop for zip-file in (list-directory-entries directory :match "\\.zip$")
+          do (unzip-file zip-file))))
+
+(defun unrar ())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
