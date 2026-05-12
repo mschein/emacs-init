@@ -1953,7 +1953,97 @@ by `do-cmd'
     (loop for zip-file in (list-directory-entries directory :match "\\.zip$")
           do (unzip-file zip-file))))
 
-(defun unrar ())
+(defun unrar-list-contents (rar)
+  (assert (file-exists-p rar))
+
+  (let (out)
+    (dolist (line (string->list (assoc1 :stdout
+                                        (do-cmd
+                                         (list "unrar" "l" rar)
+                                         :stdout 'string
+                                         :throw nil))))
+      (when-let (file (first
+                       (string-find "[0-9]+ [0-9]+:[0-9]+  \\(.+\\)$" line)))
+        (push file out)))
+    out))
+
+(defun 7z-list-contents (file)
+  (assert (file-exists-p file))
+
+  (let (out seen-start seen-end)
+    (dolist (line (string->list (assoc1 :stdout (do-cmd (list "7zz" "l" file)
+                                                        :stdout 'string
+                                                        :throw nil)))
+                  out)
+      (cl-labels ((is-marker-line-p ()
+                    (string-match-p "^-------------------" line)))
+
+
+        (cond
+         ((not seen-start)
+          (when (is-marker-line-p)
+            (setf seen-start t)))
+         ((and seen-start (not seen-end))
+          (if (is-marker-line-p)
+              (setf seen-end t)
+            (when-let (file (first
+                             (string-find "[0-9]+-[0-9]+-[0-9]+\s+[0-9]+:[0-9]+:[0-9]+\s+..... +[0-9]+ +[0-9]+ +\\(.+\\) *$"
+                                          line)))
+              (push file out)))))))))
+
+(defun 7z-unzip-contents (file)
+  (assert (file-exists-p file))
+  (run "7zz" "x" file))
+
+(defun 7z-touch-contents (file)
+  (dolist (file (7z-list-contents rar))
+    (when (file-exists-p file)
+      (touch file))))
+
+(defun unzip-list-contents (zip)
+  (run-to-str "unzip" "-l" zip))
+
+(defun unrar-touch-contents (rar)
+  (let ((files (unrar-list-contents rar)))
+    (dolist (file files)
+      (when (file-exists-p file)
+        (touch file)))))
+
+(defun un7z ()
+  (interactive)
+  (pushd (expand-file-name "~/Downloads/")
+    (dolist (7z (filter (fn (path)
+                           (and (equal "7z" (file-name-extension path))
+                                (file-has-size-p path)))
+                         (directory-files default-directory)))
+      (7z-unzip-contents 7z)
+      (7z-touch-contents 7z))))
+
+(defun unrar-single (rar)
+  (message "Unrar file %s" rar)
+  (run "unrar" "-o+" "x" rar)
+  (unrar-touch-contents rar)
+  (osx-move-to-trash (path-join default-directory rar)))
+
+(defun unrar ()
+  "Extract any extent rar and zip files."
+  (interactive)
+  (pushd (expand-file-name "~/Downloads/")
+    (dolist (rar (filter (fn (path)
+                           (and (equal "rar" (file-name-extension path))
+                                (file-has-size-p path)))
+                         (directory-files default-directory)))
+      (unrar-single rar))
+    (dolist (rar (filter (fn (path)
+                           (and (equal "part" (file-name-extension path))
+                                (string-match "\.rar\.part$" path)
+                                (file-has-size-p path)))
+                         (directory-files default-directory)))
+      (message "Unrar partial file %s" rar)
+      (with-demoted-errors "+unrar+ error: %s"
+        (do-cmd (list "unrar" "-kb" "-y" "-o+" "x" rar)
+                :throw nil)
+        (unrar-touch-contents rar)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Process Utils
