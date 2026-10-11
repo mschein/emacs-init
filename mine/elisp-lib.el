@@ -4873,7 +4873,7 @@ rm -f ${ATTACHMENT}
                 (if-let (resp (m-url-cache-get final-url))
                     ;; We already have the cached response from the url cache.
                     (progn
-                      (web-log "Cache hit on %s" web-request-id final-url)
+                      (web-log "Cache hit on %s" final-url)
                       (handle-response-fn resp))
                   (make-request-fn))
               (make-request-fn))))))))
