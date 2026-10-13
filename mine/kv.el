@@ -74,7 +74,9 @@
             (sqlite-select db "SELECT key from kv WHERE key = ?;" (list key)))))))
 
 (defun kv-get-json (store-name key)
-  (json-read-from-string (kv-get store-name key)))
+  (if-let (obj (kv-get store-name key))
+      (json-read-from-string obj)
+    (error "Key %s not found" key)))
 
 (defun kv-check-json (store-name key)
   (ignore-errors (kv-get-json store-name key)))
